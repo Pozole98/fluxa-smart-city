@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # SERVICIO PRINCIPAL: FLUXA CORE & WEB SCADA
+  # ==========================================
+  fluxa-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fluxa_core
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLUXA_SECRET_KEY=fluxa_enterprise_secure_token_2026
+    volumes:
+      - ./logs:/app/logs
+      - ./videos:/app/videos
+      - ./config.json:/app/config.json
+    # Para habilitar acceso a hardware real en gabinete (Arduino y Cámara USB),
+    # descomenta las siguientes líneas:
+    # privileged: true
+    # devices:
+    #   - "/dev/video0:/dev/video0"
+    #   - "/dev/ttyACM0:/dev/ttyACM0"
+    depends_on:
+      fluxa-db:
+        condition: service_healthy
+
+  # ==========================================
+  # BASE DE DATOS: MARIADB TELEMETRÍA Y LOGS
+  # ==========================================
+  fluxa-db:
+    image: mariadb:10.11
+    container_name: fluxa_mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: theelderfallout99
+      MYSQL_DATABASE: fluxa_traffic
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mariadb_data:
+    driver: local

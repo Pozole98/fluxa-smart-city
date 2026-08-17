@@ -1,0 +1,16 @@
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.git
+.gitignore
+.idea
+.vscode
+*.log
+logs/violations/*.jpg
+logs/*.csv
+/tmp
+*.crdownload
+*.part
