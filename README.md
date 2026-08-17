@@ -80,42 +80,56 @@ El sistema procesa video en tiempo real mediante **YOLOv8** y **BYTETracker** pa
 
 ---
 
-## 📦 Guía Rápida de Instalación y Uso
+## 📦 Guía de Instalación y Despliegue
 
-### 1. Clonar el Repositorio e Instalar Dependencias
+Dispones de dos métodos de instalación según tu entorno de trabajo:
+
+### 🏆 Método 1: Instalador Universal Nativo de 1-Clic (Recomendado para Producción & Edge)
+Compatible con **Armbian 24.04 (Orange Pi 5)**, **Ubuntu**, **Debian** y **Fedora/RHEL (x86_64)**. Configura automáticamente librerías, permisos seriales para Arduino (`dialout`), base de datos MariaDB, acceso global `fluxa` y servicio `systemd` para gabinete vial:
+
 ```bash
+# Clonar y ejecutar instalador automático
 git clone https://github.com/Pozole98/fluxa-smart-city.git
 cd fluxa-smart-city
-
-# Crear entorno virtual e instalar librerías
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+bash install.sh
 ```
 
-### 2. Configurar la Base de Datos MariaDB (Opcional pero Recomendado)
-```bash
-# Crear esquema en MariaDB
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS fluxa_traffic;"
-```
-*(Puedes ajustar las credenciales de la base de datos en `config.json`)*.
+> **Para desinstalar limpiamente en el futuro:**  
+> `bash uninstall.sh`
 
 ---
 
-## 💻 Ejecución del Sistema
+### 🐳 Método 2: Despliegue con Docker / Podman (Contenedores)
+Ideal para servidores centrales, simulaciones o pruebas rápidas sin tocar dependencias del sistema operativo:
+
+```bash
+# Iniciar FLUXA + MariaDB con Podman o Docker
+docker compose up -d
+
+# Ver logs del contenedor
+docker compose logs -f
+```
+
+---
+
+## 💻 Ejecución y Control del Sistema
+
+Una vez instalado con el **Método 1**, puedes lanzar FLUXA desde cualquier terminal con el comando global `fluxa`:
 
 ### Modo Servicio Headless (Recomendado para Producción y WebUI)
 ```bash
-# Lanzar intersección de 4 vías con clip de video demo en CPU
-python3 main.py --topology 4_way --backend cpu --headless --video videos/13868586_1280_720_24fps.mp4 --port 5000
+# Intersección de 4 vías en CPU con clip demo en puerto 5000
+fluxa --topology 4_way --backend cpu --headless --video videos/13868586_1280_720_24fps.mp4 --port 5000
 
-# Lanzar en Orange Pi 5 utilizando la NPU RK3588 con cámara USB en vivo
-python3 main.py --topology 4_way --backend rknn --headless --port 5000
+# Intersección en Orange Pi 5 (NPU RK3588 con aceleración por hardware)
+fluxa --topology 4_way --backend rknn --headless --port 5000
 ```
 
-### Modo Interfaz de Escritorio Tkinter (Pruebas con Monitor Local)
+### Control del Servicio de Gabinete Vial (Systemd)
 ```bash
-python3 main.py --topology 4_way --backend cpu --gui
+sudo systemctl start fluxa      # Iniciar servicio en segundo plano
+sudo systemctl enable fluxa     # Activar arranque automático con el gabinete
+journalctl -u fluxa -f          # Ver telemetría en tiempo real
 ```
 
 ---
