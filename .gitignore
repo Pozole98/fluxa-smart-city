@@ -1,0 +1,33 @@
+# Entornos virtuales
+.venv/
+venv/
+ENV/
+env/
+
+# Caches de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs y archivos temporales
+*.log
+/tmp/
+fluxa_cookies.txt
+.DS_Store
+
+# Archivos temporales de descarga de video
+*.crdownload
+*.part
+*.tmp
+
+# Snapshots de violaciones (mantener carpeta con .gitkeep)
+logs/violations/*.jpg
+logs/*.csv

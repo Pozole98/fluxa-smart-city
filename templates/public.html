@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FLUXA Smart City • Portal Ciudadano de Movilidad</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #060913;
+            --panel-bg: rgba(15, 23, 42, 0.7);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.3);
+            --blue: #3b82f6;
+            --blue-glow: rgba(59, 130, 246, 0.3);
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(59, 130, 246, 0.08) 0%, transparent 40%);
+        }
+
+        /* Top Navbar */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.2rem 2.5rem;
+            background: rgba(10, 15, 29, 0.8);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--panel-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), var(--blue));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .brand-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn-c5 {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            color: var(--text-muted);
+            padding: 0.55rem 1.1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-c5:hover {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--accent);
+            color: white;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        /* Hero Banner */
+        .hero-section {
+            text-align: center;
+            padding: 2rem 1.5rem 1.5rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .hero-tag {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .hero-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 0.6rem;
+            letter-spacing: -0.5px;
+        }
+
+        .hero-subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        /* Container Layout */
+        .content-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1rem 1.5rem 3rem;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 1.5rem;
+        }
+
+        .panel-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 1.4rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.6rem;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Video Container */
+        .video-box {
+            position: relative;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            aspect-ratio: 16/9;
+            box-shadow: 0 0 25px rgba(0,0,0,0.6);
+            border: 1px solid var(--panel-border);
+        }
+
+        .video-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .live-tag {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            animation: pulseRed 1.5s infinite;
+        }
+
+        @keyframes pulseRed {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.2); }
+        }
+
+        /* Phase Countdown Widget */
+        .phase-widget {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.35);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 1.2rem;
+            margin-top: 1rem;
+        }
+
+        .phase-display {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .phase-light {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #334155;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            transition: all 0.3s;
+        }
+
+        .phase-light.green { background: var(--accent); box-shadow: 0 0 20px var(--accent-glow); }
+        .phase-light.yellow { background: var(--warning); box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+        .phase-light.red { background: var(--danger); box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+
+        .phase-label-box h3 { font-size: 1.1rem; font-weight: 700; }
+        .phase-label-box p { font-size: 0.8rem; color: var(--text-muted); }
+
+        .phase-counter {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .phase-counter-val {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent);
+            line-height: 1;
+        }
+
+        .phase-counter-lbl {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* V2X GLOSA Card */
+        .v2x-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.08));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 14px;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .v2x-card::before {
+            content: '';
+            position: absolute;
+            top: 0; right: 0;
+            width: 80px; height: 80px;
+            background: radial-gradient(circle, var(--blue-glow) 0%, transparent 70%);
+        }
+
+        .v2x-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .v2x-tag {
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: var(--blue);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .v2x-advice {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.3rem;
+        }
+
+        .v2x-speed-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.35rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+        }
+
+        /* Sustainability Grid */
+        .eco-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.9rem;
+            margin-top: 0.8rem;
+        }
+
+        .eco-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .eco-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .eco-val {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 0.2rem;
+        }
+
+        .eco-lbl {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Lane Density Cards */
+        .lane-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.7rem;
+            margin-top: 0.8rem;
+        }
+
+        .lane-box {
+            background: rgba(0,0,0,0.25);
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            padding: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .lane-name { font-size: 0.82rem; font-weight: 600; text-transform: uppercase; }
+        .lane-count { font-size: 1.2rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--blue); }
+
+        /* Footer */
+        .footer {
+            margin-top: auto;
+            text-align: center;
+            padding: 1.5rem;
+            border-top: 1px solid var(--panel-border);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: rgba(10, 15, 29, 0.9);
+        }
+
+        @media (max-width: 900px) {
+            .content-container { grid-template-columns: 1fr; }
+            .navbar { padding: 1rem; }
+            .hero-title { font-size: 1.7rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navbar -->
+    <header class="navbar">
+        <div class="brand-box">
+            <div class="brand-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#022c22" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>
+            </div>
+            <div class="brand-title">FLUXA MOBILITY</div>
+        </div>
+        <div class="nav-actions">
+            <a href="/login" class="btn-c5">
+                <span>🔐</span>
+                <span>Acceso Operadores C5</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <span class="hero-tag">🌱 Red de Semáforos Autónomos y Adaptativos</span>
+        <h1 class="hero-title">Monitoreo y Fluidez Urbana en Tiempo Real</h1>
+        <p class="hero-subtitle">Optimizando el tráfico con Inteligencia Artificial y reduciendo la huella de carbono vehicular.</p>
+    </section>
+
+    <!-- Main Content -->
+    <main class="content-container">
+        
+        <!-- Left: Live Video and Signal Phase -->
+        <div>
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h2 class="panel-title">📹 Cruce Inteligente en Vivo</h2>
+                    <span style="font-size: 0.8rem; color: var(--text-muted);" id="pub-topology">4_WAY • IA EDGE</span>
+                </div>
+                
+                <div class="video-box">
+                    <img src="/video_feed" alt="Transmisión en vivo no disponible" id="pub-stream">
+                    <div class="live-tag">
+                        <div class="live-dot"></div>
+                        <span>EN VIVO</span>
+                    </div>
+                </div>
+
+                <!-- Phase Countdown -->
+                <div class="phase-widget">
+                    <div class="phase-display">
+                        <div class="phase-light" id="pub-light"></div>
+                        <div class="phase-label-box">
+                            <h3 id="pub-phase-name">Calculando Fase...</h3>
+                            <p>Control Adaptativo por Visión Artificial</p>
+                        </div>
+                    </div>
+                    <div class="phase-counter">
+                        <div class="phase-counter-val" id="pub-time-remaining">--s</div>
+                        <div class="phase-counter-lbl">Tiempo Restante</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: V2X Speed Advisor & Eco-Impact Wall -->
+        <div>
+            
+            <!-- V2X GLOSA Advisor Card -->
+            <div class="v2x-card">
+                <div class="v2x-header">
+                    <div class="v2x-tag">
+                        <span>📡</span>
+                        <span>Asesor de Conducción V2X (GLOSA)</span>
+                    </div>
+                    <span style="font-size: 0.72rem; color: var(--text-muted);">Ola Verde Activa</span>
+                </div>
+                <div class="v2x-advice" id="pub-v2x-advice">🟢 Mantenga 40-50 km/h para cruzar en Verde</div>
+                <div style="margin-top: 0.6rem;">
+                    <div class="v2x-speed-pill">
+                        <span>Velocidad Sugerida:</span>
+                        <strong id="pub-v2x-speed">45 km/h</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Eco-Impact Wall -->
+            <div class="panel-card" style="margin-bottom: 1.5rem;">
+                <div class="panel-header">
+                    <h2 class="panel-title">🌿 Impacto Ecológico y Ahorro Ciudadano</h2>
+                    <span style="font-size: 0.75rem; color: var(--accent);">Hoy</span>
+                </div>
+                <div class="eco-grid">
+                    <div class="eco-card">
+                        <div class="eco-val" id="pub-fuel-saved">0.00 L</div>
+                        <div class="eco-lbl">Combustible Ahorrado</div>
+                    </div>
+                    <div class="eco-card">
+                        <div class="eco-val" id="pub-co2-mitigated">0.00 kg</div>
+                        <div class="eco-lbl">CO₂ Mitigado</div>
+                    </div>
+                    <div class="eco-card">
+                        <div class="eco-val" id="pub-time-saved">0.0 min</div>
+                        <div class="eco-lbl">Espera Evitada</div>
+                    </div>
+                    <div class="eco-card">
+                        <div class="eco-val" id="pub-flow-efficiency">88%</div>
+                        <div class="eco-lbl">Eficiencia de Flujo</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lane Traffic Density -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h2 class="panel-title">🚗 Densidad Vehicular por Carril</h2>
+                    <span style="font-size: 0.78rem; color: var(--text-muted);" id="pub-total-cars">Total: 0 autos</span>
+                </div>
+                <div class="lane-grid" id="pub-lanes-container">
+                    <div class="lane-box"><span>Cargando carriles...</span></div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>© 2026 FLUXA Smart Traffic System • Plataforma de Movilidad Urbana Inteligente</p>
+    </footer>
+
+    <script>
+        async function updatePublicPortal() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+
+                // Topología
+                document.getElementById('pub-topology').innerText = `${data.topologia.toUpperCase()} • ${data.backend}`;
+
+                // Semáforo y Fase
+                const status = data.status || 'VERDE_NS';
+                const light = document.getElementById('pub-light');
+                const phaseName = document.getElementById('pub-phase-name');
+                const timeRem = document.getElementById('pub-time-remaining');
+
+                light.className = 'phase-light';
+                if (status.includes('VERDE')) {
+                    light.classList.add('green');
+                    phaseName.innerText = 'Luz Verde • Paso Permitido';
+                } else if (status.includes('AMARILLO')) {
+                    light.classList.add('yellow');
+                    phaseName.innerText = 'Luz Ámbar • Precaución';
+                } else {
+                    light.classList.add('red');
+                    phaseName.innerText = 'Luz Roja • Alto Total';
+                }
+
+                const rem = data.v2x && data.v2x.tiempo_restante_seg !== undefined ? data.v2x.tiempo_restante_seg : Math.max(0, data.fase_tiempo_asignado - data.fase_tiempo_transcurrido);
+                timeRem.innerText = Math.round(rem) + 's';
+
+                // V2X
+                if (data.v2x) {
+                    document.getElementById('pub-v2x-advice').innerText = data.v2x.aviso_conductor;
+                    document.getElementById('pub-v2x-speed').innerText = data.v2x.velocidad_recomendada_kmh > 0 ? `${data.v2x.velocidad_recomendada_kmh} km/h` : '0 km/h (Alto)';
+                }
+
+                // Sostenibilidad
+                if (data.sostenibilidad) {
+                    document.getElementById('pub-fuel-saved').innerText = `${data.sostenibilidad.combustible_ahorrado_litros.toFixed(2)} L`;
+                    document.getElementById('pub-co2-mitigated').innerText = `${data.sostenibilidad.co2_mitigado_kg.toFixed(2)} kg`;
+                    document.getElementById('pub-time-saved').innerText = `${data.sostenibilidad.minutos_espera_ahorrados.toFixed(1)} min`;
+                    document.getElementById('pub-flow-efficiency').innerText = `${Math.round(data.sostenibilidad.eficiencia_flujo_pct)}%`;
+                }
+
+                // Carriles
+                const laneContainer = document.getElementById('pub-lanes-container');
+                laneContainer.innerHTML = '';
+                let total = 0;
+                for (const [lane, count] of Object.entries(data.autos || {})) {
+                    total += count;
+                    laneContainer.innerHTML += `
+                        <div class="lane-box">
+                            <span class="lane-name">${lane.replace('_', ' ')}</span>
+                            <span class="lane-count">${count}</span>
+                        </div>
+                    `;
+                }
+                document.getElementById('pub-total-cars').innerText = `Total en Espera: ${total} veh.`;
+
+            } catch (e) {}
+        }
+
+        setInterval(updatePublicPortal, 1000);
+        updatePublicPortal();
+
+        // Auto-reconexión del stream
+        const streamImg = document.getElementById('pub-stream');
+        if (streamImg) {
+            streamImg.onerror = function() {
+                setTimeout(() => {
+                    streamImg.src = '/video_feed?t=' + Date.now();
+                }, 1500);
+            };
+        }
+    </script>
+</body>
+</html>
