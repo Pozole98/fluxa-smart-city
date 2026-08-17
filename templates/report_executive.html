@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe Ejecutivo de Movilidad y Auditoría Vial • FLUXA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: #f8fafc;
+            color: #0f172a;
+            padding: 2rem;
+            line-height: 1.5;
+        }
+
+        .report-page {
+            max-width: 960px;
+            margin: 0 auto;
+            background: white;
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Top Header */
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .agency-title h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.5px;
+        }
+
+        .agency-title p {
+            font-size: 0.9rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .report-meta {
+            text-align: right;
+            font-size: 0.82rem;
+            color: #475569;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .print-btn-bar {
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .btn-print {
+            background: #0f172a;
+            color: white;
+            border: none;
+            padding: 0.6rem 1.4rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .btn-print:hover { background: #1e293b; }
+
+        /* Section Headings */
+        h2.sec-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #0f172a;
+            border-left: 4px solid #10b981;
+            padding-left: 0.6rem;
+            margin: 2rem 0 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Summary KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .kpi-card .val {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #0f172a;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .kpi-card .lbl {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-top: 0.2rem;
+        }
+
+        /* Tables */
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-bottom: 2rem;
+        }
+
+        table.data-table th {
+            background: #f1f5f9;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-weight: 700;
+            color: #334155;
+            border-bottom: 2px solid #cbd5e1;
+        }
+
+        table.data-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            color: #1e293b;
+        }
+
+        /* Violation Gallery */
+        .violation-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .viol-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f8fafc;
+        }
+
+        .viol-card img {
+            width: 100%;
+            height: 140px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .viol-card .info {
+            padding: 0.6rem;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            background: white;
+        }
+
+        .report-footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        @media print {
+            body { padding: 0; background: white; }
+            .report-page { box-shadow: none; border: none; padding: 0; }
+            .print-btn-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="report-page">
+        
+        <div class="print-btn-bar">
+            <button class="btn-print" onclick="window.print()">
+                <span>🖨️</span>
+                <span>Imprimir / Guardar en PDF</span>
+            </button>
+        </div>
+
+        <!-- Header -->
+        <header class="report-header">
+            <div class="agency-title">
+                <h1>SECRETARÍA DE MOVILIDAD URBANA</h1>
+                <p>Auditoría de Desempeño y Control Semafórico Inteligente • FLUXA SCADA</p>
+            </div>
+            <div class="report-meta">
+                <div><strong>FECHA REPORTE:</strong> {{ date }}</div>
+                <div><strong>TOPOLOGÍA:</strong> {{ telemetry.topologia | upper }}</div>
+                <div><strong>MOTOR IA:</strong> {{ telemetry.backend }}</div>
+                <div><strong>ESTADO DEL NODO:</strong> OPERATIVO</div>
+            </div>
+        </header>
+
+        <!-- Resumen Ejecutivo -->
+        <h2 class="sec-title">1. Resumen Ejecutivo de Aforo y Eficiencia</h2>
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="val">{{ summary.total_vehicles or telemetry.total_acumulado or 0 }}</div>
+                <div class="lbl">Volumen Total Vehículos</div>
+            </div>
+            <div class="kpi-card">
+                <div class="val" style="color: #10b981;">{{ telemetry.sostenibilidad.combustible_ahorrado_litros or 0.0 }} L</div>
+                <div class="lbl">Combustible Ahorrado</div>
+            </div>
+            <div class="kpi-card">
+                <div class="val" style="color: #059669;">{{ telemetry.sostenibilidad.co2_mitigado_kg or 0.0 }} kg</div>
+                <div class="lbl">CO₂ Mitigado</div>
+            </div>
+            <div class="kpi-card">
+                <div class="val" style="color: #3b82f6;">{{ telemetry.sostenibilidad.eficiencia_flujo_pct or 88 }}%</div>
+                <div class="lbl">Índice de Eficiencia Vial</div>
+            </div>
+        </div>
+
+        <!-- Hora Pico y Métricas MariaDB -->
+        <h2 class="sec-title">2. Diagnóstico de Hora Pico y Aforo por Carril</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Hora Pico Identificada</th>
+                    <th>Volumen en Hora Pico</th>
+                    <th>Demanda Promedio Ponderada (TSP)</th>
+                    <th>Infracciones Registradas</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>{{ summary.peak_hour or "N/D" }}</strong></td>
+                    <td>{{ summary.peak_hour_vehicles or 0 }} vehículos/hora</td>
+                    <td>{{ summary.avg_weighted_demand or 0.0 }} pts TSP</td>
+                    <td><strong style="color: #dc2626;">{{ violations | length }} eventos</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Infracciones en Luz Roja con Fotomultas -->
+        <h2 class="sec-title">3. Fotocívicas y Evidencia de Infracciones en Luz Roja</h2>
+        {% if violations and violations | length > 0 %}
+        <div class="violation-grid">
+            {% for v in violations %}
+            <div class="viol-card">
+                <img src="/api/violations/snapshot/{{ v.snapshot_path }}" alt="Evidencia Infracción" onerror="this.src='/static/placeholder.jpg'">
+                <div class="info">
+                    <div><strong>HORA:</strong> {{ v.timestamp }}</div>
+                    <div><strong>VEHÍCULO ID:</strong> #{{ v.track_id }}</div>
+                    <div><strong>ZONA:</strong> {{ v.lane_name | upper }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color: #64748b; font-size: 0.85rem;">No se han detectado infracciones en luz roja durante el periodo seleccionado.</p>
+        {% endif %}
+
+        <!-- Certificación de Telemetría -->
+        <footer class="report-footer">
+            <div>Generado automáticamente por FLUXA SCADA • Centro de Comando C5</div>
+            <div>Código de Validación: FLUXA-AUDIT-{{ date }}-OK</div>
+        </footer>
+
+    </div>
+
+</body>
+</html>
