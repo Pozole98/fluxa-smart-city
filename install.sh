@@ -62,16 +62,19 @@ if [ -f /etc/os-release ]; then
     echo -e "${C_BLUE}ℹ️  Sistema Operativo:${C_RESET} ${NAME} (${DISTRO_ID})"
 fi
 
+# Crear estructura esencial de directorios
+mkdir -p "$SCRIPT_DIR/instance" "$SCRIPT_DIR/data/calibration_images" "$SCRIPT_DIR/logs/violations"
+
 # 4. Instalación Automática de Python, MariaDB y Librerías de Sistema
 echo -e "\n${C_YELLOW}📦 [1/6] Verificando e instalando Python 3, MariaDB y dependencias del sistema...${C_RESET}"
 
 if command -v dnf &>/dev/null; then
     echo -e "${C_CYAN}➡️  Instalando paquetes via DNF (Fedora/RHEL/CentOS)...${C_RESET}"
-    run_sudo dnf install -y python3 python3-pip python3-devel python3-tkinter mesa-libGL glib2 mariadb-server mariadb v4l-utils curl git udev
+    run_sudo dnf install -y python3 python3-pip python3-devel python3-tkinter mesa-libGL glib2 mariadb-server mariadb v4l-utils curl git udev openssl
 elif command -v apt-get &>/dev/null; then
     echo -e "${C_CYAN}➡️  Instalando paquetes via APT (Ubuntu/Debian/Armbian)...${C_RESET}"
     run_sudo apt-get update -y
-    run_sudo apt-get install -y python3 python3-pip python3-venv python3-dev python3-tk libgl1 libglib2.0-0 mariadb-server mariadb-client v4l-utils curl git udev
+    run_sudo apt-get install -y python3 python3-pip python3-venv python3-dev python3-tk libgl1 libglib2.0-0 mariadb-server mariadb-client v4l-utils curl git udev openssl
 else
     echo -e "${C_YELLOW}⚠️ Gestor de paquetes no estándar. Asegúrate de contar con Python 3.9+, MariaDB y OpenGL.${C_RESET}"
 fi
@@ -111,64 +114,103 @@ if grep -q "^video:" /etc/group; then run_sudo usermod -a -G video "$CURRENT_USE
 echo -e "${C_GREEN}✅ Hardware habilitado para uso inmediato sin necesidad de reiniciar la sesión.${C_RESET}"
 
 # 6. Creación y Despliegue del Entorno Virtual Aislado (.venv)
-echo -e "\n${C_YELLOW}🐍 [3/6] Preparando entorno virtual aislado de Python (.venv)...${C_RESET}"
+echo -e "\n${C_YELLOW}🐍 [3/6] Preparando entorno Python y librerías...${C_RESET}"
 cd "$SCRIPT_DIR"
 
 if [ ! -d ".venv" ]; then
-    python3 -m venv .venv
-    echo -e "${C_GREEN}✅ Entorno .venv creado.${C_RESET}"
-else
-    echo -e "${C_BLUE}ℹ️  Entorno .venv detectado.${C_RESET}"
+    python3 -m venv .venv 2>/dev/null || true
+fi
+
+PIP_CMD="$SCRIPT_DIR/.venv/bin/pip"
+PYTHON_CMD="$SCRIPT_DIR/.venv/bin/python3"
+
+if [ ! -f "$PIP_CMD" ]; then
+    PIP_CMD="pip3"
+    PYTHON_CMD="python3"
 fi
 
 # Actualizar herramientas de empaquetado
-"$SCRIPT_DIR/.venv/bin/pip" install --upgrade pip setuptools wheel --quiet
+if [ "$PIP_CMD" = "pip3" ]; then
+    pip3 install --upgrade pip setuptools wheel --break-system-packages --quiet 2>/dev/null || true
+    echo -e "${C_CYAN}➡️  Instalando dependencias de IA (PyTorch, YOLOv8, lapx, OpenCV, Flask, PyMySQL, pytest)...${C_RESET}"
+    pip3 install -r requirements.txt --break-system-packages --quiet
+else
+    "$PIP_CMD" install --upgrade pip setuptools wheel --quiet
+    echo -e "${C_CYAN}➡️  Instalando dependencias de IA (PyTorch, YOLOv8, lapx, OpenCV, Flask, PyMySQL, pytest)...${C_RESET}"
+    "$PIP_CMD" install -r requirements.txt --quiet
+fi
 
-echo -e "${C_CYAN}➡️  Instalando librerías de IA (PyTorch, YOLOv8, OpenCV, Flask, PyMySQL)...${C_RESET}"
-"$SCRIPT_DIR/.venv/bin/pip" install -r requirements.txt --quiet
+echo -e "${C_GREEN}✅ Dependencias de IA y tracking instaladas correctamente.${C_RESET}"
 
-echo -e "${C_GREEN}✅ Dependencias de IA instaladas correctamente.${C_RESET}"
-
-# 7. Configuración Automática y Despliegue de MariaDB
+# 7. Configuración Automática y Despliegue de MariaDB con Seguridad
 echo -e "\n${C_YELLOW}🗄️ [4/6] Desplegando e inicializando Base de Datos MariaDB...${C_RESET}"
+
+DB_PASS="${DATABASE_PASSWORD:-}"
+if [ -z "$DB_PASS" ]; then
+    # Generar contraseña segura aleatoria si no fue provista
+    DB_PASS=$(openssl rand -hex 12 2>/dev/null || echo "fluxa_db_pass_2026")
+fi
+
 if command -v systemctl &>/dev/null; then
     run_sudo systemctl enable mariadb || true
     run_sudo systemctl start mariadb || true
     
-    # Crear esquema y configurar credenciales
+    # Crear esquema y configurar usuario fluxa
     run_sudo mysql -e "CREATE DATABASE IF NOT EXISTS fluxa_traffic CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null || true
-    run_sudo mysql -e "CREATE USER IF NOT EXISTS 'root'@'localhost' IDENTIFIED BY 'theelderfallout99'; ALTER USER 'root'@'localhost' IDENTIFIED BY 'theelderfallout99'; GRANT ALL PRIVILEGES ON fluxa_traffic.* TO 'root'@'localhost'; FLUSH PRIVILEGES;" 2>/dev/null || true
-    run_sudo mysql -e "CREATE USER IF NOT EXISTS 'fluxa'@'localhost' IDENTIFIED BY 'theelderfallout99'; GRANT ALL PRIVILEGES ON fluxa_traffic.* TO 'fluxa'@'localhost'; FLUSH PRIVILEGES;" 2>/dev/null || true
+    run_sudo mysql -e "CREATE USER IF NOT EXISTS 'fluxa'@'localhost' IDENTIFIED BY '$DB_PASS'; ALTER USER 'fluxa'@'localhost' IDENTIFIED BY '$DB_PASS'; GRANT ALL PRIVILEGES ON fluxa_traffic.* TO 'fluxa'@'localhost'; FLUSH PRIVILEGES;" 2>/dev/null || true
     
-    echo -e "${C_GREEN}✅ Servidor MariaDB activo y base de datos 'fluxa_traffic' lista.${C_RESET}"
+    # Persistir en archivo .env local
+    ENV_FILE="$SCRIPT_DIR/.env"
+    if [ ! -f "$ENV_FILE" ]; then
+        echo "DATABASE_HOST=localhost" > "$ENV_FILE"
+        echo "DATABASE_USER=fluxa" >> "$ENV_FILE"
+        echo "DATABASE_PASSWORD=$DB_PASS" >> "$ENV_FILE"
+        echo "DATABASE_NAME=fluxa_traffic" >> "$ENV_FILE"
+        echo "DATABASE_PORT=3306" >> "$ENV_FILE"
+        chmod 600 "$ENV_FILE"
+    fi
+    
+    echo -e "${C_GREEN}✅ Servidor MariaDB activo y base de datos 'fluxa_traffic' lista con credenciales configuradas.${C_RESET}"
 fi
 
-# 7.1. Verificación e Instalación Automática de NPU en Orange Pi 5 (aarch64)
+# 7.1. Inicializar Credenciales de Administrador C5 si no existen
+if [ ! -f "$SCRIPT_DIR/instance/admin_credentials.json" ]; then
+    echo -e "\n${C_BLUE}🔐 Configurando credenciales iniciales de Administrador C5...${C_RESET}"
+    $PYTHON_CMD "$SCRIPT_DIR/scripts/set_admin_password.py" --username admin --password "admin1234" --force 2>/dev/null || true
+    echo -e "${C_GREEN}✅ Credenciales iniciales configuradas (Usuario: admin / Clave inicial: admin1234).${C_RESET}"
+fi
+
+# 7.2. Verificación e Instalación Automática de NPU en Orange Pi 5 (aarch64)
 if [ "$ARCH" = "aarch64" ]; then
     echo -e "\n${C_BLUE}🔍 Configurando soporte para NPU Rockchip RK3588 (rknn-toolkit-lite2)...${C_RESET}"
     
     # Obtener versión de Python en formato 310, 311, 312
-    PY_VER=$("$SCRIPT_DIR/.venv/bin/python3" -c "import sys; print(f'{sys.version_info.major}{sys.version_info.minor}')")
+    PY_VER=$($PYTHON_CMD -c "import sys; print(f'{sys.version_info.major}{sys.version_info.minor}')")
     TARGET_WHL="$SCRIPT_DIR/wheels/rknn_toolkit_lite2-2.3.2-cp${PY_VER}-cp${PY_VER}-manylinux_2_17_aarch64.manylinux2014_aarch64.whl"
+    
+    INSTALL_FLAG=""
+    if [ "$PIP_CMD" = "pip3" ]; then
+        INSTALL_FLAG="--break-system-packages"
+    fi
     
     if [ -f "$TARGET_WHL" ]; then
         echo -e "${C_CYAN}➡️  Instalando paquete oficial de Rockchip para Python ${PY_VER}: $(basename "$TARGET_WHL")...${C_RESET}"
-        "$SCRIPT_DIR/.venv/bin/pip" install "$TARGET_WHL" --quiet
+        $PIP_CMD install "$TARGET_WHL" $INSTALL_FLAG --quiet
     else
         # Búsqueda de respaldo en el sistema
         ALT_WHL=$(find "$SCRIPT_DIR" "$SCRIPT_DIR/.." /home /opt -name "*rknn_toolkit_lite2*cp${PY_VER}*aarch64.whl" 2>/dev/null | head -n 1 || true)
         if [ -n "$ALT_WHL" ] && [ -f "$ALT_WHL" ]; then
             echo -e "${C_CYAN}➡️  Instalando paquete alternativo: ${ALT_WHL}...${C_RESET}"
-            "$SCRIPT_DIR/.venv/bin/pip" install "$ALT_WHL" --quiet
+            $PIP_CMD install "$ALT_WHL" $INSTALL_FLAG --quiet
         else
             echo -e "${C_YELLOW}⬇️ Descargando wheel oficial de Rockchip para Python ${PY_VER}...${C_RESET}"
             WHL_URL="https://github.com/airockchip/rknn-toolkit2/raw/master/rknn-toolkit-lite2/packages/rknn_toolkit_lite2-2.3.2-cp${PY_VER}-cp${PY_VER}-manylinux_2_17_aarch64.manylinux2014_aarch64.whl"
-            curl -fsSL "$WHL_URL" -o "/tmp/rknn_auto.whl" 2>/dev/null && "$SCRIPT_DIR/.venv/bin/pip" install "/tmp/rknn_auto.whl" --quiet || true
+            curl -fsSL "$WHL_URL" -o "/tmp/rknn_auto.whl" 2>/dev/null && $PIP_CMD install "/tmp/rknn_auto.whl" $INSTALL_FLAG --quiet || true
         fi
     fi
 
     # Verificar que el módulo rknnlite cargue sin errores
-    if "$SCRIPT_DIR/.venv/bin/python3" -c "from rknnlite.api import RKNNLite" 2>/dev/null; then
+    if $PYTHON_CMD -c "from rknnlite.api import RKNNLite" 2>/dev/null; then
         echo -e "${C_GREEN}✅ Soporte de NPU Rockchip RK3588 (rknnlite) verificado y activo.${C_RESET}"
     else
         echo -e "${C_YELLOW}⚠️ Advertencia: rknnlite no pudo cargarse en este momento. El sistema usará el motor CPU de respaldo.${C_RESET}"
@@ -183,6 +225,11 @@ cat << 'EOF' > /tmp/fluxa_wrapper.sh
 #!/usr/bin/env bash
 SCRIPT_DIR_PATH="__INSTALL_DIR__"
 cd "$SCRIPT_DIR_PATH"
+if [ -f "$SCRIPT_DIR_PATH/.env" ]; then
+    set -a
+    . "$SCRIPT_DIR_PATH/.env"
+    set +a
+fi
 if [ -f "$SCRIPT_DIR_PATH/.venv/bin/python3" ]; then
     exec "$SCRIPT_DIR_PATH/.venv/bin/python3" "$SCRIPT_DIR_PATH/main.py" "$@"
 else
@@ -199,6 +246,11 @@ echo -e "${C_GREEN}✅ Comando 'fluxa' disponible globalmente.${C_RESET}"
 # 9. Configuración del Servicio Systemd de Gabinete
 echo -e "\n${C_YELLOW}⚙️  [6/6] Configurando servicio en segundo plano (Systemd)...${C_RESET}"
 
+BACKEND_DEFAULT="cpu"
+if [ "$ARCH" = "aarch64" ]; then
+    BACKEND_DEFAULT="rknn"
+fi
+
 SERVICE_FILE="/etc/systemd/system/fluxa.service"
 cat << EOF > /tmp/fluxa.service
 [Unit]
@@ -210,7 +262,8 @@ Wants=mariadb.service
 Type=simple
 User=${CURRENT_USER}
 WorkingDirectory=${SCRIPT_DIR}
-ExecStart=${SCRIPT_DIR}/.venv/bin/python3 ${SCRIPT_DIR}/main.py --topology 4_way --backend cpu --headless --video videos/13868586_1280_720_24fps.mp4 --port 5000
+EnvironmentFile=-${SCRIPT_DIR}/.env
+ExecStart=${SCRIPT_DIR}/.venv/bin/python3 ${SCRIPT_DIR}/main.py --topology 4_way --backend ${BACKEND_DEFAULT} --headless --port 5000
 Restart=always
 RestartSec=3
 StandardOutput=journal
@@ -221,11 +274,15 @@ Environment=PYTHONUNBUFFERED=1
 WantedBy=multi-user.target
 EOF
 
+if [ ! -f "$SCRIPT_DIR/.venv/bin/python3" ]; then
+    sed -i "s|${SCRIPT_DIR}/.venv/bin/python3|/usr/bin/python3|g" /tmp/fluxa.service
+fi
+
 run_sudo mv /tmp/fluxa.service "$SERVICE_FILE"
 run_sudo chmod 644 "$SERVICE_FILE"
 run_sudo systemctl daemon-reload
 
-echo -e "${C_GREEN}✅ Servicio systemd creado en ${SERVICE_FILE}.${C_RESET}"
+echo -e "${C_GREEN}✅ Servicio systemd creado en ${SERVICE_FILE} (Backend: ${BACKEND_DEFAULT}).${C_RESET}"
 
 # Resumen Final
 echo -e "\n${C_GREEN}${C_BOLD}"
@@ -249,7 +306,8 @@ echo -e "   Ver registros:       ${C_CYAN}journalctl -u fluxa -f${C_RESET}"
 
 echo -e "\n3️⃣  ${C_BOLD}Centros de Mando Web:${C_RESET}"
 echo -e "   Portal Ciudadano:    ${C_GREEN}http://localhost:5000${C_RESET}"
-echo -e "   Consola C5 SCADA:    ${C_GREEN}http://localhost:5000/admin${C_RESET} (admin / fluxa2026)"
+echo -e "   Consola C5 SCADA:    ${C_GREEN}http://localhost:5000/admin${C_RESET}"
+echo -e "   (Cambiar contraseña: ${C_CYAN}python3 scripts/set_admin_password.py${C_RESET})"
 
 echo -e "\n🗑️  ${C_BOLD}Desinstalación limpia:${C_RESET}"
 echo -e "   ${C_YELLOW}bash uninstall.sh${C_RESET}\n"

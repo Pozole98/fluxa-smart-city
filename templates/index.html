@@ -508,12 +508,15 @@
     </div>
 
     <!-- Banner de Alerta Crítica por Desconexión de Arduino (P2.4) -->
-    <div id="banner-arduino-disconnect" style="display: none; background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #fca5a5; padding: 0.75rem 1.2rem; border-radius: 8px; margin-bottom: 1.2rem; font-weight: 700; align-items: center; justify-content: space-between;">
+    <div id="banner-arduino-disconnect" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1.5px solid #ef4444; color: #fca5a5; padding: 0.65rem 1.2rem; border-radius: 8px; margin-bottom: 1.2rem; font-weight: 600; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem;">
         <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <span style="font-size: 1.3rem;">⚠️</span>
-            <span>Fallo crítico de comunicación con controlador físico (Arduino) — Semáforos en modo degradado (>30s)</span>
+            <span style="font-size: 1.2rem;">⚠️</span>
+            <span>Fallo de enlace con controlador físico (Arduino) — El sistema continúa en <strong>Modo Adaptativo por Visión Artificial</strong>.</span>
         </div>
-        <span style="font-size: 0.75rem; background: #ef4444; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase;">Hardware Desconectado</span>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 0.72rem; background: #ef4444; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase;">Sin Hardware</span>
+            <button id="btn-ignore-arduino" onclick="toggleIgnoreArduino()" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 0.25rem 0.65rem; border-radius: 4px; cursor: pointer; font-size: 0.72rem; transition: background 0.2s;">👁️ Ignorar / Modo Demo</button>
+        </div>
     </div>
 
     <!-- Toolbar for Advanced Modals -->
@@ -1047,6 +1050,13 @@
 
     <!-- JavaScript & Chart.js -->
     <script>
+        window.arduinoAlertIgnored = false;
+        function toggleIgnoreArduino() {
+            window.arduinoAlertIgnored = true;
+            const b = document.getElementById('banner-arduino-disconnect');
+            if (b) b.style.display = 'none';
+        }
+
         const colorPalette = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
         
         // Traffic Chart Setup
@@ -1113,10 +1123,10 @@
                     vidPanel.classList.remove('emergency-mode-active');
                 }
 
-                // Alerta Crítica de Arduino Desconectado (>30s) (P2.4)
+                // Alerta de Arduino Desconectado (>30s) (P2.4)
                 const ardBanner = document.getElementById('banner-arduino-disconnect');
                 if (ardBanner) {
-                    if (data.arduino && data.arduino.alerta_desconexion_prolongada) {
+                    if (!window.arduinoAlertIgnored && data.arduino && data.arduino.alerta_desconexion_prolongada) {
                         ardBanner.style.display = 'flex';
                     } else {
                         ardBanner.style.display = 'none';
