@@ -6,16 +6,29 @@ import cv2
 from core_semaforo import CoreSemaforoBase
 from utils import letterbox, postprocess
 
+import platform
+IS_AARCH64 = platform.machine().startswith('aarch64') or platform.machine().startswith('arm64')
+
 try:
     from rknnlite.api import RKNNLite
+    RKNN_AVAILABLE = True
 except ImportError:
-    # Para permitir pruebas de sintaxis y desarrollo en PC x86 (sin RKNNLite instalado)
+    RKNN_AVAILABLE = False
+    if IS_AARCH64:
+        print("\n" + "="*70)
+        print("❌ [ADVERTENCIA NPU] La librería 'rknnlite' no está instalada en este entorno.")
+        print("💡 Para habilitar la NPU Rockchip RK3588 en Orange Pi 5, ejecuta:")
+        py_ver = f"{sys.version_info.major}{sys.version_info.minor}"
+        print(f"   pip install wheels/rknn_toolkit_lite2-2.3.2-cp{py_ver}-cp{py_ver}-manylinux_2_17_aarch64.manylinux2014_aarch64.whl --break-system-packages")
+        print("="*70 + "\n")
+
+    # Clase de simulación solo para desarrollo en PC x86
     class RKNNLite:
         NPU_CORE_0_1_2 = 1
         def __init__(self, verbose=False): pass
         def load_rknn(self, path): return 0
         def init_runtime(self, core_mask): return 0
-        def inference(self, inputs): return [np.zeros((1, 84, 8400), dtype=np.float32)]
+        def inference(self, inputs, data_format=None): return [np.zeros((1, 84, 8400), dtype=np.float32)]
         def release(self): pass
 
 import threading
