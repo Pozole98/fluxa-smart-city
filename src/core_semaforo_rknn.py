@@ -15,7 +15,7 @@ except ImportError:
         def __init__(self, verbose=False): pass
         def load_rknn(self, path): return 0
         def init_runtime(self, core_mask): return 0
-        def inference(self, inputs): return [np.zeros((1, 8400, 4)), np.zeros((1, 8400, 80)), np.zeros((1, 8400, 80))]
+        def inference(self, inputs): return [np.zeros((1, 84, 8400), dtype=np.float32)]
         def release(self): pass
 
 class CoreSemaforoRKNN(CoreSemaforoBase):
@@ -64,22 +64,24 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
 
         outputs = self.rknn.inference(inputs=[img_input])
 
-        boxes, classes, scores = postprocess(
-            outputs, 
-            orig_shape, 
-            ratio, 
-            padding, 
-            self.CONF_THRESH, 
-            self.IOU_THRESH, 
-            self.CLASES_VEHICULOS
+        boxes, confs, classes = postprocess(
+            outputs=outputs, 
+            r=ratio, 
+            padding=padding, 
+            orig_shape=orig_shape, 
+            conf_threshold=self.CONF_THRESH, 
+            nms_threshold=self.IOU_THRESH
         )
 
         if len(boxes) > 0:
             dets = []
-            for b, c, s in zip(boxes, classes, scores):
+            for b, s, c in zip(boxes, confs, classes):
+                if self.CLASES_VEHICULOS and c not in self.CLASES_VEHICULOS:
+                    continue
                 x1, y1, x2, y2 = b
                 dets.append([x1, y1, x2, y2, s, c])
-            return np.array(dets)
+            if len(dets) > 0:
+                return np.array(dets)
         return None
 
     def stop(self):
