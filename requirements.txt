@@ -1,8 +1,9 @@
 # FLUXA - Requisitos del Sistema
 # Dependencias base para procesamiento de imagen, IA, telemetría y base de datos
 
-# Core IA y Visión por Computadora
+# Core IA, Visión por Computadora y Tracking
 ultralytics>=8.0.0
+lapx>=0.5.5
 opencv-python>=4.8.0
 numpy>=1.23.0
 torch>=2.0.0
