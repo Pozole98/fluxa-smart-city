@@ -31,6 +31,7 @@ except ImportError:
         def inference(self, inputs, data_format=None): return [np.zeros((1, 84, 8400), dtype=np.float32)]
         def release(self): pass
 
+import logging
 import threading
 import queue
 
@@ -85,37 +86,42 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
             frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
             input_data = np.expand_dims(frame_rgb, axis=0)
             
+            outputs = None
             try:
                 outputs = r_inst.inference(inputs=[input_data], data_format=['nhwc'])
             except Exception:
                 try:
                     outputs = r_inst.inference(inputs=[input_data])
-                except Exception:
+                except Exception as e:
+                    logging.warning(f"Error en worker {worker_idx}: {e}")
                     outputs = None
                     
-            if outputs:
-                boxes, confs, classes = postprocess(
-                    outputs=outputs,
-                    r=r,
-                    padding=padding,
-                    orig_shape=orig_shape,
-                    conf_threshold=self.CONF_THRESH,
-                    nms_threshold=self.IOU_THRESH
-                )
-                if len(boxes) > 0:
-                    dets = []
-                    for b, s, c in zip(boxes, confs, classes):
-                        if self.CLASES_VEHICULOS and c not in self.CLASES_VEHICULOS:
-                            continue
-                        dets.append([b[0], b[1], b[2], b[3], s, c])
-                    with self._dets_lock_m:
-                        if len(dets) > 0:
-                            self._latest_dets_m = np.array(dets, dtype=np.float32)
-                        else:
-                            self._latest_dets_m = np.empty((0, 6), dtype=np.float32)
-                else:
-                    with self._dets_lock_m:
-                        self._latest_dets_m = np.empty((0, 6), dtype=np.float32)
+            if outputs is not None and len(outputs) > 0:
+                try:
+                    boxes, confs, classes = postprocess(
+                        outputs=outputs,
+                        r=r,
+                        padding=padding,
+                        orig_shape=orig_shape,
+                        conf_threshold=self.CONF_THRESH,
+                        nms_threshold=self.IOU_THRESH
+                    )
+                    if len(boxes) > 0:
+                        dets = []
+                        for b, s, c in zip(boxes, confs, classes):
+                            if self.CLASES_VEHICULOS and c not in self.CLASES_VEHICULOS:
+                                continue
+                            dets.append([b[0], b[1], b[2], b[3], s, c])
+                        with self._dets_lock_m:
+                            if len(dets) > 0:
+                                self._latest_dets_m = np.array(dets, dtype=np.float32)
+                            else:
+                                self._latest_dets_m = None
+                    else:
+                        with self._dets_lock_m:
+                            self._latest_dets_m = None
+                except Exception as e:
+                    logging.warning(f"Error postprocess worker {worker_idx}: {e}")
             self._task_queue.task_done()
 
     def _init_model(self):
