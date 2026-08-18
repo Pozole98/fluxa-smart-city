@@ -1450,27 +1450,33 @@
                 const res = await fetch('/api/violations');
                 const data = await res.json();
                 const tbody = document.getElementById('violations-table-body');
-                document.getElementById('viol-badge').innerText = data.length || 0;
-                
-                if (data.length > 0) {
-                    tbody.innerHTML = '';
-                    data.forEach(v => {
-                        tbody.innerHTML += `
-                            <tr>
-                                <td>${v.timestamp}</td>
-                                <td><strong style="color: var(--accent);">${v.lane_name.toUpperCase()}</strong></td>
-                                <td>#${v.track_id}</td>
-                                <td><span style="color: var(--danger); font-weight: bold;">${v.phase_state}</span></td>
-                                <td>
-                                    <a href="/api/violations/snapshot/${v.snapshot_path}" target="_blank" style="color: var(--primary); text-decoration: none;">
-                                        📷 Ver Foto Evidencia
-                                    </a>
-                                </td>
-                            </tr>
-                        `;
-                    });
+                if (Array.isArray(data)) {
+                    document.getElementById('viol-badge').innerText = data.length || 0;
+                    
+                    if (data.length > 0 && tbody) {
+                        tbody.innerHTML = '';
+                        data.forEach(v => {
+                            const laneName = (v.lane_name || v.lane || 'CARRIL').toUpperCase();
+                            const snapLink = v.snapshot_path ? 
+                                `<a href="/api/violations/snapshot/${v.snapshot_path}" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: 600;">📷 Ver Evidencia</a>` :
+                                `<span style="color: var(--text-muted);">Sin foto</span>`;
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${v.timestamp || 'N/D'}</td>
+                                    <td><strong style="color: var(--accent);">${laneName}</strong></td>
+                                    <td>#${v.track_id || 'N/D'}</td>
+                                    <td><span style="color: var(--danger); font-weight: bold;">${v.phase_state || 'ROJO'}</span></td>
+                                    <td>${snapLink}</td>
+                                </tr>
+                            `;
+                        });
+                    } else if (tbody) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding: 1rem;">No hay infracciones registradas el día de hoy.</td></tr>';
+                    }
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.error("Error al obtener infracciones:", e);
+            }
         }
 
         async function updateTrafficChart() {

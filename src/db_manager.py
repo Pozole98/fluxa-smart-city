@@ -266,13 +266,14 @@ class DatabaseManager:
         except Exception as e:
             return {"error": str(e), "peak_hour": "N/D", "hourly_distribution": []}
 
-    def get_recent_violations(self, limit=25):
+    def get_recent_violations(self, limit=50):
         """Retorna las infracciones más recientes registradas en MariaDB"""
         try:
             conn = self._get_connection(use_db=True)
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT id, DATE_FORMAT(timestamp, '%%Y-%%m-%%d %%H:%%i:%%s') as timestamp, lane, track_id, phase_state, snapshot_path
+                    SELECT id, DATE_FORMAT(timestamp, '%%Y-%%m-%%d %%H:%%i:%%s') as timestamp, 
+                           lane, lane as lane_name, track_id, phase_state, snapshot_path
                     FROM red_light_violations
                     ORDER BY id DESC
                     LIMIT %s;
