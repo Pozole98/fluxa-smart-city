@@ -711,9 +711,10 @@ class CoreSemaforoBase:
         while self.running:
             is_connected = self.arduino is not None and getattr(self.arduino, 'is_open', False)
             if not is_connected:
-                # Notificación informativa de operación autónoma / demo si no hay Arduino
+                # Notificación informativa y bandera de operación autónoma / demo si no hay Arduino
                 tiempo_desconectado = time.time() - self.tiempo_desconexion_arduino
-                if tiempo_desconectado > 30.0:
+                if tiempo_desconectado > 5.0:
+                    self.alerta_desconexion_prolongada = True
                     if not self._alerta_desconexion_notificada:
                         self._alerta_desconexion_notificada = True
                         msg = "ℹ️ Modo Autónomo / Demostración: Operando sin controlador físico de semáforos (Arduino)."
