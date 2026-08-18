@@ -474,18 +474,47 @@ def list_available_models():
         candidates = [
             ("yolov8n.pt", "YOLOv8 Nano (Ultraligero - Máxima Velocidad, 3.2M params)"),
             ("yolov8s.pt", "YOLOv8 Small (Balanceado - 11.2M params)"),
-            ("yolov8m.pt", "YOLOv8 Medium (Alta Precisión - 25.9M params)")
+            ("yolov8m.pt", "YOLOv8 Medium (Alta Precisión - 25.9M params)"),
+            ("yolov8l.pt", "YOLOv8 Large (Red Pesada - 43.7M params)"),
+            ("yolov8x.pt", "YOLOv8 XLarge (Máxima Precisión - 68.2M params)")
         ]
         for c, desc in candidates:
-            found_models.append({"filename": c, "name": desc, "available": True})
-    else:
-        # RKNN
-        candidates = ["yolov8n.rknn", "yolov8s.rknn"]
-        for c in candidates:
             p1 = os.path.join(base_dir, c)
             p2 = os.path.join(base_dir, 'models', c)
-            desc = "NPU INT8 Cuantizado (RK3588 <12ms)" if "8n" in c else "NPU INT8 Mayor Resolución (RK3588)"
-            found_models.append({"filename": c, "name": f"YOLOv8 {c.replace('.rknn','').upper()} ({desc})", "available": os.path.exists(p1) or os.path.exists(p2)})
+            found_models.append({"filename": c, "name": desc, "available": os.path.exists(p1) or os.path.exists(p2) or True})
+    else:
+        # RKNN - Escaneo dinámico y descripciones profesionales para Orange Pi 5
+        known_descs = {
+            "yolov8n.rknn": "YOLOv8 Nano RKNN (NPU INT8 Ultraligero - ~3.4ms)",
+            "yolov8s.rknn": "YOLOv8 Small RKNN (NPU INT8 Balanceado - ~10-15ms)",
+            "yolov8m.rknn": "YOLOv8 Medium RKNN (NPU INT8 Alta Capacidad - ~25-35ms)",
+            "yolov8l.rknn": "YOLOv8 Large RKNN (NPU INT8 Alta Precisión)",
+            "yolov8x.rknn": "YOLOv8 XLarge RKNN (NPU INT8 Nivel Servidor Edge)"
+        }
+        
+        # Encontrar archivos .rknn en ./models y ./
+        rknn_files = set(["yolov8n.rknn", "yolov8s.rknn", "yolov8m.rknn"])
+        models_dir = os.path.join(base_dir, 'models')
+        if os.path.exists(models_dir):
+            for fn in os.listdir(models_dir):
+                if fn.endswith('.rknn'):
+                    rknn_files.add(fn)
+        for fn in os.listdir(base_dir):
+            if fn.endswith('.rknn'):
+                rknn_files.add(fn)
+                
+        preferred_order = ["yolov8n.rknn", "yolov8s.rknn", "yolov8m.rknn", "yolov8l.rknn", "yolov8x.rknn"]
+        all_rknn = sorted(list(rknn_files), key=lambda x: preferred_order.index(x) if x in preferred_order else 99)
+        
+        for c in all_rknn:
+            p1 = os.path.join(base_dir, c)
+            p2 = os.path.join(base_dir, 'models', c)
+            desc = known_descs.get(c, f"YOLOv8 {c.replace('.rknn','').upper()} RKNN (NPU Rockchip RK3588)")
+            found_models.append({
+                "filename": c, 
+                "name": desc, 
+                "available": os.path.exists(p1) or os.path.exists(p2)
+            })
 
     return jsonify({
         "backend": backend,
