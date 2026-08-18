@@ -76,30 +76,29 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
             if self.rknn is None:
                 return None
 
-            img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            orig_shape = img_rgb.shape
-            img_resized, ratio, padding = letterbox(img_rgb, new_shape=(640, 640))
-            img_input = np.expand_dims(img_resized, axis=0)
+            frame_resized, r, padding = letterbox(frame, new_shape=(640, 640))
+            frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+            input_data = np.expand_dims(frame_rgb, axis=0)
 
             try:
-                outputs = self.rknn.inference(inputs=[img_input], data_format=['nhwc'])
+                outputs = self.rknn.inference(inputs=[input_data], data_format=['nhwc'])
             except TypeError:
                 try:
-                    outputs = self.rknn.inference(inputs=[img_input], data_format='nhwc')
+                    outputs = self.rknn.inference(inputs=[input_data], data_format='nhwc')
                 except Exception:
-                    outputs = self.rknn.inference(inputs=[img_input])
+                    outputs = self.rknn.inference(inputs=[input_data])
             except Exception:
                 try:
-                    outputs = self.rknn.inference(inputs=[img_input])
+                    outputs = self.rknn.inference(inputs=[input_data])
                 except Exception as e:
                     logging.warning(f"Error en inferencia RKNN: {e}")
                     return None
 
         boxes, confs, classes = postprocess(
             outputs=outputs, 
-            r=ratio, 
+            r=r, 
             padding=padding, 
-            orig_shape=orig_shape, 
+            orig_shape=frame.shape, 
             conf_threshold=self.CONF_THRESH, 
             nms_threshold=self.IOU_THRESH
         )

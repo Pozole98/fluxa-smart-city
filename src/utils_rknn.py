@@ -83,6 +83,34 @@ def postprocess_multi_tensors(outputs, conf_threshold):
     
     return final_boxes, final_classes, final_scores
 
+def nms_fast(boxes, scores, iou_threshold):
+    """NMS vectorial en NumPy a prueba de fallos para cualquier formato de caja"""
+    if len(boxes) == 0:
+        return []
+    boxes = np.array(boxes, dtype=np.float32)
+    scores = np.array(scores, dtype=np.float32)
+    x1 = boxes[:, 0]
+    y1 = boxes[:, 1]
+    x2 = boxes[:, 0] + boxes[:, 2]
+    y2 = boxes[:, 1] + boxes[:, 3]
+    areas = np.maximum(0.0, x2 - x1) * np.maximum(0.0, y2 - y1)
+    order = scores.argsort()[::-1]
+    keep = []
+    while order.size > 0:
+        i = order[0]
+        keep.append(i)
+        xx1 = np.maximum(x1[i], x1[order[1:]])
+        yy1 = np.maximum(y1[i], y1[order[1:]])
+        xx2 = np.minimum(x2[i], x2[order[1:]])
+        yy2 = np.minimum(y2[i], y2[order[1:]])
+        w = np.maximum(0.0, xx2 - xx1)
+        h = np.maximum(0.0, yy2 - yy1)
+        inter = w * h
+        ovr = inter / (areas[i] + areas[order[1:]] - inter + 1e-6)
+        inds = np.where(ovr <= iou_threshold)[0]
+        order = order[inds + 1]
+    return keep
+
 def postprocess(outputs, r, padding, orig_shape, conf_threshold, nms_threshold):
     if outputs is None or len(outputs) == 0:
         return [], [], []
@@ -91,7 +119,7 @@ def postprocess(outputs, r, padding, orig_shape, conf_threshold, nms_threshold):
     confs_list = []
     class_ids_list = []
 
-    if len(outputs) in (6, 9):
+    if len(outputs) == 9:
         b, c, s = postprocess_multi_tensors(outputs, conf_threshold)
         for i in range(len(b)):
             x1, y1, x2, y2 = b[i]
@@ -132,13 +160,20 @@ def postprocess(outputs, r, padding, orig_shape, conf_threshold, nms_threshold):
         confs_list = filtered_confs.tolist()
         class_ids_list = filtered_class_ids.tolist()
 
-    indices = cv2.dnn.NMSBoxes(bboxes_list, confs_list, conf_threshold, nms_threshold)
+    try:
+        indices = cv2.dnn.NMSBoxes(bboxes_list, confs_list, conf_threshold, nms_threshold)
+        if indices is None or len(indices) == 0:
+            indices = nms_fast(bboxes_list, confs_list, nms_threshold)
+    except Exception:
+        indices = nms_fast(bboxes_list, confs_list, nms_threshold)
+
     final_boxes, final_confs, final_class_ids = [], [], []
     orig_h, orig_w = orig_shape[:2]
     dw, dh = padding
     if len(indices) > 0:
         for idx in indices:
-            if isinstance(idx, (list, np.ndarray)): idx = idx[0]
+            if isinstance(idx, (list, np.ndarray, tuple)): idx = idx[0]
+            idx = int(idx)
             bx, by, bw, bh = bboxes_list[idx]
             bx_orig, by_orig = (bx - dw) / r, (by - dh) / r
             bw_orig, bh_orig = bw / r, bh / r
