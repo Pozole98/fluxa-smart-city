@@ -244,24 +244,61 @@ CREATE TABLE IF NOT EXISTS traffic_violations (
 
 ---
 
-## 8. Despliegue en Producción (Systemd Daemon)
+## 8. Despliegue en Producción e Infraestructura
 
-Para que FLUXA inicie automáticamente al encender el gabinete vial sin login de usuario:
+FLUXA ofrece dos métodos de despliegue según el caso de uso y el hardware:
+
+### 8.1. Método 1: Instalador Universal Nativo (`install.sh`)
+Diseñado para operar directamente sobre hardware embebido (**Armbian 24.04 en Orange Pi 5 RK3588**) o en estaciones de trabajo y servidores (**Fedora, RHEL, Ubuntu, Debian x86_64**):
 
 ```bash
-cd yolov8_semaforo_advanced/systemd
-sudo chmod +x install_service.sh
-sudo ./install_service.sh
+cd yolov8_semaforo_advanced
+bash install.sh
 ```
 
-Comandos útiles de mantenimiento:
+#### ¿Qué hace el instalador automáticamente?
+1. **Detección de Arquitectura y Gestor de Paquetes:** Identifica `dnf` o `apt` y arquitectura `x86_64` o `aarch64`.
+2. **Aislamiento de Entorno (`.venv`):** Crea un entorno virtual dedicado con `python3-venv` para evitar conflictos con el Python del sistema operativo (evitando restricciones PEP 668 de Ubuntu 24.04).
+3. **Gestión de Permisos de Hardware:** Agrega al usuario a los grupos `dialout`, `uucp` y `video` para acceso a `/dev/ttyACM*` (Arduino) y `/dev/video*` (Cámaras) sin permisos de superusuario.
+4. **Soporte NPU Rockchip (Orange Pi 5):** Configura permisos de lectura y escritura para el dispositivo `/dev/rknpu`.
+5. **Servidor MariaDB:** Inicia el servicio local y crea la base de datos `fluxa_traffic` con sus respectivas tablas e índices.
+6. **Comando Global:** Instala `/usr/local/bin/fluxa` para ejecutar el semáforo desde cualquier terminal.
+7. **Servicio Systemd:** Registra `/etc/systemd/system/fluxa.service` para arranque automático con el gabinete vial.
+
+#### Comandos de Control Systemd
 ```bash
-# Ver estado del servicio
-sudo systemctl status fluxa.service
-
-# Ver logs en tiempo real
-journalctl -u fluxa.service -f
-
-# Reiniciar servicio
-sudo systemctl restart fluxa.service
+sudo systemctl start fluxa      # Iniciar servicio
+sudo systemctl stop fluxa       # Detener servicio
+sudo systemctl restart fluxa    # Reiniciar servicio
+journalctl -u fluxa -f          # Ver registros y telemetría en tiempo real
 ```
+
+#### Desinstalación Limpia
+```bash
+bash uninstall.sh
+```
+Elimina el servicio `systemd`, remueve el comando global `/usr/local/bin/fluxa` y permite purgar opcionalmente el `.venv` y la base de datos MariaDB.
+
+---
+
+### 8.2. Método 2: Despliegue en Contenedores (Docker / Podman)
+Diseñado para servidores de monitoreo central, salas de control C5 o pruebas rápidas sin alterar el sistema operativo anfitrión.
+
+```bash
+# Iniciar servicios con Podman o Docker
+docker compose up -d
+
+# Consultar logs de los contenedores
+docker compose logs -f
+```
+
+#### Variables de Entorno Soportadas
+| Variable | Descripción | Valor por Defecto |
+| :--- | :--- | :--- |
+| `DATABASE_HOST` | Host o IP del servidor MariaDB | `localhost` (o `fluxa-db` en Docker) |
+| `DATABASE_PORT` | Puerto de conexión MariaDB | `3306` |
+| `DATABASE_USER` | Usuario de base de datos | `root` |
+| `DATABASE_PASSWORD` | Contraseña de base de datos | `theelderfallout99` |
+| `DATABASE_NAME` | Nombre del esquema relacional | `fluxa_traffic` |
+| `FLUXA_SECRET_KEY` | Llave criptográfica para cookies de sesión | *Generada automáticamente* |
+

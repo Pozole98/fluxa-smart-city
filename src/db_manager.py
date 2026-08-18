@@ -13,11 +13,11 @@ class DatabaseManager:
     en base de datos nunca bloqueen el ciclo de procesamiento de IA ni bajen los FPS.
     """
     def __init__(self, host="localhost", user="root", password="theelderfallout99", db_name="fluxa_traffic", port=3306, enabled=True):
-        self.host = host
-        self.user = user
-        self.password = password
-        self.db_name = db_name
-        self.port = port
+        self.host = os.environ.get("DATABASE_HOST", host)
+        self.user = os.environ.get("DATABASE_USER", user)
+        self.password = os.environ.get("DATABASE_PASSWORD", password)
+        self.db_name = os.environ.get("DATABASE_NAME", db_name)
+        self.port = int(os.environ.get("DATABASE_PORT", port))
         self.enabled = enabled
         
         self.connected = False
