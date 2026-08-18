@@ -14,6 +14,10 @@ services:
       - "5000:5000"
     environment:
       - PYTHONUNBUFFERED=1
+      - DATABASE_HOST=fluxa-db
+      - DATABASE_USER=root
+      - DATABASE_PASSWORD=theelderfallout99
+      - DATABASE_NAME=fluxa_traffic
       - FLUXA_SECRET_KEY=fluxa_enterprise_secure_token_2026
     volumes:
       - ./logs:/app/logs
