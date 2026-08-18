@@ -82,9 +82,18 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
             img_input = np.expand_dims(img_resized, axis=0)
 
             try:
-                outputs = self.rknn.inference(inputs=[img_input])
+                outputs = self.rknn.inference(inputs=[img_input], data_format=['nhwc'])
+            except TypeError:
+                try:
+                    outputs = self.rknn.inference(inputs=[img_input], data_format='nhwc')
+                except Exception:
+                    outputs = self.rknn.inference(inputs=[img_input])
             except Exception:
-                return None
+                try:
+                    outputs = self.rknn.inference(inputs=[img_input])
+                except Exception as e:
+                    logging.warning(f"Error en inferencia RKNN: {e}")
+                    return None
 
         boxes, confs, classes = postprocess(
             outputs=outputs, 
@@ -103,7 +112,7 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
                 x1, y1, x2, y2 = b
                 dets.append([x1, y1, x2, y2, s, c])
             if len(dets) > 0:
-                return np.array(dets)
+                return np.array(dets, dtype=np.float32)
         return None
 
     def stop(self):

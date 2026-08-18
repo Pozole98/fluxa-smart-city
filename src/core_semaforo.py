@@ -948,11 +948,18 @@ class CoreSemaforoBase:
 
         overlay = frame.copy()
 
-        # Tracking
+        # Tracking & Detección Robusta
         t_track_start = time.time()
         if dets is not None and len(dets) > 0:
-            wrapper = DetectionsWrapper(dets)
-            tracked = self.tracker.update(wrapper)
+            try:
+                wrapper = DetectionsWrapper(dets)
+                tracked = self.tracker.update(wrapper)
+            except Exception as e:
+                # Fallback de seguridad: usar detecciones directas si BYTETracker falla
+                tracked = []
+                for i, d in enumerate(dets):
+                    x1, y1, x2, y2, s, c = d
+                    tracked.append([x1, y1, x2, y2, i + 1, s, c, i])
             self._procesar_tracking(tracked, frame, overlay)
         else:
             self.last_autos = {zona: 0 for zona in self.zonas_raw.keys()}
