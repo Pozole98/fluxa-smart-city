@@ -12,13 +12,24 @@ class DatabaseManager:
     Utiliza una cola en segundo plano (Worker Thread) para garantizar que las escrituras
     en base de datos nunca bloqueen el ciclo de procesamiento de IA ni bajen los FPS.
     """
-    def __init__(self, host="localhost", user="root", password="theelderfallout99", db_name="fluxa_traffic", port=3306, enabled=True):
+    def __init__(self, host="localhost", user="root", password=None, db_name="fluxa_traffic", port=3306, enabled=True):
         self.host = os.environ.get("DATABASE_HOST", host)
         self.user = os.environ.get("DATABASE_USER", user)
-        self.password = os.environ.get("DATABASE_PASSWORD", password)
         self.db_name = os.environ.get("DATABASE_NAME", db_name)
         self.port = int(os.environ.get("DATABASE_PORT", port))
         self.enabled = enabled
+        
+        # Resolución segura de contraseña (P0.1)
+        db_pass = os.environ.get("DATABASE_PASSWORD", password)
+        if self.enabled and (db_pass is None or db_pass == ""):
+            raise ValueError(
+                "\n❌ Error de configuración crítico en DatabaseManager:\n"
+                "   La contraseña de MariaDB no está definida.\n"
+                "💡 Solución:\n"
+                "   • Exporta la variable de entorno: export DATABASE_PASSWORD='<TU_CONTRASEÑA>'\n"
+                "   • O especifícala en tu archivo config.json / .env / docker-compose.yml.\n"
+            )
+        self.password = db_pass or ""
         
         self.connected = False
         self.write_queue = queue.Queue(maxsize=1000)

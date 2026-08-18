@@ -21,23 +21,106 @@
 
 ## 🌟 ¿Qué es FLUXA?
 
-**FLUXA** es una plataforma integral de movilidad urbana de grado industrial que sustituye los semáforos convencionales de tiempo fijo por una **red de semáforos autónomos adaptativos impulsados por Visión por Computadora e Inteligencia Artificial en el Borde (*Edge AI*)**.
+**FLUXA** es una plataforma de **Inteligencia y Orquestación Edge para Tráfico Urbano** diseñada para modernizar la infraestructura semafórica sin requerir la sustitución costosa de los gabinetes y cabezales existentes. 
 
-El sistema procesa video en tiempo real mediante **YOLOv8** y **BYTETracker** para cuantificar el tráfico carril por carril, prioriza automáticamente al transporte público masivo y vehículos de emergencia, detecta infracciones en luz roja con evidencia fotográfica y reduce drásticamente las emisiones contaminantes ($\text{CO}_2$) y el tiempo de espera ciudadano.
+FLUXA actúa como una **capa de decisión inteligente (*Overlay Controller*)** compatible con controladores estándar de la industria (NEMA TS2, Tipo 170/2070, o relevadores directos vía microcontrolador industrial/PLC):
+
+* 👁️ **Visión Artificial Edge (YOLOv8 + BYTETracker):** Cuantifica colas vehiculares carril por carril y monitorea peatones con latencias de inferencia de **< 12 ms** en NPU Rockchip RK3588 (Orange Pi 5) o CPU x86.
+* ⚖️ **Prioridad de Transporte Público (TSP) y Corredores de Emergencia C5:** Ajusta dinámicamente los tiempos de verde asignando mayor peso al transporte masivo y despejando la vía a ambulancias con **intervalos seguros de despeje vial (Ámbar + Todo-Rojo)**.
+* 🌿 **Sustentabilidad y Analítica V2X:** Reduce hasta un **60% el tiempo de ralentí vehicular**, mitigando emisiones de $\text{CO}_2$ y transmitiendo avisos de velocidad óptima (GLOSA) a vehículos conectados.
+* 📷 **Auditoría Forense de Fotomultas:** Captura fotográfica automática de cruces indebidos en fase roja con persistencia asíncrona en MariaDB.
 
 ```
                   ┌───────────────────────────────────────────────────────────┐
                   │                      SISTEMA FLUXA                        │
                   ├─────────────────────────────┬─────────────────────────────┤
-                  │     Semáforo Tradicional    │          FLUXA IA           │
+                  │     Semáforo Tradicional    │       FLUXA Edge AI         │
 ├─────────────────┼─────────────────────────────┼─────────────────────────────┤
 │ Asignación Fase │ 45s fijos (Calle vacía)     │ Dinámica (5s a 45s por cola)│
 │ Prioridad Bus   │ ❌ Ninguna                  │ ✅ TSP Automático (Peso 4x) │
 │ Huella de CO₂   │ 🔴 Alta por ralentí inútil  │ 🟢 Reducción de hasta el 60%│
-│ Emergencias C5  │ ❌ Manual o inexistente     │ 🚨 Corredor Verde Inmediato │
+│ Emergencias C5  │ ❌ Manual o inexistente     │ 🚨 Despeje Vial Seguro (C5) │
 │ Autos Conectados│ ❌ Desconectado             │ 📡 V2X Broadcast (SPaT)    │
-│ Calibración     │ ❌ Manual en gabinete       │ 🎨 Estudio Canvas con Ratón │
+│ Integración     │ ❌ Rígido                   │ 🔌 Capa Overlay (NEMA / MCU)│
 └─────────────────┴─────────────────────────────┴─────────────────────────────┘
+```
+
+---
+
+## 🏛️ Diagrama de Arquitectura del Sistema
+
+```mermaid
+flowchart TD
+    subgraph SENSORICA ["📷 CAPA DE CAPTURA & SENSORES (EDGE)"]
+        CAM["Cámara Vial / Flujo RTSP / Clip de Video"]
+        CALL_BTN["Botón Peatonal / Mando C5"]
+    end
+
+    subgraph PROCESAMIENTO ["⚡ NÚCLEO DE INTELIGENCIA ARTIFICIAL (ORANGE PI 5 / X86)"]
+        direction TB
+        PRE["Normalización y Preprocesamiento (640x640)"]
+        
+        subgraph INFERENCIA ["Motor de Inferencia Dual"]
+            RKNN["NPU RK3588 (INT8 - 3 Cores Tri-Core)"]
+            CPU_ENGINE["PyTorch YOLOv8 (CPU Fallback)"]
+        end
+        
+        POST["Postprocesamiento & NMS (Detección de Objetos)"]
+        TRACKER["BYTETracker (Seguimiento de IDs Únicos)"]
+        ROI["Filtro Espacial de ROIs Poligonales (Zonas)"]
+        TSP["Ponderación Matemática TSP (Transporte Público)"]
+    end
+
+    subgraph FSM_CORE ["🚦 MÁQUINA DE ESTADOS FINITOS & SEGURIDAD VIAL"]
+        direction TB
+        FSM["CoreSemaforoBase (FSM Adaptativa)"]
+        CLEARANCE["Protocolo de Despeje Vial (Ámbar + Todo-Rojo)"]
+        EMERGENCY["Controlador de Corredor de Emergencia"]
+        SUSTAIN["Motor de Métricas Sustentables & Comparativa A/B"]
+    end
+
+    subgraph HARDWARE_OUTPUT ["🔌 CONTROLADORES FÍSICOS EN CAMPO"]
+        ARDUINO["Arduino UNO R4 / PLC / Módulo de Relevadores"]
+        LIGHTS["Cabezales Semafóricos Físicos (Leds Calle)"]
+        CONTROLLER_EX["Controlador de Tráfico Existente (NEMA TS2 / 170 / 2070)"]
+    end
+
+    subgraph SERVICIOS ["🌐 SERVICIOS DE TELEMETRÍA, PERSISTENCIA & SCADA"]
+        direction TB
+        MARIADB[("MariaDB (Persistencia No Bloqueante en Cola Async)")]
+        FLASK_API["API REST & WebSockets (Flask-Limiter + CSRF)"]
+        SCADA["Centro de Mando C5 SCADA (/admin)"]
+        PUBLIC_PORTAL["Portal Ciudadano & GLOSA V2X (/)"]
+        VIOLATIONS["Módulo Forense de Fotomultas (Snapshots JPG)"]
+    end
+
+    %% Conexiones
+    CAM --> PRE
+    CALL_BTN --> FSM
+    PRE --> RKNN
+    PRE --> CPU_ENGINE
+    RKNN --> POST
+    CPU_ENGINE --> POST
+    POST --> TRACKER
+    TRACKER --> ROI
+    ROI --> TSP
+    TSP --> FSM
+    
+    FSM <--> CLEARANCE
+    FSM <--> EMERGENCY
+    FSM --> SUSTAIN
+    
+    FSM -->|"Comandos Seriales ('1' a '5')"| ARDUINO
+    ARDUINO --> LIGHTS
+    ARDUINO -.->|"Integración de Gabinete"| CONTROLLER_EX
+    
+    FSM -->|"Eventos y Telemetría"| FLASK_API
+    FSM -->|"Worker Queue (Queue)"| MARIADB
+    FSM -->|"Detección de Infracciones"| VIOLATIONS
+    
+    FLASK_API --> SCADA
+    FLASK_API --> PUBLIC_PORTAL
+    VIOLATIONS --> MARIADB
 ```
 
 ---
@@ -52,7 +135,7 @@ El sistema procesa video en tiempo real mediante **YOLOv8** y **BYTETracker** pa
   * Selector dinámico de variantes de YOLO (`yolov8n.pt`, `yolov8s.pt`, `yolov8m.pt`) y sliders de tiempos semafóricos con aplicación en caliente (*Hot-Reload*).
 * 🛡️ **Seguridad por Roles y Doble Interfaz Web:**
   * **Portal Ciudadano Público (`/`):** Streaming en vivo, semáforo con cuenta regresiva, métricas ecológicas y Asesor de Velocidad V2X (*GLOSA*).
-  * **Centro de Mando C5 SCADA (`/admin`):** Portal protegido por login (`admin` / `fluxa2026`) para control remoto, calibración de carriles y fotomultas.
+  * **Centro de Mando C5 SCADA (`/admin`):** Portal protegido por login con hash criptográfico (`admin` / Contraseña configurable con `scripts/set_admin_password.py`) para control remoto, calibración de carriles y fotomultas.
 * ⚖️ **Prioridad de Transporte Público (TSP):**
   * Ponderación matemática sin reentrenamiento: Autobuses ($4.0\times$), Camiones ($2.5\times$), Peatones ($1.5\times$), Autos ($1.0\times$).
 * 🚨 **Corredor Verde de Emergencia C5:**
@@ -134,14 +217,14 @@ journalctl -u fluxa -f          # Ver telemetría en tiempo real
 
 ---
 
-## 🌐 Especificación de Interfaces Web y Accesos
+## 🌐 Ecosistema de Portales y Acceso a la Red
 
-Una vez iniciado FLUXA, abre tu navegador en:
+Al iniciar FLUXA, la plataforma expone sus servicios en el puerto configurado (por defecto `5000`):
 
 | Portal | URL | Credenciales | Descripción |
 | :--- | :--- | :--- | :--- |
 | **Portal Ciudadano Público** | `http://localhost:5000/` | Libre | Semáforo en vivo, aforo, asesor de velocidad V2X y sustentabilidad. |
-| **Inicio de Sesión C5** | `http://localhost:5000/login` | `admin` / `fluxa2026` | Portal de autenticación con cifrado y diseño *glassmorphism*. |
+| **Inicio de Sesión C5** | `http://localhost:5000/login` | `admin` / `<TU_CONTRASEÑA>` | Portal de autenticación con hash seguro y protección *Rate-Limiting*. |
 | **Centro de Mando SCADA C5** | `http://localhost:5000/admin` | Requiere Login | Control remoto C5, Calibrador Canvas, Selector de Video y Fotomultas. |
 | **Informe Ejecutivo Oficial** | `http://localhost:5000/report/executive` | Requiere Login | Reporte de movilidad listo para imprimir o exportar a PDF (`Ctrl+P`). |
 | **Streaming MJPEG** | `http://localhost:5000/video_feed` | Libre | Flujo de video continuo con overlay de IA y HUD semafórico. |

@@ -12,11 +12,15 @@ torchvision>=0.15.0
 pyserial>=3.5
 Pillow>=9.5.0
 Flask>=3.0.0
+Flask-Limiter>=3.5.0
 psutil>=5.9.0
 
 # Base de Datos MariaDB / MySQL
 pymysql>=1.1.0
 cryptography>=41.0.0
+
+# Testing y Calidad de Código
+pytest>=7.4.0
 
 # Nota para aceleración NPU en Orange Pi 5 (RK3588):
 # Para ejecutar en NPU se requiere instalar rknn-toolkit-lite2 siguiendo la guía oficial de Rockchip.

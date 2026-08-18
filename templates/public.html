@@ -440,7 +440,14 @@
     <!-- Main Content -->
     <main class="content-container">
         
-        <!-- Left: Live Video and Signal Phase -->
+        <!-- Banner de Advertencia de Controlador Físico (P2.4) -->
+        <div id="pub-banner-arduino-disconnect" style="display: none; grid-column: 1 / -1; background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #fca5a5; padding: 0.75rem 1.2rem; border-radius: 8px; margin-bottom: 1.2rem; font-weight: 700; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 1.3rem;">⚠️</span>
+                <span>Aviso Ciudadano: Sistema operando en modo adaptativo por visión artificial (Controlador físico en reconexión).</span>
+            </div>
+            <span style="font-size: 0.75rem; background: #ef4444; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase;">Aviso de Operación</span>
+        </div>
         <div>
             <div class="panel-card">
                 <div class="panel-header">
@@ -547,7 +554,24 @@
                 const data = await res.json();
 
                 // Topología
-                document.getElementById('pub-topology').innerText = `${data.topologia.toUpperCase()} • ${data.backend}`;
+                if (data.ai_engine) {
+                    const ai = data.ai_engine;
+                    document.getElementById('pub-topology').innerHTML = ai.is_npu 
+                        ? `⚡ <strong>NPU RK3588</strong> • ${ai.model_file}` 
+                        : `🧠 <strong>CPU PyTorch</strong> • ${ai.model_file}`;
+                } else {
+                    document.getElementById('pub-topology').innerText = `${data.topologia.toUpperCase()} • ${data.backend}`;
+                }
+
+                // Aviso de desconexión física prolongada
+                const pubArdBanner = document.getElementById('pub-banner-arduino-disconnect');
+                if (pubArdBanner) {
+                    if (data.arduino && data.arduino.alerta_desconexion_prolongada) {
+                        pubArdBanner.style.display = 'flex';
+                    } else {
+                        pubArdBanner.style.display = 'none';
+                    }
+                }
 
                 // Semáforo y Fase
                 const status = data.status || 'VERDE_NS';
