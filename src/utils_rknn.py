@@ -111,8 +111,14 @@ def nms_fast(boxes, scores, iou_threshold):
         order = order[inds + 1]
     return keep
 
+_debug_counter = 0
+
 def postprocess(outputs, r, padding, orig_shape, conf_threshold, nms_threshold):
+    global _debug_counter
     if outputs is None or len(outputs) == 0:
+        if _debug_counter < 3:
+            print("🔍 [DEBUG RKNN] outputs es None o vacío.")
+            _debug_counter += 1
         return [], [], []
     
     bboxes_list = []
@@ -147,6 +153,10 @@ def postprocess(outputs, r, padding, orig_shape, conf_threshold, nms_threshold):
         class_ids = np.argmax(scores, axis=1)
         confidences = np.max(scores, axis=1)
         
+        if _debug_counter < 3:
+            print(f"🔍 [DEBUG RKNN] Tensor shape={output_t.shape} | Conf Máxima detectada={float(np.max(confidences)):.3f} | Umbral={conf_threshold}")
+            _debug_counter += 1
+            
         mask = confidences > conf_threshold
         filtered_boxes = boxes[mask]
         filtered_confs = confidences[mask]
