@@ -107,13 +107,6 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
                     logging.warning(f"Error en inferencia RKNN: {e}")
                     return None
 
-        if getattr(self, '_debug_raw_count', 0) < 3:
-            self._debug_raw_count = getattr(self, '_debug_raw_count', 0) + 1
-            if outputs and len(outputs) > 0:
-                print(f"📊 [NPU RAW] tensores={len(outputs)}, dtype={outputs[0].dtype}, shape={outputs[0].shape}, min={float(np.min(outputs[0])):.4f}, max={float(np.max(outputs[0])):.4f}")
-                flat = outputs[0].reshape(-1)
-                print(f"📊 [NPU SAMPLES] No-ceros: {np.count_nonzero(flat)} / {flat.size} | Primeros 8: {flat[:8]}")
-
         boxes, confs, classes = postprocess(
             outputs=outputs, 
             r=r, 
