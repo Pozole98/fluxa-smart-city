@@ -1242,10 +1242,19 @@ class CoreSemaforoBase:
         
         self.start()
         
+        _terminating = False
         def _sig_handler(sig, frame):
+            nonlocal _terminating
+            if _terminating:
+                print("\n⚡ Cierre forzado inmediato.")
+                os._exit(0)
+            _terminating = True
             print("\n🛑 Señal de terminación recibida. Deteniendo servicio FLUXA...")
-            self.stop()
-            sys.exit(0)
+            try:
+                self.stop()
+            except Exception:
+                pass
+            os._exit(0)
             
         signal.signal(signal.SIGINT, _sig_handler)
         signal.signal(signal.SIGTERM, _sig_handler)
@@ -1259,3 +1268,4 @@ class CoreSemaforoBase:
                     time.sleep(0.005)
         except KeyboardInterrupt:
             self.stop()
+            os._exit(0)
