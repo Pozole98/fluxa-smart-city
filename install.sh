@@ -143,20 +143,35 @@ if command -v systemctl &>/dev/null; then
     echo -e "${C_GREEN}✅ Servidor MariaDB activo y base de datos 'fluxa_traffic' lista.${C_RESET}"
 fi
 
-# 7.1. Verificación de NPU en Orange Pi 5 (aarch64)
+# 7.1. Verificación e Instalación Automática de NPU en Orange Pi 5 (aarch64)
 if [ "$ARCH" = "aarch64" ]; then
-    echo -e "\n${C_BLUE}🔍 Verificando soporte para NPU Rockchip RK3588 (rknn-toolkit-lite2)...${C_RESET}"
-    if "$SCRIPT_DIR/.venv/bin/python3" -c "import rknnlite" 2>/dev/null; then
-        echo -e "${C_GREEN}✅ Soporte de NPU RKNN Lite activo en Python.${C_RESET}"
+    echo -e "\n${C_BLUE}🔍 Configurando soporte para NPU Rockchip RK3588 (rknn-toolkit-lite2)...${C_RESET}"
+    
+    # Obtener versión de Python en formato 310, 311, 312
+    PY_VER=$("$SCRIPT_DIR/.venv/bin/python3" -c "import sys; print(f'{sys.version_info.major}{sys.version_info.minor}')")
+    TARGET_WHL="$SCRIPT_DIR/wheels/rknn_toolkit_lite2-2.3.2-cp${PY_VER}-cp${PY_VER}-manylinux_2_17_aarch64.manylinux2014_aarch64.whl"
+    
+    if [ -f "$TARGET_WHL" ]; then
+        echo -e "${C_CYAN}➡️  Instalando paquete oficial de Rockchip para Python ${PY_VER}: $(basename "$TARGET_WHL")...${C_RESET}"
+        "$SCRIPT_DIR/.venv/bin/pip" install "$TARGET_WHL" --quiet
     else
-        RKNN_WHL=$(find "$SCRIPT_DIR" "$SCRIPT_DIR/.." /home /opt -name "rknn_toolkit_lite2*.whl" 2>/dev/null | head -n 1 || true)
-        if [ -n "$RKNN_WHL" ] && [ -f "$RKNN_WHL" ]; then
-            echo -e "${C_CYAN}➡️  Instalando paquete RKNN Lite detectado: ${RKNN_WHL}...${C_RESET}"
-            "$SCRIPT_DIR/.venv/bin/pip" install "$RKNN_WHL" --quiet || true
+        # Búsqueda de respaldo en el sistema
+        ALT_WHL=$(find "$SCRIPT_DIR" "$SCRIPT_DIR/.." /home /opt -name "*rknn_toolkit_lite2*cp${PY_VER}*aarch64.whl" 2>/dev/null | head -n 1 || true)
+        if [ -n "$ALT_WHL" ] && [ -f "$ALT_WHL" ]; then
+            echo -e "${C_CYAN}➡️  Instalando paquete alternativo: ${ALT_WHL}...${C_RESET}"
+            "$SCRIPT_DIR/.venv/bin/pip" install "$ALT_WHL" --quiet
         else
-            echo -e "${C_YELLOW}💡 Nota para Orange Pi 5: Si deseas usar la NPU (--backend rknn), instala el wheel oficial:${C_RESET}"
-            echo -e "   ${C_CYAN}.venv/bin/pip install rknn_toolkit_lite2-*-cp311-cp311-linux_aarch64.whl${C_RESET}"
+            echo -e "${C_YELLOW}⬇️ Descargando wheel oficial de Rockchip para Python ${PY_VER}...${C_RESET}"
+            WHL_URL="https://github.com/airockchip/rknn-toolkit2/raw/master/rknn-toolkit-lite2/packages/rknn_toolkit_lite2-2.3.2-cp${PY_VER}-cp${PY_VER}-manylinux_2_17_aarch64.manylinux2014_aarch64.whl"
+            curl -fsSL "$WHL_URL" -o "/tmp/rknn_auto.whl" 2>/dev/null && "$SCRIPT_DIR/.venv/bin/pip" install "/tmp/rknn_auto.whl" --quiet || true
         fi
+    fi
+
+    # Verificar que el módulo rknnlite cargue sin errores
+    if "$SCRIPT_DIR/.venv/bin/python3" -c "from rknnlite.api import RKNNLite" 2>/dev/null; then
+        echo -e "${C_GREEN}✅ Soporte de NPU Rockchip RK3588 (rknnlite) verificado y activo.${C_RESET}"
+    else
+        echo -e "${C_YELLOW}⚠️ Advertencia: rknnlite no pudo cargarse en este momento. El sistema usará el motor CPU de respaldo.${C_RESET}"
     fi
 fi
 
