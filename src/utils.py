@@ -44,14 +44,17 @@ def box_process(position, img_size=(640, 640)):
     xyxy = np.concatenate((box_xy * stride, box_xy2 * stride), axis=1)
     return xyxy
 
-def postprocess_9tensors(outputs, conf_threshold):
+def postprocess_multi_tensors(outputs, conf_threshold):
     boxes, scores, classes_conf = [], [], []
     default_branch = 3
     pair_per_branch = len(outputs) // default_branch
     for i in range(default_branch):
         boxes.append(box_process(outputs[pair_per_branch * i]))
         classes_conf.append(outputs[pair_per_branch * i + 1])
-        scores.append(np.ones_like(outputs[pair_per_branch * i + 1][:, :1, :, :], dtype=np.float32))
+        if pair_per_branch == 3:
+            scores.append(outputs[pair_per_branch * i + 2])
+        else:
+            scores.append(np.ones_like(outputs[pair_per_branch * i + 1][:, :1, :, :], dtype=np.float32))
 
     def sp_flatten(_in):
         ch = _in.shape[1]
@@ -62,11 +65,19 @@ def postprocess_9tensors(outputs, conf_threshold):
     classes_conf = np.concatenate([sp_flatten(_v) for _v in classes_conf])
     scores = np.concatenate([sp_flatten(_v) for _v in scores])
 
+    # Aplicar sigmoid si son logits (valores fuera del rango [0, 1])
+    if np.min(classes_conf) < 0.0 or np.max(classes_conf) > 1.0:
+        classes_conf = 1.0 / (1.0 + np.exp(-np.clip(classes_conf, -20.0, 20.0)))
+        
+    if scores.size > 0 and (np.min(scores) < 0.0 or np.max(scores) > 1.0):
+        scores = 1.0 / (1.0 + np.exp(-np.clip(scores, -20.0, 20.0)))
+
     class_max_score = np.max(classes_conf, axis=-1)
     classes = np.argmax(classes_conf, axis=-1)
 
-    _class_pos = np.where(class_max_score * scores.reshape(-1) >= conf_threshold)
-    final_scores = (class_max_score * scores.reshape(-1))[_class_pos]
+    total_conf = class_max_score * scores.reshape(-1)
+    _class_pos = np.where(total_conf >= conf_threshold)
+    final_scores = total_conf[_class_pos]
     final_boxes = boxes[_class_pos]
     final_classes = classes[_class_pos]
     
@@ -80,8 +91,8 @@ def postprocess(outputs, r, padding, orig_shape, conf_threshold, nms_threshold):
     confs_list = []
     class_ids_list = []
 
-    if len(outputs) == 9:
-        b, c, s = postprocess_9tensors(outputs, conf_threshold)
+    if len(outputs) in (6, 9):
+        b, c, s = postprocess_multi_tensors(outputs, conf_threshold)
         for i in range(len(b)):
             x1, y1, x2, y2 = b[i]
             w = x2 - x1
@@ -101,6 +112,10 @@ def postprocess(outputs, r, padding, orig_shape, conf_threshold, nms_threshold):
             
         boxes = output_t[:, :4]
         scores = output_t[:, 4:]
+        
+        if np.min(scores) < 0.0 or np.max(scores) > 1.0:
+            scores = 1.0 / (1.0 + np.exp(-np.clip(scores, -20.0, 20.0)))
+            
         class_ids = np.argmax(scores, axis=1)
         confidences = np.max(scores, axis=1)
         
@@ -130,7 +145,8 @@ def postprocess(outputs, r, padding, orig_shape, conf_threshold, nms_threshold):
             x1, y1 = int(max(0, bx_orig)), int(max(0, by_orig))
             x2, y2 = int(min(orig_w, bx_orig + bw_orig)), int(min(orig_h, by_orig + bh_orig))
             final_boxes.append((x1, y1, x2, y2))
-            final_confs.append(confs_list[idx])
-            final_class_ids.append(class_ids_list[idx])
+            final_confs.append(float(confs_list[idx]))
+            final_class_ids.append(int(class_ids_list[idx]))
             
     return final_boxes, final_confs, final_class_ids
+
