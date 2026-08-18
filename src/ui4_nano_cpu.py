@@ -1,7 +1,14 @@
 import os
 import sys
-import tkinter as tk
-from tkinter import font, messagebox
+try:
+    import tkinter as tk
+    from tkinter import font, messagebox
+    TKINTER_AVAILABLE = True
+except ImportError:
+    tk = None
+    font = None
+    messagebox = None
+    TKINTER_AVAILABLE = False
 import cv2
 import serial
 import time
