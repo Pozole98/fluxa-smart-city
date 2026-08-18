@@ -155,9 +155,14 @@ if command -v systemctl &>/dev/null; then
     run_sudo systemctl enable mariadb || true
     run_sudo systemctl start mariadb || true
     
+    MYSQL_EXEC="mysql"
+    if ! command -v mysql &>/dev/null && command -v mariadb &>/dev/null; then
+        MYSQL_EXEC="mariadb"
+    fi
+    
     # Crear esquema y configurar usuario fluxa
-    run_sudo mysql -e "CREATE DATABASE IF NOT EXISTS fluxa_traffic CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null || true
-    run_sudo mysql -e "CREATE USER IF NOT EXISTS 'fluxa'@'localhost' IDENTIFIED BY '$DB_PASS'; ALTER USER 'fluxa'@'localhost' IDENTIFIED BY '$DB_PASS'; GRANT ALL PRIVILEGES ON fluxa_traffic.* TO 'fluxa'@'localhost'; FLUSH PRIVILEGES;" 2>/dev/null || true
+    run_sudo $MYSQL_EXEC -e "CREATE DATABASE IF NOT EXISTS fluxa_traffic CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null || true
+    run_sudo $MYSQL_EXEC -e "CREATE USER IF NOT EXISTS 'fluxa'@'localhost' IDENTIFIED BY '$DB_PASS'; ALTER USER 'fluxa'@'localhost' IDENTIFIED BY '$DB_PASS'; GRANT ALL PRIVILEGES ON fluxa_traffic.* TO 'fluxa'@'localhost'; FLUSH PRIVILEGES;" 2>/dev/null || true
     
     # Persistir en archivo .env local
     ENV_FILE="$SCRIPT_DIR/.env"
