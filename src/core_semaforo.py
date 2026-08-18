@@ -89,12 +89,15 @@ class CoreSemaforoBase:
         else:
             self.fuente_actual = self.config.get("system", {}).get("camera_source", self.config.get("system", {}).get("camera_index", 0))
         
-        # Telemetría de Arduino
+        # Telemetría de Arduino y Watchdog de Desconexión Prolongada (P2.4)
         self.arduino_port_actual = self.config.get("system", {}).get("serial_port", "/dev/ttyACM0")
         self.arduino_baud = self.config.get("system", {}).get("serial_baudrate", 9600)
         self.arduino_tx_count = 0
         self.arduino_reconnect_count = 0
         self.ultimo_comando = None
+        self.tiempo_desconexion_arduino = time.time()
+        self.alerta_desconexion_prolongada = False
+        self._alerta_desconexion_notificada = False
         
         # Cargar polígonos de la topología
         self.zonas_raw = self.config.get("zones", {}).get(self.topology_name, {})
@@ -178,6 +181,9 @@ class CoreSemaforoBase:
             (236, 72, 153)   # Rosa
         ]
         
+        # Configuración unificada de la Máquina de Estados (FSM)
+        self._configurar_topologia_fsm()
+
         # Inicializar Analytics Logger y Gestor MariaDB
         log_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
         self.logger = TrafficAnalyticsLogger(log_dir=log_dir, enabled=self.config.get("system", {}).get("log_analytics", True))
@@ -187,7 +193,7 @@ class CoreSemaforoBase:
         self.db = DatabaseManager(
             host=db_cfg.get("host", "localhost"),
             user=db_cfg.get("user", "root"),
-            password=db_cfg.get("password", "theelderfallout99"),
+            password=db_cfg.get("password", None),
             db_name=db_cfg.get("name", "fluxa_traffic"),
             port=db_cfg.get("port", 3306),
             enabled=db_cfg.get("enabled", True)
@@ -220,13 +226,311 @@ class CoreSemaforoBase:
         )
         self.tracker = BYTETracker(args)
 
+    def _configurar_topologia_fsm(self):
+        """Mapeo de zonas y características operativas según la topología activa (P1.2)"""
+        cfg_tl = self.config.get("traffic_light", {})
+        self.TIEMPO_BUFFER_EMERGENCIA = cfg_tl.get("tiempo_buffer_emergencia", 1.0)
+        self.has_phase_skipping = False
+        self.is_pedestrian = False
+        self.llamada_peatonal_manual = False
+        
+        self.fsm_commands = {
+            'VERDE_1': '1',
+            'AMARILLO_1': '2',
+            'ROJO_TODOS_1': '5',
+            'VERDE_2': '3',
+            'AMARILLO_2': '4',
+            'ROJO_TODOS_2': '5'
+        }
+
+        if self.topology_name == "4_way":
+            self.eje_1_zonas = ['norte', 'sur']
+            self.eje_2_zonas = ['este', 'oeste']
+            self.eje_1_aliases = {'1', 'A', 'NS', 'NORTE', 'SUR'}
+            self.eje_2_aliases = {'2', 'B', 'EO', 'ESTE', 'OESTE'}
+        elif self.topology_name == "2_way":
+            self.eje_1_zonas = ['zona_a']
+            self.eje_2_zonas = ['zona_b']
+            self.eje_1_aliases = {'1', 'A', 'ZONA_A', 'NS'}
+            self.eje_2_aliases = {'2', 'B', 'ZONA_B', 'EO'}
+        elif self.topology_name == "3_way_t":
+            self.eje_1_zonas = ['principal_izq', 'principal_der']
+            self.eje_2_zonas = ['secundaria']
+            self.eje_1_aliases = {'1', 'A', 'PRINCIPAL', 'NS'}
+            self.eje_2_aliases = {'2', 'B', 'SECUNDARIA', 'EO'}
+        elif self.topology_name == "4_way_protected":
+            self.eje_1_zonas = ['frente']
+            self.eje_2_zonas = ['giro_izq']
+            self.eje_1_aliases = {'1', 'A', 'FRENTE', 'NS'}
+            self.eje_2_aliases = {'2', 'B', 'GIRO', 'EO'}
+            self.has_phase_skipping = True
+        elif self.topology_name == "pedestrian":
+            self.eje_1_zonas = ['vehiculos']
+            self.eje_2_zonas = ['peatones_esperando']
+            self.eje_1_aliases = {'1', 'A', 'VEHICULOS', 'NS'}
+            self.eje_2_aliases = {'2', 'B', 'PEATONES', 'PEDESTRIAN', 'EO'}
+            self.is_pedestrian = True
+        else:
+            zonas_list = list(self.zonas_raw.keys())
+            mid = max(1, len(zonas_list) // 2)
+            self.eje_1_zonas = zonas_list[:mid]
+            self.eje_2_zonas = zonas_list[mid:]
+            self.eje_1_aliases = {'1', 'A', 'NS'}
+            self.eje_2_aliases = {'2', 'B', 'EO'}
+
+    def _calcular_demanda_eje(self, autos, zonas):
+        """Calcula la demanda consolidada considerando aforo instantáneo y demanda ponderada (TSP)"""
+        if not zonas:
+            return 0.0
+        val_max = 0.0
+        for z in zonas:
+            a = autos.get(z, 0)
+            p = self.last_demanda_ponderada.get(z, 0.0) if isinstance(self.last_demanda_ponderada, dict) else 0.0
+            val_max = max(val_max, float(a), float(p))
+        return val_max
+
+    def _resolver_eje_emergencia(self, eje_str):
+        """Resuelve si el eje solicitado corresponde al Eje 1 (1) o Eje 2 (2)"""
+        if not eje_str:
+            return 1
+        eje_norm = str(eje_str).strip().upper()
+        if eje_norm in self.eje_2_aliases:
+            return 2
+        return 1
+
+    def _cambiar_fase(self, target_generic):
+        """
+        Transición canónica de fase semafórica.
+        Mapea el identificador genérico al enum concreto de la topología activa.
+        """
+        if not hasattr(self, 'estado_actual') or self.estado_actual is None:
+            return
+            
+        enum_cls = self.estado_actual.__class__
+        target_name = None
+        
+        if self.topology_name == "4_way":
+            mapping = {
+                "VERDE_1": "VERDE_NS", "AMARILLO_1": "AMARILLO_NS", "ROJO_TODOS_1": "ROJO_TODOS_1",
+                "VERDE_2": "VERDE_EO", "AMARILLO_2": "AMARILLO_EO", "ROJO_TODOS_2": "ROJO_TODOS_2"
+            }
+            target_name = mapping.get(target_generic)
+        elif self.topology_name == "2_way":
+            mapping = {
+                "VERDE_1": "VERDE_A", "AMARILLO_1": "AMARILLO_A", "ROJO_TODOS_1": "ROJO_TODOS_1",
+                "VERDE_2": "VERDE_B", "AMARILLO_2": "AMARILLO_B", "ROJO_TODOS_2": "ROJO_TODOS_2"
+            }
+            target_name = mapping.get(target_generic)
+        elif self.topology_name == "3_way_t":
+            mapping = {
+                "VERDE_1": "VERDE_PRINCIPAL", "AMARILLO_1": "AMARILLO_PRINCIPAL", "ROJO_TODOS_1": "ROJO_TODOS_1",
+                "VERDE_2": "VERDE_SECUNDARIA", "AMARILLO_2": "AMARILLO_SECUNDARIA", "ROJO_TODOS_2": "ROJO_TODOS_2"
+            }
+            target_name = mapping.get(target_generic)
+        elif self.topology_name == "4_way_protected":
+            mapping = {
+                "VERDE_1": "VERDE_FRENTE", "AMARILLO_1": "AMARILLO_FRENTE", "ROJO_TODOS_1": "ROJO_TODOS_1",
+                "VERDE_2": "VERDE_GIRO", "AMARILLO_2": "AMARILLO_GIRO", "ROJO_TODOS_2": "ROJO_TODOS_2"
+            }
+            target_name = mapping.get(target_generic)
+        elif self.topology_name == "pedestrian":
+            mapping = {
+                "VERDE_1": "VERDE_VEHICULOS", "AMARILLO_1": "AMARILLO_VEHICULOS", "ROJO_TODOS_1": "ROJO_TODOS_1",
+                "VERDE_2": "VERDE_PEATONES", "AMARILLO_2": "AMARILLO_PEATONES", "ROJO_TODOS_2": "ROJO_TODOS_2"
+            }
+            target_name = mapping.get(target_generic)
+
+        if target_name and hasattr(enum_cls, target_name):
+            nuevo_estado = getattr(enum_cls, target_name)
+            if self.estado_actual != nuevo_estado:
+                self.estado_actual = nuevo_estado
+                self.tiempo_ultimo_cambio = time.time()
+
+    def _procesar_transicion_emergencia_segura(self, eje_dest, tiempo_transcurrido):
+        """
+        Transición de Emergencia Segura con Intervalo de Despeje Vial Obligatorio (P1.1 y P1.3).
+        
+        Fundamento de Seguridad Vial:
+        Bajo ninguna circunstancia normativa se debe retirar la luz verde a una vía en flujo sin
+        otorgar el intervalo de advertencia (Ámbar) y el despeje de intersección (Todo-Rojo).
+        Un corte abrupto genera riesgo inminente de colisión lateral o atropellamiento.
+        """
+        estado_str = self.estado_actual.name if hasattr(self.estado_actual, 'name') else str(self.estado_actual)
+        buffer_seguridad = max(1.0, float(self.TIEMPO_BUFFER_EMERGENCIA))
+
+        # --- REQUERIMIENTO: EJE 1 ---
+        if eje_dest == 1:
+            # 1.1 Ya estamos en Verde Eje 1 -> Mantener verde sostenido
+            if any(k in estado_str for k in ["VERDE_1", "VERDE_NS", "VERDE_A", "VERDE_PRINCIPAL", "VERDE_FRENTE", "VERDE_VEHICULOS"]):
+                self.enviar_comando(self.fsm_commands.get('VERDE_1', '1'))
+                self.fase_tiempo_asignado = 999.0
+                return
+
+            # 1.2 Estábamos en Verde Eje 2 -> Despeje seguro: Forzar Amarillo Eje 2
+            if any(k in estado_str for k in ["VERDE_2", "VERDE_EO", "VERDE_B", "VERDE_SECUNDARIA", "VERDE_GIRO", "VERDE_PEATONES"]):
+                self._cambiar_fase("AMARILLO_2")
+                self.enviar_comando(self.fsm_commands.get('AMARILLO_2', '4'))
+                self.fase_tiempo_asignado = self.TIEMPO_AMARILLO
+                return
+
+            # 1.3 Estábamos en Amarillo Eje 2 -> Permitir que termine el tiempo de ámbar
+            if any(k in estado_str for k in ["AMARILLO_2", "AMARILLO_EO", "AMARILLO_B", "AMARILLO_SECUNDARIA", "AMARILLO_GIRO", "AMARILLO_PEATONES"]):
+                self.enviar_comando(self.fsm_commands.get('AMARILLO_2', '4'))
+                self.fase_tiempo_asignado = self.TIEMPO_AMARILLO
+                if tiempo_transcurrido >= self.TIEMPO_AMARILLO:
+                    self._cambiar_fase("ROJO_TODOS_2")
+                    self.enviar_comando(self.fsm_commands.get('ROJO_TODOS_2', '5'))
+                    self.fase_tiempo_asignado = self.TIEMPO_ROJO_TODOS + buffer_seguridad
+                return
+
+            # 1.4 Estábamos en Amarillo Eje 1 (hacia rojo) -> Dejar pasar a Rojo Todos
+            if any(k in estado_str for k in ["AMARILLO_1", "AMARILLO_NS", "AMARILLO_A", "AMARILLO_PRINCIPAL", "AMARILLO_FRENTE", "AMARILLO_VEHICULOS"]):
+                self.enviar_comando(self.fsm_commands.get('AMARILLO_1', '2'))
+                self.fase_tiempo_asignado = self.TIEMPO_AMARILLO
+                if tiempo_transcurrido >= self.TIEMPO_AMARILLO:
+                    self._cambiar_fase("ROJO_TODOS_1")
+                    self.enviar_comando(self.fsm_commands.get('ROJO_TODOS_1', '5'))
+                return
+
+            # 1.5 Estábamos en Todo-Rojo -> Respetar buffer mínimo de seguridad antes de dar verde
+            if "ROJO_TODOS" in estado_str:
+                self.enviar_comando(self.fsm_commands.get('ROJO_TODOS_1', '5'))
+                self.fase_tiempo_asignado = buffer_seguridad
+                if tiempo_transcurrido >= buffer_seguridad:
+                    self._cambiar_fase("VERDE_1")
+                    self.enviar_comando(self.fsm_commands.get('VERDE_1', '1'))
+                return
+
+        # --- REQUERIMIENTO: EJE 2 ---
+        elif eje_dest == 2:
+            # 2.1 Ya estamos en Verde Eje 2 -> Mantener verde sostenido
+            if any(k in estado_str for k in ["VERDE_2", "VERDE_EO", "VERDE_B", "VERDE_SECUNDARIA", "VERDE_GIRO", "VERDE_PEATONES"]):
+                self.enviar_comando(self.fsm_commands.get('VERDE_2', '3'))
+                self.fase_tiempo_asignado = 999.0
+                return
+
+            # 2.2 Estábamos en Verde Eje 1 -> Despeje seguro: Forzar Amarillo Eje 1
+            if any(k in estado_str for k in ["VERDE_1", "VERDE_NS", "VERDE_A", "VERDE_PRINCIPAL", "VERDE_FRENTE", "VERDE_VEHICULOS"]):
+                self._cambiar_fase("AMARILLO_1")
+                self.enviar_comando(self.fsm_commands.get('AMARILLO_1', '2'))
+                self.fase_tiempo_asignado = self.TIEMPO_AMARILLO
+                return
+
+            # 2.3 Estábamos en Amarillo Eje 1 -> Permitir que termine el tiempo de ámbar
+            if any(k in estado_str for k in ["AMARILLO_1", "AMARILLO_NS", "AMARILLO_A", "AMARILLO_PRINCIPAL", "AMARILLO_FRENTE", "AMARILLO_VEHICULOS"]):
+                self.enviar_comando(self.fsm_commands.get('AMARILLO_1', '2'))
+                self.fase_tiempo_asignado = self.TIEMPO_AMARILLO
+                if tiempo_transcurrido >= self.TIEMPO_AMARILLO:
+                    self._cambiar_fase("ROJO_TODOS_1")
+                    self.enviar_comando(self.fsm_commands.get('ROJO_TODOS_1', '5'))
+                    self.fase_tiempo_asignado = self.TIEMPO_ROJO_TODOS + buffer_seguridad
+                return
+
+            # 2.4 Estábamos en Amarillo Eje 2 (hacia rojo) -> Dejar pasar a Rojo Todos
+            if any(k in estado_str for k in ["AMARILLO_2", "AMARILLO_EO", "AMARILLO_B", "AMARILLO_SECUNDARIA", "AMARILLO_GIRO", "AMARILLO_PEATONES"]):
+                self.enviar_comando(self.fsm_commands.get('AMARILLO_2', '4'))
+                self.fase_tiempo_asignado = self.TIEMPO_AMARILLO
+                if tiempo_transcurrido >= self.TIEMPO_AMARILLO:
+                    self._cambiar_fase("ROJO_TODOS_2")
+                    self.enviar_comando(self.fsm_commands.get('ROJO_TODOS_2', '5'))
+                return
+
+            # 2.5 Estábamos en Todo-Rojo -> Respetar buffer mínimo de seguridad antes de dar verde
+            if "ROJO_TODOS" in estado_str:
+                self.enviar_comando(self.fsm_commands.get('ROJO_TODOS_2', '5'))
+                self.fase_tiempo_asignado = buffer_seguridad
+                if tiempo_transcurrido >= buffer_seguridad:
+                    self._cambiar_fase("VERDE_2")
+                    self.enviar_comando(self.fsm_commands.get('VERDE_2', '3'))
+                return
+
+    def _procesar_logica_semaforo(self, autos, tiempo_minimo_actual):
+        """
+        Lógica unificada de la máquina de estados semafórica adaptativa (P1.2).
+        Calcula tiempos dinámicos, gestiona intervalos de despeje y transiciones seguras.
+        """
+        tiempo_transcurrido = time.time() - self.tiempo_ultimo_cambio
+        
+        # 1. Cálculo de aforo y demanda ponderada por eje
+        demanda_eje_1 = self._calcular_demanda_eje(autos, self.eje_1_zonas)
+        demanda_eje_2 = self._calcular_demanda_eje(autos, self.eje_2_zonas)
+        
+        autos_eje_1 = max([autos.get(z, 0) for z in self.eje_1_zonas] or [0])
+        autos_eje_2 = max([autos.get(z, 0) for z in self.eje_2_zonas] or [0])
+
+        factor = self.config.get("traffic_light", {}).get("factor_tiempo_por_auto", 3.0)
+
+        # 2. Gestión de Corredores de Emergencia Seguros
+        if self.emergencia_activa:
+            eje_dest = self._resolver_eje_emergencia(self.eje_emergencia)
+            self._procesar_transicion_emergencia_segura(eje_dest, tiempo_transcurrido)
+            return
+
+        estado_str = self.estado_actual.name if hasattr(self.estado_actual, 'name') else str(self.estado_actual)
+
+        # --- FASE 1: VERDE EJE 1 ---
+        if any(k in estado_str for k in ["VERDE_1", "VERDE_NS", "VERDE_A", "VERDE_PRINCIPAL", "VERDE_FRENTE", "VERDE_VEHICULOS"]):
+            self.enviar_comando(self.fsm_commands.get('VERDE_1', '1'))
+            self.fase_tiempo_asignado = min(self.TIEMPO_MAXIMO_VERDE, max(tiempo_minimo_actual, demanda_eje_1 * factor))
+            
+            hay_demanda_opuesta = (autos_eje_2 > 0 or demanda_eje_2 > 0) if not self.is_pedestrian else ((autos_eje_2 > 0 or demanda_eje_2 > 0) or getattr(self, 'llamada_peatonal_manual', False))
+            
+            if hay_demanda_opuesta and tiempo_transcurrido > tiempo_minimo_actual:
+                if autos_eje_1 == 0 or tiempo_transcurrido >= self.fase_tiempo_asignado:
+                    self._cambiar_fase("AMARILLO_1")
+                    if self.is_pedestrian:
+                        self.llamada_peatonal_manual = False
+
+        # --- FASE 1: AMARILLO EJE 1 ---
+        elif any(k in estado_str for k in ["AMARILLO_1", "AMARILLO_NS", "AMARILLO_A", "AMARILLO_PRINCIPAL", "AMARILLO_FRENTE", "AMARILLO_VEHICULOS"]):
+            self.enviar_comando(self.fsm_commands.get('AMARILLO_1', '2'))
+            self.fase_tiempo_asignado = self.TIEMPO_AMARILLO
+            if tiempo_transcurrido > self.TIEMPO_AMARILLO:
+                self._cambiar_fase("ROJO_TODOS_1")
+
+        # --- FASE INTERMEDIA: ROJO TODOS 1 ---
+        elif "ROJO_TODOS_1" in estado_str:
+            self.enviar_comando(self.fsm_commands.get('ROJO_TODOS_1', '5'))
+            self.fase_tiempo_asignado = self.TIEMPO_ROJO_TODOS
+            if tiempo_transcurrido > self.TIEMPO_ROJO_TODOS:
+                # Hook Phase-Skipping: Si no hay giro a la izquierda en 4_way_protected, saltar directo a VERDE_FRENTE
+                if self.has_phase_skipping and autos_eje_2 == 0 and demanda_eje_2 == 0:
+                    self._cambiar_fase("VERDE_1")
+                else:
+                    self._cambiar_fase("VERDE_2")
+
+        # --- FASE 2: VERDE EJE 2 ---
+        elif any(k in estado_str for k in ["VERDE_2", "VERDE_EO", "VERDE_B", "VERDE_SECUNDARIA", "VERDE_GIRO", "VERDE_PEATONES"]):
+            self.enviar_comando(self.fsm_commands.get('VERDE_2', '3'))
+            if self.is_pedestrian:
+                tiempo_cruce = max(10.0, demanda_eje_2 * 3.5)
+                self.fase_tiempo_asignado = min(25.0, tiempo_cruce)
+                if tiempo_transcurrido >= self.fase_tiempo_asignado:
+                    self._cambiar_fase("AMARILLO_2")
+            else:
+                self.fase_tiempo_asignado = min(self.TIEMPO_MAXIMO_VERDE, max(tiempo_minimo_actual, demanda_eje_2 * factor))
+                if (autos_eje_1 > 0 or demanda_eje_1 > 0) and tiempo_transcurrido > tiempo_minimo_actual:
+                    if autos_eje_2 == 0 or tiempo_transcurrido >= self.fase_tiempo_asignado:
+                        self._cambiar_fase("AMARILLO_2")
+
+        # --- FASE 2: AMARILLO EJE 2 ---
+        elif any(k in estado_str for k in ["AMARILLO_2", "AMARILLO_EO", "AMARILLO_B", "AMARILLO_SECUNDARIA", "AMARILLO_GIRO", "AMARILLO_PEATONES"]):
+            self.enviar_comando(self.fsm_commands.get('AMARILLO_2', '4'))
+            self.fase_tiempo_asignado = self.TIEMPO_AMARILLO
+            if tiempo_transcurrido > self.TIEMPO_AMARILLO:
+                self._cambiar_fase("ROJO_TODOS_2")
+
+        # --- FASE INTERMEDIA: ROJO TODOS 2 ---
+        elif "ROJO_TODOS_2" in estado_str:
+            self.enviar_comando(self.fsm_commands.get('ROJO_TODOS_2', '5'))
+            self.fase_tiempo_asignado = self.TIEMPO_ROJO_TODOS
+            if tiempo_transcurrido > self.TIEMPO_ROJO_TODOS:
+                self._cambiar_fase("VERDE_1")
+
     def _init_model(self):
         raise NotImplementedError
 
     def _predict(self, frame):
-        raise NotImplementedError
-
-    def _procesar_logica_semaforo(self, autos, tiempo_minimo_actual):
         raise NotImplementedError
 
     def _dibujar_interfaz_topologia(self, frame, autos):
@@ -404,7 +708,19 @@ class CoreSemaforoBase:
         ]
         
         while self.running:
-            if self.arduino is None or not self.arduino.is_open:
+            is_connected = self.arduino is not None and getattr(self.arduino, 'is_open', False)
+            if not is_connected:
+                # Monitoreo de desconexión prolongada (>30s) (P2.4)
+                tiempo_desconectado = time.time() - self.tiempo_desconexion_arduino
+                if tiempo_desconectado > 30.0:
+                    self.alerta_desconexion_prolongada = True
+                    if not self._alerta_desconexion_notificada:
+                        self._alerta_desconexion_notificada = True
+                        msg = f"⚠️ CRÍTICO: Controlador físico (Arduino) desconectado por más de {int(tiempo_desconectado)}s. Semáforos en modo degradado."
+                        self.api.log_event('CRITICAL', msg)
+                        self.db.log_event_async('CRITICAL', msg)
+                        logging.critical(msg)
+
                 connected = False
                 for port in ports_to_try:
                     try:
@@ -412,17 +728,33 @@ class CoreSemaforoBase:
                         time.sleep(2)
                         self.arduino.reset_input_buffer()
                         self.arduino_port_actual = port
-                        print(f"✅ Enlace serial con Arduino UNO R4 activo en {port}.")
-                        self.api.log_event('INFO', f"Arduino UNO R4 conectado en {port}")
-                        self.db.log_event_async('INFO', f"Arduino UNO R4 conectado en {port}")
                         connected = True
                         break
                     except Exception:
                         pass
                 
-                if not connected:
+                if connected:
+                    logging.info(f"✅ Enlace serial con Arduino UNO R4 activo en {self.arduino_port_actual}.")
+                    self.api.log_event('INFO', f"Controlador físico (Arduino UNO R4) reconectado en {self.arduino_port_actual}")
+                    self.db.log_event_async('INFO', f"Controlador físico (Arduino UNO R4) reconectado en {self.arduino_port_actual}")
+                    self.alerta_desconexion_prolongada = False
+                    self._alerta_desconexion_notificada = False
+                    self.tiempo_desconexion_arduino = time.time()
+                    
+                    # Reenviar de inmediato el estado actual de la máquina de estados
+                    if self.ultimo_comando:
+                        try:
+                            self.arduino.write(self.ultimo_comando.encode())
+                        except Exception:
+                            pass
+                else:
                     self.arduino_reconnect_count += 1
-            time.sleep(5)
+            else:
+                self.tiempo_desconexion_arduino = time.time()
+                self.alerta_desconexion_prolongada = False
+                self._alerta_desconexion_notificada = False
+
+            time.sleep(3)
 
     def stop(self):
         self.running = False
@@ -445,8 +777,9 @@ class CoreSemaforoBase:
                 self.arduino_tx_count += 1
                 self.api.log_event('ARDUINO', f"Comando '{comando}' enviado a semáforos")
             except serial.SerialException:
-                print("❌ Falla de comunicación Serial con Arduino R4. Reintentando...")
+                logging.warning("❌ Falla de comunicación Serial con Arduino R4. Iniciando watchdog de reconexión...")
                 self.api.log_event('WARN', "Desconexión de Arduino detectada. Iniciando watchdog...")
+                self.tiempo_desconexion_arduino = time.time()
                 try:
                     self.arduino.close()
                 except Exception:
@@ -719,12 +1052,13 @@ class CoreSemaforoBase:
         f_restante = max(0.0, self.fase_tiempo_asignado - f_transcurrido)
         
         arduino_info = {
-            "connected": self.arduino is not None and self.arduino.is_open,
+            "connected": self.arduino is not None and getattr(self.arduino, 'is_open', False),
             "port": self.arduino_port_actual,
             "baudrate": self.arduino_baud,
             "tx_count": self.arduino_tx_count,
             "last_command": self.ultimo_comando,
-            "reconnects": self.arduino_reconnect_count
+            "reconnects": self.arduino_reconnect_count,
+            "alerta_desconexion_prolongada": self.alerta_desconexion_prolongada
         }
         
         # Describir tipo de fuente activa
@@ -764,6 +1098,17 @@ class CoreSemaforoBase:
             "spat_timestamp": datetime.now().isoformat()
         }
         
+        # Paquete de Motor de IA y Acelerador de Hardware
+        model_file = self.config.get("ai_model", {}).get("model_file", "yolov8n.pt" if "CPU" in self.backend_name else "yolov8n.rknn")
+        is_npu = ("NPU" in self.backend_name or "RKNN" in self.backend_name)
+        ai_engine_info = {
+            "backend": self.backend_name,
+            "model_file": model_file,
+            "accelerator": "Rockchip RK3588 NPU (3 Núcleos, 6 TOPS)" if is_npu else "CPU Multi-Core (PyTorch / AVX2)",
+            "is_npu": is_npu,
+            "confidence_threshold": self.CONF_THRESH
+        }
+        
         self.api.update_state(
             topologia=self.topology_name,
             backend=self.backend_name,
@@ -781,7 +1126,8 @@ class CoreSemaforoBase:
             eje_emergencia=self.eje_emergencia,
             demanda_ponderada=self.last_demanda_ponderada,
             sostenibilidad=sostenibilidad_info,
-            v2x=v2x_info
+            v2x=v2x_info,
+            ai_engine=ai_engine_info
         )
 
         try:
@@ -871,7 +1217,9 @@ class CoreSemaforoBase:
         texto_estado = f"{estado_str} [{t_trans}s / {t_asig}s]"
         cv2.putText(frame, texto_estado, (32, int(hud_h * 0.65)), cv2.FONT_HERSHEY_SIMPLEX, 0.52, color_fase, 1)
         
-        cv2.putText(frame, f"MODO: {self.modo_actual}", (int(self.w * 0.48), int(hud_h * 0.65)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (148, 163, 184), 1)
+        model_file = self.config.get("ai_model", {}).get("model_file", "yolov8n.pt" if "CPU" in self.backend_name else "yolov8n.rknn")
+        engine_tag = f"⚡ {self.backend_name}: {model_file}" if ("NPU" in self.backend_name or "RKNN" in self.backend_name) else f"🧠 {self.backend_name}: {model_file}"
+        cv2.putText(frame, engine_tag, (int(self.w * 0.40), int(hud_h * 0.65)), cv2.FONT_HERSHEY_SIMPLEX, 0.44, (56, 189, 248), 1)
         
         total_ahora = sum(autos.values()) if isinstance(autos, dict) else 0
         demanda_total = sum(self.last_demanda_ponderada.values()) if isinstance(self.last_demanda_ponderada, dict) else 0.0

@@ -18,51 +18,73 @@ except ImportError:
         def inference(self, inputs): return [np.zeros((1, 84, 8400), dtype=np.float32)]
         def release(self): pass
 
+import threading
+
 class CoreSemaforoRKNN(CoreSemaforoBase):
     """
     Clase base para aceleración en NPU (Rockchip RK3588 en Orange Pi 5) mediante RKNN-Toolkit2 Lite.
     """
     def __init__(self, topology_name="4_way", port=None, video_source=None):
+        self._rknn_lock = threading.Lock()
+        self.rknn = None
         super().__init__(topology_name=topology_name, backend_name="NPU (RKNN)", port=port, video_source=video_source)
 
     def _init_model(self):
-        self.IOU_THRESH = self.config.get("ai_model", {}).get("iou_threshold", 0.45)
-        
-        model_name = self.config.get("ai_model", {}).get("model_file", "yolov8n.rknn")
-        if not model_name.endswith('.rknn'):
-            model_name = model_name.rsplit('.', 1)[0] + '.rknn'
+        with self._rknn_lock:
+            self.IOU_THRESH = self.config.get("ai_model", {}).get("iou_threshold", 0.45)
             
-        model_path = model_name
-        possible_paths = [
-            os.path.join(os.path.dirname(__file__), '..', 'models', model_name),
-            os.path.join('models', model_name),
-            os.path.join(os.path.dirname(__file__), '..', model_name),
-            model_name
-        ]
-        for p in possible_paths:
-            if os.path.exists(p):
-                model_path = p
-                break
+            model_name = self.config.get("ai_model", {}).get("model_file", "yolov8n.rknn")
+            if not model_name.endswith('.rknn'):
+                model_name = model_name.rsplit('.', 1)[0] + '.rknn'
+                
+            model_path = model_name
+            possible_paths = [
+                os.path.join(os.path.dirname(__file__), '..', 'models', model_name),
+                os.path.join('models', model_name),
+                os.path.join(os.path.dirname(__file__), '..', model_name),
+                model_name
+            ]
+            for p in possible_paths:
+                if os.path.exists(p):
+                    model_path = p
+                    break
 
-        print(f"📦 Cargando modelo RKNN en la NPU desde: {model_path}")
-        self.rknn = RKNNLite(verbose=False)
-        ret = self.rknn.load_rknn(model_path)
-        if ret != 0:
-            print("❌ Falla crítica al cargar el modelo RKNN.")
-            sys.exit(1)
+            print(f"📦 Cargando modelo RKNN en la NPU desde: {model_path}")
             
-        ret = self.rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0_1_2)
-        if ret != 0:
-            print("❌ Falla crítica inicializando el runtime de la NPU.")
-            sys.exit(1)
+            # Liberar contexto anterior si existe
+            if self.rknn is not None:
+                try:
+                    self.rknn.release()
+                except Exception:
+                    pass
+
+            new_rknn = RKNNLite(verbose=False)
+            ret = new_rknn.load_rknn(model_path)
+            if ret != 0:
+                print(f"❌ Falla crítica al cargar el modelo RKNN {model_path}.")
+                return
+                
+            ret = new_rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0_1_2)
+            if ret != 0:
+                print("❌ Falla crítica inicializando el runtime de la NPU.")
+                return
+
+            self.rknn = new_rknn
 
     def _predict(self, frame):
-        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        orig_shape = img_rgb.shape
-        img_resized, ratio, padding = letterbox(img_rgb, new_shape=(640, 640))
-        img_input = np.expand_dims(img_resized, axis=0)
+        with self._rknn_lock:
+            if self.rknn is None:
+                return None
 
-        outputs = self.rknn.inference(inputs=[img_input])
+            img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            orig_shape = img_rgb.shape
+            img_resized, ratio, padding = letterbox(img_rgb, new_shape=(640, 640))
+            img_input = np.expand_dims(img_resized, axis=0)
+
+            try:
+                outputs = self.rknn.inference(inputs=[img_input])
+            except Exception:
+                return None
 
         boxes, confs, classes = postprocess(
             outputs=outputs, 

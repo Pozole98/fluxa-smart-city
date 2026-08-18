@@ -7,7 +7,7 @@
 
 ## 1. Resumen Ejecutivo y Ficha Técnica
 
-FLUXA es un sistema industrial de control de tráfico adaptativo en tiempo real basado en **Visión por Computadora, Inteligencia Artificial en el Borde (*Edge AI*) y Microcontroladores**. El sistema sustituye los ciclos semafóricos tradicionales de tiempo fijo por un control dinámico basado en demanda vehicular ponderada (TSP), mitigación de emisiones contaminantes y prioridad de emergencias C5.
+FLUXA es una plataforma industrial de **Inteligencia y Orquestación Edge para Tráfico Urbano** basada en **Visión por Computadora, Inteligencia Artificial en el Borde (*Edge AI*) y Microcontroladores**. Diseñada como una capa inteligente (*Overlay Controller*) compatible con gabinetes y controladores normativos (NEMA TS2, 170/2070 o relevadores directos), moderniza intersecciones viales sin requerir reemplazos masivos de infraestructura física. El sistema sustituye los ciclos semafóricos tradicionales de tiempo fijo por un control dinámico basado en demanda vehicular ponderada (TSP), protocolos seguros de despeje vial (Ámbar + Todo-Rojo), mitigación de emisiones contaminantes y prioridad de emergencias C5.
 
 ### Ficha de Especificaciones del Sistema
 
@@ -19,9 +19,9 @@ FLUXA es un sistema industrial de control de tráfico adaptativo en tiempo real 
 | **Backend CPU de Respaldo** | PyTorch / TorchScript (x86_64, ARM64) |
 | **Latencia de Inferencia** | **< 12 ms** (NPU RK3588) / **~35-45 ms** (CPU moderna) |
 | **Tasa de Cuadros (FPS)** | 25 - 60 FPS continuos en Edge |
-| **Controlador de Potencia** | Arduino UNO R4 Minima (USB CDC ACM, 9600 baudios) con Watchdog Serial |
-| **Base de Datos** | MariaDB 10.11+ / MySQL 8.0+ con motor InnoDB |
-| **Servidor Web y Streaming** | Flask 3.x con hilos nativos, MJPEG Multipart y WebSockets/REST API |
+| **Controlador de Potencia** | Arduino UNO R4 Minima / Microcontrolador Industrial / PLC con Watchdog Serial |
+| **Base de Datos** | MariaDB 10.11+ / MySQL 8.0+ con motor InnoDB y persistencia asíncrona |
+| **Servidor Web y Streaming** | Flask 3.x con hilos nativos, MJPEG Multipart y Rate Limiting |
 | **Protocolo V2X** | SPaT (*Signal Phase and Timing*) y GLOSA (*Green Light Optimal Speed Advisory*) |
 
 ---
@@ -298,7 +298,7 @@ docker compose logs -f
 | `DATABASE_HOST` | Host o IP del servidor MariaDB | `localhost` (o `fluxa-db` en Docker) |
 | `DATABASE_PORT` | Puerto de conexión MariaDB | `3306` |
 | `DATABASE_USER` | Usuario de base de datos | `root` |
-| `DATABASE_PASSWORD` | Contraseña de base de datos | `theelderfallout99` |
+| `DATABASE_PASSWORD` | Contraseña de base de datos | `<TU_CONTRASEÑA_MARIADB>` |
 | `DATABASE_NAME` | Nombre del esquema relacional | `fluxa_traffic` |
 | `FLUXA_SECRET_KEY` | Llave criptográfica para cookies de sesión | *Generada automáticamente* |
 

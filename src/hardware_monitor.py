@@ -93,6 +93,72 @@ class HardwareMonitor:
                 pass
         return self.net_speed_kbps
 
+    def get_npu_metrics(self):
+        """
+        Lee métricas en tiempo real de la NPU Rockchip RK3588 (Orange Pi 5).
+        Retorna carga por núcleo (Core 0, Core 1, Core 2) y frecuencia en MHz si está disponible.
+        """
+        npu_info = {
+            "supported": False,
+            "cores_load": [],
+            "average_load": 0.0,
+            "freq_mhz": None,
+            "status_text": "No disponible (Modo CPU)"
+        }
+
+        # 1. Leer carga de los 3 núcleos de la NPU RK3588 en sysfs / debugfs
+        load_paths = [
+            "/sys/kernel/debug/rknpu/load",
+            "/sys/devices/platform/fdab0000.npu/devfreq/fdab0000.npu/load",
+            "/sys/class/devfreq/fdab0000.npu/load"
+        ]
+        for p in load_paths:
+            if os.path.exists(p):
+                try:
+                    with open(p, "r") as f:
+                        content = f.read().strip()
+                        import re
+                        matches = re.findall(r'(\d+)%', content)
+                        if matches:
+                            cores = [float(m) for m in matches]
+                            npu_info["supported"] = True
+                            npu_info["cores_load"] = cores
+                            npu_info["average_load"] = round(sum(cores) / len(cores), 1)
+                            npu_info["status_text"] = f"Activa (Carga Media: {npu_info['average_load']}%)"
+                            break
+                except Exception:
+                    pass
+
+        # 2. Leer frecuencia actual de la NPU
+        freq_paths = [
+            "/sys/class/devfreq/fdab0000.npu/cur_freq",
+            "/sys/devices/platform/fdab0000.npu/devfreq/fdab0000.npu/cur_freq",
+            "/sys/kernel/debug/rknpu/freq"
+        ]
+        for p in freq_paths:
+            if os.path.exists(p):
+                try:
+                    with open(p, "r") as f:
+                        raw = f.read().strip()
+                        val = float(raw)
+                        if val > 1000000:
+                            npu_info["freq_mhz"] = int(val / 1000000)
+                        elif val > 1000:
+                            npu_info["freq_mhz"] = int(val / 1000)
+                        else:
+                            npu_info["freq_mhz"] = int(val)
+                        npu_info["supported"] = True
+                        break
+                except Exception:
+                    pass
+
+        # 3. Si existe /dev/rknpu pero no debugfs, marcar como soportada
+        if not npu_info["supported"] and os.path.exists("/dev/rknpu"):
+            npu_info["supported"] = True
+            npu_info["status_text"] = "NPU RK3588 Detectada (Hardware Directo)"
+
+        return npu_info
+
     def get_metrics(self):
         """Obtiene el paquete completo de telemetría de hardware"""
         now = time.time()
@@ -123,6 +189,7 @@ class HardwareMonitor:
 
         temp_c = self.get_temperature()
         net_speed = self.get_net_speed()
+        npu_metrics = self.get_npu_metrics()
 
         return {
             "hostname": self.hostname,
@@ -137,5 +204,6 @@ class HardwareMonitor:
             "ram_total_mb": round(mem.total / (1024**2), 1),
             "ram_percent": mem.percent,
             "disk": disk_info,
-            "net_speed_kbps": net_speed
+            "net_speed_kbps": net_speed,
+            "npu": npu_metrics
         }

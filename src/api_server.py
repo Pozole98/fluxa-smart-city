@@ -9,7 +9,17 @@ import secrets
 from functools import wraps
 from datetime import datetime
 import cv2
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, jsonify, request, render_template, Response, send_file, send_from_directory, session, redirect, url_for
+
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    LIMITER_AVAILABLE = True
+except ImportError:
+    Limiter = None
+    get_remote_address = None
+    LIMITER_AVAILABLE = False
 
 from hardware_monitor import HardwareMonitor
 
@@ -20,15 +30,37 @@ log.setLevel(logging.ERROR)
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
 app.secret_key = os.environ.get("FLUXA_SECRET_KEY", secrets.token_hex(32))
 
+# Endurecimiento de cookies de sesión (P0.4)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=os.environ.get("FLUXA_ENV", "dev").lower() == "production"
+)
+
+# Rate Limiter (P0.3)
+if LIMITER_AVAILABLE and get_remote_address:
+    limiter = Limiter(
+        get_remote_address,
+        app=app,
+        default_limits=[],
+        storage_uri="memory://"
+    )
+else:
+    limiter = None
+
 # Instancia global de monitor de hardware
 hw_monitor = HardwareMonitor()
 cached_hw_metrics = {}
 
 # Directorios del sistema
 base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+instance_directory = os.path.join(base_dir, 'instance')
 log_directory = os.path.join(base_dir, 'logs')
 violations_directory = os.path.join(log_directory, 'violations')
 videos_directory = os.path.join(base_dir, 'videos')
+admin_creds_file = os.path.join(instance_directory, 'admin_credentials.json')
+
+os.makedirs(instance_directory, exist_ok=True)
 os.makedirs(violations_directory, exist_ok=True)
 os.makedirs(videos_directory, exist_ok=True)
 
@@ -108,14 +140,67 @@ def registrar_evento(tipo, mensaje):
         if len(eventos_sistema) > 100:
             eventos_sistema.pop(0)
 
+_login_failures = {}
+_login_lock = threading.Lock()
+
 def load_auth_config():
+    """
+    Carga la configuración de autenticación con hash seguro.
+    Si no existen credenciales configuradas, genera una contraseña aleatoria de 12 caracteres,
+    la almacena de forma segura en instance/admin_credentials.json con hash pbkdf2/sha256 y la muestra una única vez.
+    """
+    # 1. Prioridad: Archivo local protegido instance/admin_credentials.json
+    if os.path.exists(admin_creds_file):
+        try:
+            with open(admin_creds_file, 'r') as f:
+                creds = json.load(f)
+                if creds.get("admin_pass_hash") or creds.get("admin_pass"):
+                    return {
+                        "enabled": creds.get("enabled", True),
+                        "admin_user": creds.get("admin_user", "admin"),
+                        "admin_pass_hash": creds.get("admin_pass_hash"),
+                        "admin_pass": creds.get("admin_pass")
+                    }
+        except Exception:
+            pass
+
+    # 2. Configuración en config.json
     cfg_path = os.path.join(base_dir, 'config.json')
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path, 'r') as f:
+                cfg = json.load(f)
+                auth_cfg = cfg.get("auth", {})
+                if auth_cfg.get("admin_pass_hash") or auth_cfg.get("admin_pass"):
+                    return auth_cfg
+        except Exception:
+            pass
+
+    # 3. Generación automática y segura de credenciales en primer arranque
+    raw_pass = secrets.token_urlsafe(12)
+    pass_hash = generate_password_hash(raw_pass)
+    auto_creds = {
+        "enabled": True,
+        "admin_user": "admin",
+        "admin_pass_hash": pass_hash,
+        "generated_at": datetime.now().isoformat()
+    }
     try:
-        with open(cfg_path, 'r') as f:
-            cfg = json.load(f)
-            return cfg.get("auth", {"enabled": True, "admin_user": "admin", "admin_pass": "fluxa2026"})
-    except Exception:
-        return {"enabled": True, "admin_user": "admin", "admin_pass": "fluxa2026"}
+        with open(admin_creds_file, 'w') as f:
+            json.dump(auto_creds, f, indent=4)
+        os.chmod(admin_creds_file, 0o600)
+    except Exception as e:
+        print(f"⚠️ Error guardando credenciales seguras: {e}")
+
+    print("\n" + "=" * 72)
+    print("⚠️  FLUXA SEGURIDAD: Credenciales de Administrador C5 Generadas")
+    print("👤 Usuario:     admin")
+    print(f"🔑 Contraseña:  {raw_pass}")
+    print("ℹ️  Guarda esta contraseña de forma segura. No se volverá a mostrar en texto plano.")
+    print("💡 Para cambiarla: python3 scripts/set_admin_password.py")
+    print("=" * 72 + "\n")
+
+    return auto_creds
 
 def admin_required(f):
     @wraps(f)
@@ -175,22 +260,59 @@ def report_executive():
 
 @app.route('/api/auth/login', methods=['POST'])
 def api_login():
+    # Rate Limiting manual por IP (Defensa en profundidad)
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr) or '127.0.0.1'
+    now_ts = time.time()
+    with _login_lock:
+        attempts = [t for t in _login_failures.get(client_ip, []) if now_ts - t < 60]
+        _login_failures[client_ip] = attempts
+        if len(attempts) >= 5:
+            registrar_evento('CRITICAL', f"Bloqueo temporal por exceso de intentos de login desde IP: {client_ip}")
+            return jsonify({
+                "status": "error",
+                "error": "Demasiados intentos fallidos. Por favor espere 1 minuto antes de reintentar."
+            }), 429
+
     data = request.json or {}
     username = data.get("username", "").strip()
     password = data.get("password", "").strip()
     
     auth_cfg = load_auth_config()
     expected_user = auth_cfg.get("admin_user", "admin")
-    expected_pass = auth_cfg.get("admin_pass", "fluxa2026")
+    expected_hash = auth_cfg.get("admin_pass_hash")
+    expected_raw = auth_cfg.get("admin_pass")
     
-    if username == expected_user and password == expected_pass:
+    is_valid = False
+    if username == expected_user:
+        if expected_hash:
+            try:
+                is_valid = check_password_hash(expected_hash, password)
+            except Exception:
+                is_valid = False
+        elif expected_raw:
+            is_valid = (password == expected_raw)
+            # Auto-migración a hash seguro
+            if is_valid:
+                try:
+                    new_hash = generate_password_hash(password)
+                    with open(admin_creds_file, 'w') as f:
+                        json.dump({"enabled": True, "admin_user": username, "admin_pass_hash": new_hash}, f, indent=4)
+                    os.chmod(admin_creds_file, 0o600)
+                except Exception:
+                    pass
+
+    if is_valid:
+        with _login_lock:
+            _login_failures.pop(client_ip, None)
         session['is_admin'] = True
         session['user'] = username
         session['login_time'] = datetime.now().isoformat()
         registrar_evento('INFO', f"Operador '{username}' inició sesión en Centro de Mando C5")
         return jsonify({"status": "ok", "message": "Acceso concedido", "redirect": "/admin"})
     else:
-        registrar_evento('WARN', f"Intento fallido de inicio de sesión para usuario: '{username}'")
+        with _login_lock:
+            _login_failures.setdefault(client_ip, []).append(now_ts)
+        registrar_evento('WARN', f"Intento fallido de inicio de sesión para usuario: '{username}' desde {client_ip}")
         return jsonify({"status": "error", "error": "Credenciales inválidas. Verifique usuario y contraseña."}), 401
 
 @app.route('/api/auth/logout', methods=['POST', 'GET'])
@@ -559,9 +681,25 @@ def set_video_source():
         else:
             return jsonify({"error": msg}), 400
     else:
-        custom_path = data.get("path", "")
+        custom_path = str(data.get("path", "")).strip()
         if custom_path:
-            success, msg = change_source_callback_global(custom_path)
+            # 1. Si es índice numérico de cámara
+            if custom_path.isdigit():
+                cam_idx = int(custom_path)
+                success, msg = change_source_callback_global(cam_idx)
+            # 2. Si es flujo de red seguro (RTSP / HTTP / HTTPS)
+            elif custom_path.startswith(('rtsp://', 'http://', 'https://')):
+                success, msg = change_source_callback_global(custom_path)
+            # 3. Archivo local: Validación estricta de ruta (Defensa en profundidad contra Path Traversal)
+            else:
+                real_target = os.path.realpath(os.path.abspath(custom_path))
+                real_videos_dir = os.path.realpath(os.path.abspath(videos_directory))
+                if not (real_target == real_videos_dir or real_target.startswith(real_videos_dir + os.sep)) or not os.path.exists(real_target):
+                    return jsonify({
+                        "error": "Acceso denegado: Por seguridad, solo se permiten fuentes dentro del directorio videos/ o flujos de red (RTSP/HTTP)."
+                    }), 403
+                success, msg = change_source_callback_global(real_target)
+                
             if success:
                 registrar_evento('INFO', f"Entrada de video conmutada a: {custom_path}")
                 return jsonify({"status": "ok", "message": msg})
@@ -717,7 +855,7 @@ class TelemetryAPI:
     def update_state(self, topologia, backend, status_msg, autos_dict, autos_acumulados, fps, modo, 
                      arduino_info, camara_info, latencias, f_transcurrido=0, f_asignado=0,
                      emergencia_activa=False, eje_emergencia=None, demanda_ponderada=None,
-                     sostenibilidad=None, v2x=None):
+                     sostenibilidad=None, v2x=None, ai_engine=None):
         if not self.enabled:
             return
             
@@ -733,6 +871,8 @@ class TelemetryAPI:
             estado_global["sostenibilidad"] = sostenibilidad.copy()
         if v2x is not None:
             estado_global["v2x"] = v2x.copy()
+        if ai_engine is not None:
+            estado_global["ai_engine"] = ai_engine.copy()
         estado_global["fps"] = round(fps, 1)
         estado_global["modo"] = modo
         estado_global["emergencia_activa"] = emergencia_activa

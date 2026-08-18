@@ -31,3 +31,13 @@ fluxa_cookies.txt
 # Snapshots de violaciones (mantener carpeta con .gitkeep)
 logs/violations/*.jpg
 logs/*.csv
+
+# Configuración y credenciales locales seguras (P0.1)
+instance/
+config.json
+.env
+.env.*
+
+# Cuadros temporales de calibración RKNN
+data/calibration_images/*.jpg
+

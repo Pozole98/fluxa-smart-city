@@ -484,7 +484,8 @@
     <div class="header">
         <div class="title-box">
             <h1>FLUXA COMMAND</h1>
-            <span class="badge-edge" id="badge-topology">4_WAY • CPU</span>
+            <span class="badge-edge" id="badge-topology">4_WAY</span>
+            <span class="badge-edge" id="badge-ai-model" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #10b981;">⚡ IA: NPU (RKNN)</span>
         </div>
         <div class="sys-info-bar">
             <div class="info-pill user-pill">
@@ -504,6 +505,15 @@
             </div>
             <a href="/api/auth/logout" class="btn-logout">🚪 Cerrar Sesión</a>
         </div>
+    </div>
+
+    <!-- Banner de Alerta Crítica por Desconexión de Arduino (P2.4) -->
+    <div id="banner-arduino-disconnect" style="display: none; background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #fca5a5; padding: 0.75rem 1.2rem; border-radius: 8px; margin-bottom: 1.2rem; font-weight: 700; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 1.3rem;">⚠️</span>
+            <span>Fallo crítico de comunicación con controlador físico (Arduino) — Semáforos en modo degradado (>30s)</span>
+        </div>
+        <span style="font-size: 0.75rem; background: #ef4444; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase;">Hardware Desconectado</span>
     </div>
 
     <!-- Toolbar for Advanced Modals -->
@@ -629,6 +639,31 @@
                         <div class="title"><span>DISCO RAÍZ</span> <span>💽</span></div>
                         <div class="val" id="hw-disk">0%</div>
                         <div class="sub" id="hw-disk-gb">0 GB libres</div>
+                    </div>
+                </div>
+
+                <!-- NPU RK3588 Acceleration Card (Orange Pi 5) -->
+                <div class="hw-npu-card" id="card-npu-telemetry" style="margin-top: 0.8rem; padding: 0.75rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #10b981; display: flex; align-items: center; gap: 0.4rem;">
+                            <span>⚡</span> <span id="npu-title-text">NPU Rockchip RK3588 (6 TOPS)</span>
+                        </span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted); font-family: 'JetBrains Mono';" id="npu-freq-val">Frecuencia Auto</span>
+                    </div>
+                    <!-- NPU Cores Load Bars -->
+                    <div id="npu-cores-container" style="display: flex; gap: 0.4rem;">
+                        <div style="flex: 1; background: rgba(0,0,0,0.4); padding: 0.35rem; border-radius: 4px; text-align: center;">
+                            <div style="font-size: 0.62rem; color: var(--text-muted);">NPU Núcleo 0</div>
+                            <div style="font-size: 0.85rem; font-weight: 800; color: white;" id="npu-c0-load">0%</div>
+                        </div>
+                        <div style="flex: 1; background: rgba(0,0,0,0.4); padding: 0.35rem; border-radius: 4px; text-align: center;">
+                            <div style="font-size: 0.62rem; color: var(--text-muted);">NPU Núcleo 1</div>
+                            <div style="font-size: 0.85rem; font-weight: 800; color: white;" id="npu-c1-load">0%</div>
+                        </div>
+                        <div style="flex: 1; background: rgba(0,0,0,0.4); padding: 0.35rem; border-radius: 4px; text-align: center;">
+                            <div style="font-size: 0.62rem; color: var(--text-muted);">NPU Núcleo 2</div>
+                            <div style="font-size: 0.85rem; font-weight: 800; color: white;" id="npu-c2-load">0%</div>
+                        </div>
                     </div>
                 </div>
 
@@ -1078,6 +1113,16 @@
                     vidPanel.classList.remove('emergency-mode-active');
                 }
 
+                // Alerta Crítica de Arduino Desconectado (>30s) (P2.4)
+                const ardBanner = document.getElementById('banner-arduino-disconnect');
+                if (ardBanner) {
+                    if (data.arduino && data.arduino.alerta_desconexion_prolongada) {
+                        ardBanner.style.display = 'flex';
+                    } else {
+                        ardBanner.style.display = 'none';
+                    }
+                }
+
                 // Progress Bar
                 document.getElementById('phase-time').innerText = Math.floor(data.fase_tiempo_transcurrido) + 's';
                 document.getElementById('phase-target').innerText = Math.floor(data.fase_tiempo_asignado) + 's';
@@ -1152,6 +1197,46 @@
                     if (hw.disk) {
                         document.getElementById('hw-disk').innerText = `${hw.disk.percent}%`;
                         document.getElementById('hw-disk-gb').innerText = `${hw.disk.free_gb} GB libres`;
+                    }
+
+                    // Telemetría NPU Rockchip RK3588 (Orange Pi 5)
+                    const npuCard = document.getElementById('card-npu-telemetry');
+                    if (npuCard) {
+                        if (hw.npu && hw.npu.supported && hw.npu.cores_load && hw.npu.cores_load.length >= 3) {
+                            npuCard.style.display = 'block';
+                            document.getElementById('npu-c0-load').innerText = `${hw.npu.cores_load[0]}%`;
+                            document.getElementById('npu-c1-load').innerText = `${hw.npu.cores_load[1]}%`;
+                            document.getElementById('npu-c2-load').innerText = `${hw.npu.cores_load[2]}%`;
+                            document.getElementById('npu-freq-val').innerText = hw.npu.freq_mhz ? `${hw.npu.freq_mhz} MHz` : '1000 MHz';
+                        } else if (data.ai_engine && data.ai_engine.is_npu) {
+                            npuCard.style.display = 'block';
+                            document.getElementById('npu-title-text').innerText = '⚡ NPU Rockchip RK3588 (Hardware Directo)';
+                            document.getElementById('npu-freq-val').innerText = '6 TOPS Activos';
+                            document.getElementById('npu-c0-load').innerText = 'Activo';
+                            document.getElementById('npu-c1-load').innerText = 'Activo';
+                            document.getElementById('npu-c2-load').innerText = 'Activo';
+                        } else {
+                            npuCard.style.display = 'none';
+                        }
+                    }
+                }
+
+                // AI Engine Badge update
+                if (data.ai_engine) {
+                    const ai = data.ai_engine;
+                    const badge = document.getElementById('badge-ai-model');
+                    if (badge) {
+                        if (ai.is_npu) {
+                            badge.innerHTML = `⚡ <strong>NPU RK3588</strong> • ${ai.model_file}`;
+                            badge.style.background = 'rgba(16, 185, 129, 0.15)';
+                            badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                            badge.style.color = '#10b981';
+                        } else {
+                            badge.innerHTML = `🧠 <strong>CPU PyTorch</strong> • ${ai.model_file}`;
+                            badge.style.background = 'rgba(59, 130, 246, 0.15)';
+                            badge.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+                            badge.style.color = '#38bdf8';
+                        }
                     }
                 }
 
