@@ -711,16 +711,15 @@ class CoreSemaforoBase:
         while self.running:
             is_connected = self.arduino is not None and getattr(self.arduino, 'is_open', False)
             if not is_connected:
-                # Monitoreo de desconexión prolongada (>30s) (P2.4)
+                # Notificación informativa de operación autónoma / demo si no hay Arduino
                 tiempo_desconectado = time.time() - self.tiempo_desconexion_arduino
                 if tiempo_desconectado > 30.0:
-                    self.alerta_desconexion_prolongada = True
                     if not self._alerta_desconexion_notificada:
                         self._alerta_desconexion_notificada = True
-                        msg = f"⚠️ CRÍTICO: Controlador físico (Arduino) desconectado por más de {int(tiempo_desconectado)}s. Semáforos en modo degradado."
-                        self.api.log_event('CRITICAL', msg)
-                        self.db.log_event_async('CRITICAL', msg)
-                        logging.critical(msg)
+                        msg = "ℹ️ Modo Autónomo / Demostración: Operando sin controlador físico de semáforos (Arduino)."
+                        self.api.log_event('INFO', msg)
+                        self.db.log_event_async('INFO', msg)
+                        logging.info(msg)
 
                 connected = False
                 for port in ports_to_try:
