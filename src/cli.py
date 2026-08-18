@@ -171,8 +171,15 @@ Ejemplos de Uso:
             controller = controller_cls(port=args.port, video_source=args.video)
             controller.run_headless()
         else:
+            tk = getattr(mod, "tk", None)
+            if tk is None or not getattr(mod, "TKINTER_AVAILABLE", True):
+                print("\n❌ Error: La interfaz gráfica de escritorio (--gui) requiere Tkinter.")
+                print("💡 Solución:")
+                print("   • En Ubuntu/Debian/Armbian:  sudo apt install python3-tk")
+                print("   • En Fedora/RHEL:           sudo dnf install python3-tkinter")
+                print("   • O ejecuta en modo Headless (WebUI): python3 main.py --headless\n")
+                sys.exit(1)
             gui_cls = getattr(mod, topology_info["cpu_gui_app"])
-            tk = getattr(mod, "tk")
             ventana = tk.Tk()
             app = gui_cls(ventana, video_source=args.video)
             ventana.mainloop()
@@ -183,8 +190,15 @@ Ejemplos de Uso:
             controller = controller_cls(port=args.port, video_source=args.video)
             controller.run_headless()
         else:
+            tk = getattr(mod, "tk", None)
+            if tk is None or not getattr(mod, "TKINTER_AVAILABLE", True):
+                print("\n❌ Error: La interfaz gráfica de escritorio (--gui) requiere Tkinter.")
+                print("💡 Solución:")
+                print("   • En Ubuntu/Debian/Armbian:  sudo apt install python3-tk")
+                print("   • En Fedora/RHEL:           sudo dnf install python3-tkinter")
+                print("   • O ejecuta en modo Headless (WebUI): python3 main.py --backend rknn --headless\n")
+                sys.exit(1)
             gui_cls = getattr(mod, topology_info["rknn_gui_app"])
-            tk = getattr(mod, "tk")
             ventana = tk.Tk()
             app = gui_cls(ventana, video_source=args.video)
             ventana.mainloop()

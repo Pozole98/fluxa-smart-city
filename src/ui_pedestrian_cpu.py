@@ -1,8 +1,14 @@
 import os
 import time
 from enum import Enum
-import tkinter as tk
-from tkinter import filedialog
+try:
+    import tkinter as tk
+    from tkinter import filedialog
+    TKINTER_AVAILABLE = True
+except ImportError:
+    tk = None
+    filedialog = None
+    TKINTER_AVAILABLE = False
 from PIL import Image, ImageTk
 import cv2
 from ultralytics import YOLO

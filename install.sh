@@ -67,11 +67,11 @@ echo -e "\n${C_YELLOW}📦 [1/6] Verificando e instalando Python 3, MariaDB y de
 
 if command -v dnf &>/dev/null; then
     echo -e "${C_CYAN}➡️  Instalando paquetes via DNF (Fedora/RHEL/CentOS)...${C_RESET}"
-    run_sudo dnf install -y python3 python3-pip python3-devel mesa-libGL glib2 mariadb-server mariadb v4l-utils curl git udev
+    run_sudo dnf install -y python3 python3-pip python3-devel python3-tkinter mesa-libGL glib2 mariadb-server mariadb v4l-utils curl git udev
 elif command -v apt-get &>/dev/null; then
     echo -e "${C_CYAN}➡️  Instalando paquetes via APT (Ubuntu/Debian/Armbian)...${C_RESET}"
     run_sudo apt-get update -y
-    run_sudo apt-get install -y python3 python3-pip python3-venv python3-dev libgl1 libglib2.0-0 mariadb-server mariadb-client v4l-utils curl git udev
+    run_sudo apt-get install -y python3 python3-pip python3-venv python3-dev python3-tk libgl1 libglib2.0-0 mariadb-server mariadb-client v4l-utils curl git udev
 else
     echo -e "${C_YELLOW}⚠️ Gestor de paquetes no estándar. Asegúrate de contar con Python 3.9+, MariaDB y OpenGL.${C_RESET}"
 fi
