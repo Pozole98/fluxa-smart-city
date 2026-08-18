@@ -441,12 +441,15 @@
     <main class="content-container">
         
         <!-- Banner de Advertencia de Controlador Físico (P2.4) -->
-        <div id="pub-banner-arduino-disconnect" style="display: none; grid-column: 1 / -1; background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #fca5a5; padding: 0.75rem 1.2rem; border-radius: 8px; margin-bottom: 1.2rem; font-weight: 700; align-items: center; justify-content: space-between;">
+        <div id="pub-banner-arduino-disconnect" style="display: none; grid-column: 1 / -1; background: rgba(239, 68, 68, 0.15); border: 1.5px solid #ef4444; color: #fca5a5; padding: 0.65rem 1.2rem; border-radius: 8px; margin-bottom: 1.2rem; font-weight: 600; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem;">
             <div style="display: flex; align-items: center; gap: 0.6rem;">
-                <span style="font-size: 1.3rem;">⚠️</span>
-                <span>Aviso Ciudadano: Sistema operando en modo adaptativo por visión artificial (Controlador físico en reconexión).</span>
+                <span style="font-size: 1.2rem;">⚠️</span>
+                <span>Aviso Ciudadano: Sistema operando en <strong>Modo Adaptativo por Visión Artificial</strong> (Controlador físico en reconexión).</span>
             </div>
-            <span style="font-size: 0.75rem; background: #ef4444; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase;">Aviso de Operación</span>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.72rem; background: #ef4444; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase;">Aviso Operativo</span>
+                <button onclick="dismissPubArduinoAlert()" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 0.25rem 0.65rem; border-radius: 4px; cursor: pointer; font-size: 0.72rem;">Ocultar</button>
+            </div>
         </div>
         <div>
             <div class="panel-card">
@@ -548,6 +551,13 @@
     </footer>
 
     <script>
+        window.pubArduinoAlertIgnored = false;
+        function dismissPubArduinoAlert() {
+            window.pubArduinoAlertIgnored = true;
+            const b = document.getElementById('pub-banner-arduino-disconnect');
+            if (b) b.style.display = 'none';
+        }
+
         async function updatePublicPortal() {
             try {
                 const res = await fetch('/api/status');
@@ -566,7 +576,7 @@
                 // Aviso de desconexión física prolongada
                 const pubArdBanner = document.getElementById('pub-banner-arduino-disconnect');
                 if (pubArdBanner) {
-                    if (data.arduino && data.arduino.alerta_desconexion_prolongada) {
+                    if (!window.pubArduinoAlertIgnored && data.arduino && data.arduino.alerta_desconexion_prolongada) {
                         pubArdBanner.style.display = 'flex';
                     } else {
                         pubArdBanner.style.display = 'none';
