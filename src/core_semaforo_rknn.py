@@ -53,36 +53,50 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
             model_path = model_name
             possible_paths = [
                 os.path.join(os.path.dirname(__file__), '..', 'models', model_name),
-                os.path.join('models', model_name),
                 os.path.join(os.path.dirname(__file__), '..', model_name),
+                os.path.join('models', model_name),
+                os.path.join(os.getcwd(), 'models', model_name),
                 model_name
             ]
             for p in possible_paths:
                 if os.path.exists(p):
-                    model_path = p
+                    model_path = os.path.abspath(p)
                     break
 
             print(f"📦 Cargando modelo RKNN en la NPU desde: {model_path}")
             
-            # Liberar contexto anterior si existe
-            if self.rknn is not None:
-                try:
-                    self.rknn.release()
-                except Exception:
-                    pass
-
             new_rknn = RKNNLite(verbose=False)
             ret = new_rknn.load_rknn(model_path)
             if ret != 0:
-                print(f"❌ Falla crítica al cargar el modelo RKNN {model_path}.")
+                print(f"❌ Falla crítica al cargar el modelo RKNN {model_path} (ret={ret}).")
                 return
                 
-            ret = new_rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0_1_2)
+            core_mask = getattr(RKNNLite, 'NPU_CORE_0_1_2', 1)
+            try:
+                ret = new_rknn.init_runtime(core_mask=core_mask)
+            except Exception:
+                ret = -1
+
             if ret != 0:
-                print("❌ Falla crítica inicializando el runtime de la NPU.")
+                try:
+                    ret = new_rknn.init_runtime()
+                except Exception:
+                    ret = -1
+
+            if ret != 0:
+                print(f"❌ Falla crítica inicializando el runtime de la NPU para {model_path} (ret={ret}).")
                 return
 
+            # Solo liberar el contexto anterior tras inicializar exitosamente el nuevo
+            old_rknn = self.rknn
             self.rknn = new_rknn
+            
+            if old_rknn is not None:
+                try:
+                    old_rknn.release()
+                except Exception:
+                    pass
+            print(f"✅ Modelo RKNN {os.path.basename(model_path)} cargado y activo en NPU.")
 
     def _predict(self, frame):
         with self._rknn_lock:
