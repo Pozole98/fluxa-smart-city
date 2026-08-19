@@ -219,6 +219,12 @@ def admin_required(f):
 # RUTAS DE NAVEGACIÓN Y VISTAS WEB
 # ==========================================
 
+@app.route('/logos/<path:filename>')
+def serve_logo(filename):
+    """Sirve los logos institucionales (TESCo, TecNM, SIC)"""
+    logos_dir = os.path.join(base_dir, 'logos')
+    return send_from_directory(logos_dir, filename)
+
 @app.route('/')
 def public_index():
     """Portal Ciudadano Público - Información de tráfico en tiempo real sin controles sensibles"""

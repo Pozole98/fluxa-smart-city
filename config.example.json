@@ -24,6 +24,10 @@
         "admin_pass_hash": "<HASH_DE_CONTRASEÑA_O_DEJAR_VACIO>",
         "session_timeout_minutes": 120
     },
+    "storage": {
+        "max_violation_snapshots": 300,
+        "max_violation_storage_mb": 150
+    },
     "sustainability": {
         "fuel_burn_rate_lph": 0.8,
         "co2_per_liter_kg": 2.31,
