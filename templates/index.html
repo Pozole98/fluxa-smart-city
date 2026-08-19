@@ -4,42 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FLUXA SCADA • Centro de Comando y Telemetría C5</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg-color: #080c16;
-            --panel-bg: rgba(15, 23, 42, 0.85);
-            --panel-border: rgba(255, 255, 255, 0.08);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent: #10b981;
-            --accent-glow: rgba(16, 185, 129, 0.35);
-            --danger: #ef4444;
-            --danger-glow: rgba(239, 68, 68, 0.35);
-            --warning: #f59e0b;
-            --warning-glow: rgba(245, 158, 11, 0.35);
+            --bg-color: #070c09;
+            --panel-bg: #0d1711;
+            --panel-border: #1a3324;
+            --panel-border-hover: #2d523c;
+            --text-main: #f0f5f2;
+            --text-muted: #8ea395;
+            --tesco-green: #70ba28;
+            --tesco-green-dark: #58981d;
+            --tesco-green-glow: rgba(112, 186, 40, 0.25);
+            --tecnm-blue: #1b396a;
+            --accent: #70ba28;
+            --accent-glow: rgba(112, 186, 40, 0.25);
+            --danger: #dc2626;
+            --danger-glow: rgba(220, 38, 38, 0.3);
+            --warning: #d97706;
+            --warning-glow: rgba(217, 119, 6, 0.3);
             --primary: #3b82f6;
-            --primary-glow: rgba(59, 130, 246, 0.35);
-            --purple: #8b5cf6;
+            --primary-glow: rgba(59, 130, 246, 0.3);
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
         
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
             min-height: 100vh;
-            padding: 1.5rem;
+            padding: 1.2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
             background-image: 
-                radial-gradient(circle at 10% 0%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
-                radial-gradient(circle at 90% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 40%);
+                radial-gradient(circle at 10% 0%, rgba(112, 186, 40, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 0%, rgba(27, 57, 106, 0.05) 0%, transparent 40%);
         }
 
         /* Strobe Effect for Emergency Corridor */
         @keyframes emergencyStrobe {
-            0%, 100% { border-color: rgba(239, 68, 68, 0.8); box-shadow: 0 0 35px rgba(239, 68, 68, 0.5); }
-            50% { border-color: rgba(59, 130, 246, 0.8); box-shadow: 0 0 35px rgba(59, 130, 246, 0.5); }
+            0%, 100% { border-color: rgba(220, 38, 38, 0.9); box-shadow: 0 0 25px rgba(220, 38, 38, 0.5); }
+            50% { border-color: rgba(59, 130, 246, 0.9); box-shadow: 0 0 25px rgba(59, 130, 246, 0.5); }
         }
 
         .emergency-mode-active {
@@ -51,52 +62,106 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1.2rem;
+            margin-bottom: 1.2rem;
+            padding-bottom: 1rem;
             border-bottom: 1px solid var(--panel-border);
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
-        .title-box { display: flex; align-items: center; gap: 1rem; }
-        .title-box h1 { font-size: 1.9rem; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+        }
+
+        .inst-logos-box {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            background: rgba(13, 23, 17, 0.7);
+            border: 1px solid var(--panel-border);
+            padding: 0.35rem 0.75rem;
+            border-radius: var(--radius-md);
+        }
+
+        .inst-logo {
+            height: 32px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .inst-divider {
+            width: 1px;
+            height: 22px;
+            background: var(--panel-border);
+        }
+
+        .title-box {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .title-row h1 {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.4px;
+        }
+
+        .inst-subtitle {
+            font-size: 0.72rem;
+            color: var(--tesco-green);
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            margin-top: 0.1rem;
+        }
+
         .badge-edge {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--accent);
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
+            background: rgba(112, 186, 40, 0.12);
+            color: var(--tesco-green);
+            padding: 0.2rem 0.6rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.7rem;
             font-weight: 700;
-            border: 1px solid var(--accent);
+            border: 1px solid rgba(112, 186, 40, 0.35);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
         }
 
-        .sys-info-bar { display: flex; gap: 0.8rem; align-items: center; }
+        .sys-info-bar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
         .info-pill {
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
-            padding: 0.5rem 0.85rem;
-            border-radius: 8px;
-            font-size: 0.8rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: var(--radius-md);
+            font-size: 0.75rem;
             display: flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.35rem;
         }
-        .info-pill span { color: var(--text-muted); font-size: 0.72rem; }
+        .info-pill span { color: var(--text-muted); font-size: 0.68rem; font-weight: 600; }
 
         .user-pill {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid var(--accent);
+            background: rgba(112, 186, 40, 0.1);
+            border: 1px solid var(--tesco-green);
             color: white;
             font-weight: 600;
         }
 
         .btn-logout {
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid var(--danger);
+            background: rgba(220, 38, 38, 0.12);
+            border: 1px solid rgba(220, 38, 38, 0.4);
             color: #fca5a5;
-            padding: 0.5rem 0.85rem;
-            border-radius: 8px;
-            font-size: 0.78rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: var(--radius-md);
+            font-size: 0.74rem;
             font-weight: 700;
             cursor: pointer;
             text-decoration: none;
@@ -105,86 +170,82 @@
         .btn-logout:hover {
             background: var(--danger);
             color: white;
-            box-shadow: 0 0 15px var(--danger-glow);
         }
 
         /* Navigation / Toolbar */
         .toolbar {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.7rem;
-            margin-bottom: 1.5rem;
+            gap: 0.5rem;
+            margin-bottom: 1.2rem;
         }
         .tab-btn {
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
             color: var(--text-muted);
-            padding: 0.55rem 1.1rem;
-            border-radius: 8px;
-            font-size: 0.85rem;
+            padding: 0.45rem 0.9rem;
+            border-radius: var(--radius-md);
+            font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 0.45rem;
+            gap: 0.4rem;
         }
         .tab-btn:hover, .tab-btn.active {
-            background: rgba(16, 185, 129, 0.15);
-            border-color: var(--accent);
-            color: var(--accent);
+            background: rgba(112, 186, 40, 0.12);
+            border-color: var(--tesco-green);
+            color: var(--tesco-green);
         }
         .tab-btn-highlight {
-            border-color: var(--warning);
-            color: var(--warning);
-            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(217, 119, 6, 0.4);
+            color: #fbbf24;
+            background: rgba(217, 119, 6, 0.1);
         }
         .tab-btn-emergency {
-            border-color: var(--danger);
-            color: white;
-            background: rgba(239, 68, 68, 0.2);
-            animation: pulseEmergency 2s infinite;
+            border-color: rgba(220, 38, 38, 0.6);
+            color: #fca5a5;
+            background: rgba(220, 38, 38, 0.15);
         }
-        @keyframes pulseEmergency {
-            0%, 100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.2); }
-            50% { box-shadow: 0 0 18px var(--danger-glow); }
+        .tab-btn-emergency:hover {
+            background: var(--danger);
+            color: white;
         }
 
         /* Layout Grid */
         .main-layout {
             display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
-            gap: 1.5rem;
+            grid-template-columns: 1.18fr 0.82fr;
+            gap: 1.2rem;
         }
 
         .panel {
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
-            border-radius: 12px;
-            padding: 1.25rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(12px);
+            border-radius: var(--radius-lg);
+            padding: 1.1rem;
+            margin-bottom: 1.2rem;
         }
 
         .panel-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
+            margin-bottom: 0.8rem;
+            padding-bottom: 0.4rem;
             border-bottom: 1px solid var(--panel-border);
         }
 
         .panel-title {
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             font-weight: 700;
             color: var(--text-main);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.4rem;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
         }
 
         /* Video Container */
@@ -192,7 +253,7 @@
             position: relative;
             width: 100%;
             background: #000;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             overflow: hidden;
             border: 1px solid var(--panel-border);
             aspect-ratio: 16/9;
@@ -207,38 +268,44 @@
 
         .video-overlay {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 0.3rem 0.6rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
+            top: 8px;
+            left: 8px;
+            background: rgba(7, 12, 9, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 0.2rem 0.5rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.68rem;
             font-family: 'JetBrains Mono', monospace;
             display: flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.35rem;
         }
 
         .video-src-tag {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(16, 185, 129, 0.2);
-            border: 1px solid var(--accent);
-            color: var(--accent);
-            padding: 0.3rem 0.6rem;
-            border-radius: 4px;
-            font-size: 0.72rem;
+            top: 8px;
+            right: 8px;
+            background: rgba(112, 186, 40, 0.15);
+            border: 1px solid var(--tesco-green);
+            color: var(--tesco-green);
+            padding: 0.2rem 0.5rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.68rem;
             font-family: 'JetBrains Mono', monospace;
             font-weight: 700;
         }
 
         .rec-dot {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             background: var(--danger);
             border-radius: 50%;
             animation: pulse 1.5s infinite;
+        }
+
+        .rec-dot.on {
+            background: var(--tesco-green);
+            box-shadow: 0 0 6px var(--tesco-green);
         }
 
         @keyframes pulse {
@@ -248,29 +315,29 @@
 
         /* Phase Indicator */
         .phase-card {
-            background: rgba(0,0,0,0.3);
+            background: rgba(7, 13, 9, 0.7);
             border: 1px solid var(--panel-border);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-top: 1rem;
+            border-radius: var(--radius-md);
+            padding: 0.85rem;
+            margin-top: 0.85rem;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.4rem;
         }
 
         .phase-pill {
             display: inline-block;
-            padding: 0.4rem 1rem;
-            border-radius: 6px;
+            padding: 0.35rem 0.8rem;
+            border-radius: var(--radius-sm);
             font-weight: 800;
-            font-size: 1rem;
-            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+            letter-spacing: 0.4px;
             text-align: center;
         }
 
         .phase-progress-bar {
-            height: 6px;
-            background: rgba(255,255,255,0.08);
+            height: 5px;
+            background: rgba(255,255,255,0.06);
             border-radius: 3px;
             overflow: hidden;
             position: relative;
@@ -278,7 +345,7 @@
 
         .phase-progress-fill {
             height: 100%;
-            background: var(--accent);
+            background: var(--tesco-green);
             width: 0%;
             transition: width 0.3s linear;
         }
@@ -287,62 +354,63 @@
         .zones-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 0.8rem;
+            gap: 0.6rem;
         }
 
         .zone-card {
-            background: rgba(0, 0, 0, 0.25);
+            background: rgba(7, 13, 9, 0.7);
             border: 1px solid var(--panel-border);
-            border-radius: 8px;
-            padding: 0.9rem;
+            border-radius: var(--radius-md);
+            padding: 0.75rem;
             position: relative;
             overflow: hidden;
         }
 
         .zone-card h4 {
-            font-size: 0.8rem;
+            font-size: 0.74rem;
             color: var(--text-muted);
             text-transform: uppercase;
-            margin-bottom: 0.3rem;
+            margin-bottom: 0.2rem;
+            font-weight: 600;
         }
 
         .zone-card .live-count {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: 800;
             font-family: 'JetBrains Mono', monospace;
             line-height: 1;
         }
 
         .zone-card .cumul-count {
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             color: var(--text-muted);
-            margin-top: 0.3rem;
+            margin-top: 0.25rem;
             font-family: 'JetBrains Mono', monospace;
         }
 
         .tsp-badge {
-            font-size: 0.68rem;
-            color: var(--warning);
+            font-size: 0.66rem;
+            color: #fbbf24;
             font-family: 'JetBrains Mono', monospace;
-            margin-top: 0.2rem;
+            margin-top: 0.15rem;
         }
 
         /* Hardware Telemetry Grid */
         .hw-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 0.8rem;
+            gap: 0.6rem;
         }
 
         .hw-metric-card {
-            background: rgba(0, 0, 0, 0.25);
+            background: rgba(7, 13, 9, 0.7);
             border: 1px solid var(--panel-border);
-            border-radius: 8px;
-            padding: 0.8rem;
+            border-radius: var(--radius-md);
+            padding: 0.7rem;
         }
 
         .hw-metric-card .title {
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             color: var(--text-muted);
             text-transform: uppercase;
             font-weight: 600;
@@ -351,15 +419,15 @@
         }
 
         .hw-metric-card .val {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: 800;
             font-family: 'JetBrains Mono', monospace;
-            margin-top: 0.2rem;
+            margin-top: 0.15rem;
             color: var(--text-main);
         }
 
         .hw-metric-card .sub {
-            font-size: 0.7rem;
+            font-size: 0.66rem;
             color: var(--text-muted);
             font-family: 'JetBrains Mono', monospace;
             margin-top: 0.1rem;
@@ -367,41 +435,41 @@
 
         /* Buttons & Forms */
         .btn {
-            padding: 0.6rem 1rem;
-            border-radius: 6px;
-            font-size: 0.85rem;
+            padding: 0.5rem 0.85rem;
+            border-radius: var(--radius-md);
+            font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
             border: none;
             transition: all 0.2s;
         }
 
-        .btn-accent { background: var(--accent); color: #022c22; }
-        .btn-accent:hover { filter: brightness(1.1); box-shadow: 0 0 15px var(--accent-glow); }
-        .btn-primary { background: var(--primary); color: white; }
+        .btn-accent { background: var(--tesco-green); color: #07120a; }
+        .btn-accent:hover { background: var(--tesco-green-dark); color: #ffffff; }
+        .btn-primary { background: #2563eb; color: white; }
         .btn-danger { background: var(--danger); color: white; }
         .btn-outline { background: transparent; border: 1px solid var(--panel-border); color: var(--text-main); }
-        .btn-outline:hover { background: rgba(255,255,255,0.05); }
+        .btn-outline:hover { background: rgba(255,255,255,0.04); border-color: var(--panel-border-hover); }
 
         /* Console Logs */
         .console-box {
-            height: 140px;
-            background: #050811;
+            height: 130px;
+            background: #050806;
             border: 1px solid var(--panel-border);
-            border-radius: 8px;
-            padding: 0.7rem;
+            border-radius: var(--radius-md);
+            padding: 0.6rem;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             overflow-y: auto;
-            color: #cbd5e1;
+            color: #d1d5db;
         }
 
-        .log-entry { margin-bottom: 0.25rem; }
-        .log-ts { color: #64748b; margin-right: 0.4rem; }
+        .log-entry { margin-bottom: 0.2rem; line-height: 1.35; }
+        .log-ts { color: #64748b; margin-right: 0.35rem; }
         .log-emerg { color: #ef4444; font-weight: bold; }
-        .log-info { color: #10b981; }
-        .log-phase { color: #3b82f6; }
-        .log-warn { color: #f59e0b; }
+        .log-info { color: var(--tesco-green); }
+        .log-phase { color: #60a5fa; }
+        .log-warn { color: #fbbf24; }
 
         /* Modals */
         .modal {
@@ -409,17 +477,17 @@
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(6px);
             z-index: 1000;
             align-items: center;
             justify-content: center;
         }
         .modal.open { display: flex; }
         .modal-content {
-            background: #121826;
+            background: #0d1711;
             border: 1px solid var(--panel-border);
-            border-radius: 14px;
-            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            padding: 1.3rem;
             width: 90%;
             max-width: 800px;
             max-height: 90vh;
@@ -430,66 +498,104 @@
         .viol-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.8rem;
-            margin-top: 1rem;
+            font-size: 0.78rem;
+            margin-top: 0.8rem;
         }
         .viol-table th {
             text-align: left;
-            padding: 0.6rem;
-            background: rgba(0,0,0,0.4);
+            padding: 0.55rem;
+            background: rgba(7, 13, 9, 0.8);
             color: var(--text-muted);
             border-bottom: 1px solid var(--panel-border);
+            font-weight: 700;
         }
         .viol-table td {
-            padding: 0.6rem;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
+            padding: 0.55rem;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
             font-family: 'JetBrains Mono', monospace;
         }
 
         /* Video Sources Cards */
         .source-card {
-            background: rgba(0,0,0,0.3);
+            background: rgba(7, 13, 9, 0.7);
             border: 1px solid var(--panel-border);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 0.8rem;
+            border-radius: var(--radius-md);
+            padding: 0.85rem;
+            margin-bottom: 0.6rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         .source-card.active-src {
-            border-color: var(--accent);
-            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--tesco-green);
+            background: rgba(112, 186, 40, 0.08);
         }
 
         /* Chart */
-        .chart-wrapper { height: 220px; width: 100%; margin-top: 0.5rem; }
+        .chart-wrapper { height: 210px; width: 100%; margin-top: 0.4rem; }
 
         /* Dynamic Color Classes */
-        .bg-green { background: var(--accent); color: #022c22; box-shadow: 0 0 25px var(--accent-glow); }
-        .bg-yellow { background: var(--warning); color: #451a03; box-shadow: 0 0 25px var(--warning-glow); }
-        .bg-red { background: var(--danger); color: white; box-shadow: 0 0 25px var(--danger-glow); }
-        .bg-dark { background: rgba(0,0,0,0.5); color: #64748b; }
+        .bg-green { background: var(--tesco-green); color: #07120a; }
+        .bg-yellow { background: var(--warning); color: #07120a; }
+        .bg-red { background: var(--danger); color: white; }
+        .bg-dark { background: rgba(7, 13, 9, 0.8); color: #64748b; }
+
+        /* Footer */
+        .dashboard-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--panel-border);
+            padding-top: 1rem;
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        .footer-inst-info {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
 
         @media (max-width: 1024px) {
             .main-layout { grid-template-columns: 1fr; }
-            .header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+            .header { flex-direction: column; align-items: flex-start; }
             .sys-info-bar { flex-wrap: wrap; }
+            .dashboard-footer { flex-direction: column; text-align: center; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Top Header -->
+    <!-- Top Header with Institutional Logos & Pride -->
     <div class="header">
-        <div class="title-box">
-            <h1>FLUXA COMMAND</h1>
-            <span class="badge-edge" id="badge-topology">4_WAY</span>
-            <span class="badge-edge" id="badge-ai-model" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #10b981;">⚡ IA: NPU (RKNN)</span>
+        <div class="header-brand">
+            <div class="inst-logos-box">
+                <img src="/logos/tesco.png" alt="TESCo" class="inst-logo" title="Tecnológico de Estudios Superiores de Coacalco">
+                <div class="inst-divider"></div>
+                <img src="/logos/tecnm.png" alt="TecNM" class="inst-logo" title="Tecnológico Nacional de México">
+                <div class="inst-divider"></div>
+                <img src="/logos/sic.png" alt="ISC" class="inst-logo" title="Ingeniería en Sistemas Computacionales">
+            </div>
+            <div class="title-box">
+                <div class="title-row">
+                    <h1>FLUXA SCADA C5</h1>
+                    <span class="badge-edge" id="badge-topology">4_WAY</span>
+                    <span class="badge-edge" id="badge-ai-model">IA: NPU RK3588</span>
+                </div>
+                <div class="inst-subtitle">
+                    Tecnológico de Estudios Superiores de Coacalco • TecNM | Ingeniería en Sistemas Computacionales
+                </div>
+            </div>
         </div>
+
         <div class="sys-info-bar">
             <div class="info-pill user-pill">
-                <span>👤</span> <strong id="val-user">{{ user or 'admin' }} (C5)</strong>
+                <span>OPERADOR:</span> <strong id="val-user">{{ user or 'admin' }} (C5)</strong>
             </div>
             <div class="info-pill">
                 <span>HOST:</span> <strong id="val-host">-</strong>
@@ -501,35 +607,33 @@
                 <span>UPTIME:</span> <strong id="val-uptime">00:00:00</strong>
             </div>
             <div class="info-pill">
-                <span>MODO:</span> <strong id="val-mode" style="color: var(--accent);">Normal</strong>
+                <span>MODO:</span> <strong id="val-mode" style="color: var(--tesco-green);">Normal</strong>
             </div>
-            <a href="/api/auth/logout" class="btn-logout">🚪 Cerrar Sesión</a>
+            <a href="/api/auth/logout" class="btn-logout">Cerrar Sesión</a>
         </div>
     </div>
 
-    <!-- Banner de Alerta Crítica por Desconexión de Arduino (P2.4) -->
-    <div id="banner-arduino-disconnect" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1.5px solid #ef4444; color: #fca5a5; padding: 0.65rem 1.2rem; border-radius: 8px; margin-bottom: 1.2rem; font-weight: 600; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem;">
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <span style="font-size: 1.2rem;">⚠️</span>
-            <span>Fallo de enlace con controlador físico (Arduino) — El sistema continúa en <strong>Modo Adaptativo por Visión Artificial</strong>.</span>
+    <!-- Banner de Alerta Crítica por Desconexión de Arduino -->
+    <div id="banner-arduino-disconnect" style="display: none; background: rgba(220, 38, 38, 0.12); border: 1px solid rgba(220, 38, 38, 0.35); color: #fca5a5; padding: 0.55rem 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-size: 0.8rem; font-weight: 500; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
+        <div>
+            Aviso de Comunicación: Sin enlace con el microcontrolador físico (Arduino). El sistema opera en <strong>Modo Adaptativo por Visión Artificial</strong>.
         </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span style="font-size: 0.72rem; background: #ef4444; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase;">Sin Hardware</span>
-            <button id="btn-ignore-arduino" onclick="toggleIgnoreArduino()" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 0.25rem 0.65rem; border-radius: 4px; cursor: pointer; font-size: 0.72rem; transition: background 0.2s;">👁️ Ignorar / Modo Demo</button>
+        <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <button id="btn-ignore-arduino" onclick="toggleIgnoreArduino()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: #fff; padding: 0.2rem 0.6rem; border-radius: var(--radius-sm); cursor: pointer; font-size: 0.72rem;">Ignorar Aviso</button>
         </div>
     </div>
 
     <!-- Toolbar for Advanced Modals -->
     <div class="toolbar">
-        <button class="tab-btn active" onclick="switchView('dashboard')">📊 Tablero SCADA</button>
-        <button class="tab-btn tab-btn-emergency" onclick="openModal('modal-emergency-corridor')">🚨 Corredor de Emergencia C5</button>
-        <button class="tab-btn" onclick="openModal('modal-sustainability')">🌿 Impacto Ecológico & ROI</button>
-        <button class="tab-btn" onclick="openModal('modal-ab')">⚡ Comparativa A/B</button>
-        <button class="tab-btn tab-btn-highlight" onclick="openModal('modal-video-source')">🎬 Entrada de Video (Demo / Cámara)</button>
-        <button class="tab-btn" onclick="openModal('modal-zones')">📐 Calibrador ROIs</button>
-        <button class="tab-btn" onclick="openModal('modal-peak')">📈 Hora Pico</button>
-        <button class="tab-btn" onclick="openModal('modal-violations')">🚨 Infracciones (<span id="viol-badge">0</span>)</button>
-        <button class="tab-btn" onclick="window.open('/report/executive', '_blank')">📄 Informe Oficial (PDF)</button>
+        <button class="tab-btn active" onclick="switchView('dashboard')">Tablero SCADA</button>
+        <button class="tab-btn tab-btn-emergency" onclick="openModal('modal-emergency-corridor')">Corredor de Emergencia C5</button>
+        <button class="tab-btn" onclick="openModal('modal-sustainability')">Sustentabilidad y ROI</button>
+        <button class="tab-btn" onclick="openModal('modal-ab')">Comparativa A/B</button>
+        <button class="tab-btn tab-btn-highlight" onclick="openModal('modal-video-source')">Entrada de Video</button>
+        <button class="tab-btn" onclick="openModal('modal-zones')">Calibrador ROIs</button>
+        <button class="tab-btn" onclick="openModal('modal-peak')">Diagnóstico Hora Pico</button>
+        <button class="tab-btn" onclick="openModal('modal-violations')">Infracciones (<span id="viol-badge">0</span>)</button>
+        <button class="tab-btn" onclick="window.open('/report/executive', '_blank')">Informe Oficial (PDF)</button>
     </div>
 
     <!-- Main Content Grid -->
@@ -540,8 +644,8 @@
             <!-- Video Streaming Panel -->
             <div class="panel" id="panel-video-stream">
                 <div class="panel-header">
-                    <div class="panel-title">📹 Transmisión en Vivo con Detección e IDs</div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted);" id="stream-meta">640x480 • 0.0 FPS</div>
+                    <div class="panel-title">Transmisión en Vivo con Detección e IDs</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono';" id="stream-meta">640x480 • 0.0 FPS</div>
                 </div>
                 <div class="video-container">
                     <img src="/video_feed" class="video-stream" alt="Transmisión no disponible">
@@ -550,16 +654,16 @@
                         <span>STREAM MJPEG EDGE</span>
                     </div>
                     <div class="video-src-tag" id="video-src-badge">
-                        <span>📹 ENTRADA: AUTO</span>
+                        <span>ENTRADA: AUTO</span>
                     </div>
                 </div>
 
                 <!-- Phase & Countdown Card -->
                 <div class="phase-card">
                     <div class="phase-pill bg-dark" id="phase-pill">INICIANDO...</div>
-                    <div style="font-size: 0.85rem; color: var(--text-muted); display: flex; justify-content: space-between;">
-                        <span>Tiempo en Fase: <strong id="phase-time" style="color: white;">0s</strong></span>
-                        <span>Asignado: <strong id="phase-target" style="color: white;">0s</strong></span>
+                    <div style="font-size: 0.78rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+                        <span>Tiempo en Fase: <strong id="phase-time" style="color: white; font-family: 'JetBrains Mono';">0s</strong></span>
+                        <span>Asignado: <strong id="phase-target" style="color: white; font-family: 'JetBrains Mono';">0s</strong></span>
                     </div>
                     <div class="phase-progress-bar">
                         <div class="phase-progress-fill" id="phase-progress"></div>
@@ -568,19 +672,19 @@
             </div>
 
             <!-- V2X Broadcast Widget -->
-            <div class="panel" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(15, 23, 42, 0.8)); border-color: rgba(59, 130, 246, 0.3);">
+            <div class="panel" style="background: rgba(13, 23, 17, 0.85); border-color: rgba(59, 130, 246, 0.25);">
                 <div class="panel-header">
-                    <div class="panel-title" style="color: var(--primary);">📡 Telemetría V2X • Broadcast SPaT</div>
-                    <span style="font-size: 0.72rem; color: var(--text-muted);">Autos Autónomos / Conectados</span>
+                    <div class="panel-title" style="color: #60a5fa;">Telemetría V2X • Broadcast SPaT</div>
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">Autos Autónomos / Conectados</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <div style="font-size: 0.95rem; font-weight: 700; color: white;" id="v2x-advice-text">🟢 Ola Verde Activa</div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">Velocidad Sugerida (GLOSA): <strong style="color: var(--accent);" id="v2x-speed-val">45 km/h</strong></div>
+                        <div style="font-size: 0.9rem; font-weight: 700; color: white;" id="v2x-advice-text">Ola Verde Activa</div>
+                        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">Velocidad Sugerida (GLOSA): <strong style="color: var(--tesco-green); font-family: 'JetBrains Mono';" id="v2x-speed-val">45 km/h</strong></div>
                     </div>
                     <div style="text-align: right;">
-                        <span style="font-size: 0.72rem; color: var(--text-muted);">Segundos a Cambio:</span>
-                        <div style="font-size: 1.5rem; font-weight: 800; font-family: 'JetBrains Mono'; color: var(--primary);" id="v2x-countdown">0.0s</div>
+                        <span style="font-size: 0.68rem; color: var(--text-muted);">Segundos a Cambio:</span>
+                        <div style="font-size: 1.35rem; font-weight: 800; font-family: 'JetBrains Mono'; color: #60a5fa;" id="v2x-countdown">0.0s</div>
                     </div>
                 </div>
             </div>
@@ -588,9 +692,9 @@
             <!-- Historical Traffic Volume Chart -->
             <div class="panel">
                 <div class="panel-header">
-                    <div class="panel-title">📈 Flujo Vehicular en Tiempo Real (Histórico)</div>
-                    <a href="/api/logs/download" target="_blank" class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.75rem; text-decoration: none;">
-                        📥 Descargar CSV Hoy
+                    <div class="panel-title">Flujo Vehicular en Tiempo Real (Histórico)</div>
+                    <a href="/api/logs/download" target="_blank" class="btn btn-outline" style="padding: 0.25rem 0.65rem; font-size: 0.72rem; text-decoration: none;">
+                        Descargar CSV Hoy
                     </a>
                 </div>
                 <div class="chart-wrapper">
@@ -604,8 +708,8 @@
             <!-- Traffic Zones Telemetry -->
             <div class="panel">
                 <div class="panel-header">
-                    <div class="panel-title">🚦 Conteo por Zona / Carril</div>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">Total Hoy: <strong id="val-total-today" style="color: var(--accent);">0</strong></span>
+                    <div class="panel-title">Conteo por Zona / Carril</div>
+                    <span style="font-size: 0.72rem; color: var(--text-muted);">Total Hoy: <strong id="val-total-today" style="color: var(--tesco-green); font-family: 'JetBrains Mono';">0</strong></span>
                 </div>
                 <div class="zones-grid" id="zones-container">
                     <!-- Tarjetas de carril dinámicas -->
@@ -615,79 +719,79 @@
             <!-- Hardware Telemetry Dashboard -->
             <div class="panel">
                 <div class="panel-header">
-                    <div class="panel-title">⚡ Diagnóstico de Hardware Edge</div>
-                    <span style="font-size: 0.75rem; color: var(--accent);">MariaDB Conectada</span>
+                    <div class="panel-title">Diagnóstico de Hardware Edge</div>
+                    <span style="font-size: 0.7rem; color: var(--tesco-green);">MariaDB Conectada</span>
                 </div>
                 
                 <div class="hw-grid">
                     <div class="hw-metric-card">
-                        <div class="title"><span>USO CPU</span> <span>📊</span></div>
+                        <div class="title"><span>USO CPU</span></div>
                         <div class="val" id="hw-cpu">0%</div>
                         <div class="sub" id="hw-cores">12 núcleos</div>
                     </div>
 
                     <div class="hw-metric-card">
-                        <div class="title"><span>TEMP SOC / CPU</span> <span>🔥</span></div>
+                        <div class="title"><span>TEMP SOC / CPU</span></div>
                         <div class="val" id="hw-temp">0 °C</div>
                         <div class="sub">Térmico Normal</div>
                     </div>
 
                     <div class="hw-metric-card">
-                        <div class="title"><span>MEMORIA RAM</span> <span>💾</span></div>
+                        <div class="title"><span>MEMORIA RAM</span></div>
                         <div class="val" id="hw-ram">0%</div>
                         <div class="sub" id="hw-ram-mb">0 / 0 MB</div>
                     </div>
 
                     <div class="hw-metric-card">
-                        <div class="title"><span>DISCO RAÍZ</span> <span>💽</span></div>
+                        <div class="title"><span>DISCO RAÍZ</span></div>
                         <div class="val" id="hw-disk">0%</div>
                         <div class="sub" id="hw-disk-gb">0 GB libres</div>
                     </div>
                 </div>
 
                 <!-- NPU RK3588 Acceleration Card (Orange Pi 5) -->
-                <div class="hw-npu-card" id="card-npu-telemetry" style="margin-top: 0.8rem; padding: 0.75rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <span style="font-size: 0.75rem; font-weight: 700; color: #10b981; display: flex; align-items: center; gap: 0.4rem;">
-                            <span>⚡</span> <span id="npu-title-text">NPU Rockchip RK3588 (6 TOPS)</span>
+                <div class="hw-npu-card" id="card-npu-telemetry" style="margin-top: 0.6rem; padding: 0.65rem; background: rgba(112, 186, 40, 0.06); border: 1px solid rgba(112, 186, 40, 0.2); border-radius: var(--radius-md);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span style="font-size: 0.72rem; font-weight: 700; color: var(--tesco-green);" id="npu-title-text">
+                            NPU Rockchip RK3588 (6 TOPS)
                         </span>
-                        <span style="font-size: 0.7rem; color: var(--text-muted); font-family: 'JetBrains Mono';" id="npu-freq-val">Frecuencia Auto</span>
+                        <span style="font-size: 0.68rem; color: var(--text-muted); font-family: 'JetBrains Mono';" id="npu-freq-val">Frecuencia Auto</span>
                     </div>
                     <!-- NPU Cores Load Bars -->
                     <div id="npu-cores-container" style="display: flex; gap: 0.4rem;">
-                        <div style="flex: 1; background: rgba(0,0,0,0.4); padding: 0.35rem; border-radius: 4px; text-align: center;">
-                            <div style="font-size: 0.62rem; color: var(--text-muted);">NPU Núcleo 0</div>
-                            <div style="font-size: 0.85rem; font-weight: 800; color: white;" id="npu-c0-load">0%</div>
+                        <div style="flex: 1; background: rgba(0,0,0,0.4); padding: 0.3rem; border-radius: 4px; text-align: center;">
+                            <div style="font-size: 0.6rem; color: var(--text-muted);">Núcleo 0</div>
+                            <div style="font-size: 0.8rem; font-weight: 800; color: white;" id="npu-c0-load">0%</div>
                         </div>
-                        <div style="flex: 1; background: rgba(0,0,0,0.4); padding: 0.35rem; border-radius: 4px; text-align: center;">
-                            <div style="font-size: 0.62rem; color: var(--text-muted);">NPU Núcleo 1</div>
-                            <div style="font-size: 0.85rem; font-weight: 800; color: white;" id="npu-c1-load">0%</div>
+                        <div style="flex: 1; background: rgba(0,0,0,0.4); padding: 0.3rem; border-radius: 4px; text-align: center;">
+                            <div style="font-size: 0.6rem; color: var(--text-muted);">Núcleo 1</div>
+                            <div style="font-size: 0.8rem; font-weight: 800; color: white;" id="npu-c1-load">0%</div>
                         </div>
-                        <div style="flex: 1; background: rgba(0,0,0,0.4); padding: 0.35rem; border-radius: 4px; text-align: center;">
-                            <div style="font-size: 0.62rem; color: var(--text-muted);">NPU Núcleo 2</div>
-                            <div style="font-size: 0.85rem; font-weight: 800; color: white;" id="npu-c2-load">0%</div>
+                        <div style="flex: 1; background: rgba(0,0,0,0.4); padding: 0.3rem; border-radius: 4px; text-align: center;">
+                            <div style="font-size: 0.6rem; color: var(--text-muted);">Núcleo 2</div>
+                            <div style="font-size: 0.8rem; font-weight: 800; color: white;" id="npu-c2-load">0%</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Latencies -->
-                <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding: 0.6rem; background: rgba(0,0,0,0.3); border-radius: 6px; font-size: 0.75rem; font-family: 'JetBrains Mono';">
-                    <span>IA: <strong id="lat-infer" style="color: var(--primary);">0ms</strong></span>
-                    <span>Track: <strong id="lat-track" style="color: var(--accent);">0ms</strong></span>
+                <div style="display: flex; justify-content: space-between; margin-top: 0.8rem; padding: 0.5rem 0.7rem; background: rgba(0,0,0,0.3); border-radius: var(--radius-sm); font-size: 0.72rem; font-family: 'JetBrains Mono';">
+                    <span>IA: <strong id="lat-infer" style="color: #60a5fa;">0ms</strong></span>
+                    <span>Track: <strong id="lat-track" style="color: var(--tesco-green);">0ms</strong></span>
                     <span>Total: <strong id="lat-total" style="color: white;">0ms</strong></span>
                 </div>
 
                 <!-- Peripherals status -->
-                <div style="margin-top: 0.8rem; font-size: 0.75rem; display: flex; flex-direction: column; gap: 0.3rem;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="margin-top: 0.6rem; font-size: 0.72rem; display: flex; flex-direction: column; gap: 0.25rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <div class="rec-dot" id="dot-ard" style="background: var(--text-muted);"></div>
                         <span>Semáforos (Arduino UNO R4):</span>
                         <strong id="val-ard-port" style="color: white; font-family: 'JetBrains Mono';">-</strong>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <div class="rec-dot" id="dot-cam" style="background: var(--text-muted);"></div>
                         <span>Fuente de Video Activa:</span>
-                        <strong id="val-cam-type" style="color: var(--primary); font-family: 'JetBrains Mono';">Auto</strong>
+                        <strong id="val-cam-type" style="color: #60a5fa; font-family: 'JetBrains Mono';">Auto</strong>
                     </div>
                 </div>
             </div>
@@ -695,9 +799,9 @@
             <!-- Remote Controls (C5 Command) -->
             <div class="panel">
                 <div class="panel-header">
-                    <div class="panel-title">🎮 Mando Remoto C5</div>
+                    <div class="panel-title">Mando Remoto C5</div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.8rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.4rem;">
                     <button class="btn btn-outline" onclick="sendCommand('force_ns')">Paso Eje NS</button>
                     <button class="btn btn-outline" onclick="sendCommand('force_eo')">Paso Eje EO</button>
                     <button class="btn btn-outline" onclick="sendCommand('pedestrian_call')">Paso Peatonal</button>
@@ -708,8 +812,8 @@
             <!-- Event Logs Console -->
             <div class="panel">
                 <div class="panel-header">
-                    <div class="panel-title">📜 Registro de Eventos del Sistema</div>
-                    <span style="font-size: 0.7rem; color: var(--text-muted);">En Vivo</span>
+                    <div class="panel-title">Registro de Eventos del Sistema</div>
+                    <span style="font-size: 0.68rem; color: var(--text-muted);">En Vivo</span>
                 </div>
                 <div class="console-box" id="event-console">
                     <!-- Logs inyectados por JS -->
@@ -721,28 +825,28 @@
 
     <!-- MODAL: Corredor de Emergencia C5 -->
     <div class="modal" id="modal-emergency-corridor">
-        <div class="modal-content" style="max-width: 600px; border-color: var(--danger);">
+        <div class="modal-content" style="max-width: 550px; border-color: rgba(220, 38, 38, 0.4);">
             <div class="panel-header">
-                <div class="panel-title" style="color: var(--danger);">🚨 Corredor de Emergencia C5 (Ambulancias / Bomberos)</div>
-                <button class="btn btn-outline" style="padding: 0.3rem 0.6rem;" onclick="closeModal('modal-emergency-corridor')">✕ Cerrar</button>
+                <div class="panel-title" style="color: var(--danger);">Corredor de Emergencia C5 (Ambulancias / Bomberos)</div>
+                <button class="btn btn-outline" style="padding: 0.25rem 0.5rem;" onclick="closeModal('modal-emergency-corridor')">✕</button>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.2rem;">
+            <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1rem;">
                 Activa la prioridad máxima inmediata en la intersección para abrir paso expedito a vehículos de emergencia, colocando todas las demás vías en rojo total.
             </p>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1.5rem;">
-                <button class="btn btn-danger" style="padding: 0.9rem; font-size: 0.95rem; font-weight: 800;" onclick="activateCorridor('NS')">
-                    🚑 DESPEJAR EJE NORTE-SUR
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 1.2rem;">
+                <button class="btn btn-danger" style="padding: 0.8rem; font-size: 0.85rem; font-weight: 700;" onclick="activateCorridor('NS')">
+                    Despejar Eje Norte-Sur
                 </button>
-                <button class="btn btn-danger" style="padding: 0.9rem; font-size: 0.95rem; font-weight: 800;" onclick="activateCorridor('EO')">
-                    🚒 DESPEJAR EJE ESTE-OESTE
+                <button class="btn btn-danger" style="padding: 0.8rem; font-size: 0.85rem; font-weight: 700;" onclick="activateCorridor('EO')">
+                    Despejar Eje Este-Oeste
                 </button>
             </div>
 
-            <div style="border-top: 1px solid var(--panel-border); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.8rem; color: var(--text-muted);">¿Finalizó la emergencia?</span>
+            <div style="border-top: 1px solid var(--panel-border); padding-top: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.75rem; color: var(--text-muted);">¿Finalizó la emergencia?</span>
                 <button class="btn btn-accent" onclick="cancelCorridor()">
-                    🔄 Restaurar Ciclo Normal
+                    Restaurar Ciclo Normal
                 </button>
             </div>
         </div>
@@ -750,38 +854,38 @@
 
     <!-- MODAL: Impacto Ecológico y ROI Smart City -->
     <div class="modal" id="modal-sustainability">
-        <div class="modal-content" style="max-width: 750px; border-color: var(--accent);">
+        <div class="modal-content" style="max-width: 700px; border-color: var(--tesco-green);">
             <div class="panel-header">
-                <div class="panel-title" style="color: var(--accent);">🌿 Impacto Ecológico & ROI Smart City (Tiempo Real)</div>
-                <button class="btn btn-outline" style="padding: 0.3rem 0.6rem;" onclick="closeModal('modal-sustainability')">✕ Cerrar</button>
+                <div class="panel-title" style="color: var(--tesco-green);">Sustentabilidad y ROI de Movilidad</div>
+                <button class="btn btn-outline" style="padding: 0.25rem 0.5rem;" onclick="closeModal('modal-sustainability')">✕</button>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.2rem;">
+            <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1rem;">
                 Estimación en tiempo real del ahorro energético y mitigación de contaminación lograda por FLUXA al reducir los tiempos muertos de semáforos fijos.
             </p>
 
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
-                <div style="background: rgba(0,0,0,0.3); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--panel-border); text-align: center;">
-                    <div style="font-size: 2rem; font-weight: 800; color: var(--accent); font-family: 'JetBrains Mono';" id="modal-fuel-saved">0.00 L</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Combustible Ahorrado (Ralentí evitado)</div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; margin-bottom: 1.2rem;">
+                <div style="background: rgba(7, 13, 9, 0.7); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--panel-border); text-align: center;">
+                    <div style="font-size: 1.7rem; font-weight: 800; color: var(--tesco-green); font-family: 'JetBrains Mono';" id="modal-fuel-saved">0.00 L</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Combustible Ahorrado (Ralentí evitado)</div>
                 </div>
-                <div style="background: rgba(0,0,0,0.3); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--panel-border); text-align: center;">
-                    <div style="font-size: 2rem; font-weight: 800; color: #34d399; font-family: 'JetBrains Mono';" id="modal-co2-saved">0.00 kg</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">CO₂ Mitigado a la Atmósfera</div>
+                <div style="background: rgba(7, 13, 9, 0.7); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--panel-border); text-align: center;">
+                    <div style="font-size: 1.7rem; font-weight: 800; color: #34d399; font-family: 'JetBrains Mono';" id="modal-co2-saved">0.00 kg</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">CO₂ Mitigado a la Atmósfera</div>
                 </div>
-                <div style="background: rgba(0,0,0,0.3); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--panel-border); text-align: center;">
-                    <div style="font-size: 2rem; font-weight: 800; color: var(--primary); font-family: 'JetBrains Mono';" id="modal-time-saved">0.0 min</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Tiempo de Espera Ahorrado a Ciudadanos</div>
+                <div style="background: rgba(7, 13, 9, 0.7); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--panel-border); text-align: center;">
+                    <div style="font-size: 1.7rem; font-weight: 800; color: #60a5fa; font-family: 'JetBrains Mono';" id="modal-time-saved">0.0 min</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Tiempo de Espera Ahorrado</div>
                 </div>
-                <div style="background: rgba(0,0,0,0.3); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--panel-border); text-align: center;">
-                    <div style="font-size: 2rem; font-weight: 800; color: var(--warning); font-family: 'JetBrains Mono';" id="modal-flow-eff">88%</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Índice de Fluidez del Cruce</div>
+                <div style="background: rgba(7, 13, 9, 0.7); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--panel-border); text-align: center;">
+                    <div style="font-size: 1.7rem; font-weight: 800; color: #fbbf24; font-family: 'JetBrains Mono';" id="modal-flow-eff">88%</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Índice de Fluidez del Cruce</div>
                 </div>
             </div>
 
-            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--accent); padding: 1rem; border-radius: 8px;">
-                <h4 style="font-size: 0.85rem; color: var(--accent); margin-bottom: 0.3rem;">📊 Proyección de Retorno de Inversión Municipal (ROI):</h4>
-                <p style="font-size: 0.78rem; color: var(--text-muted);">
-                    Al optimizar 10 cruces en la ciudad con FLUXA, se proyecta un ahorro superior a <strong>$450,000 MXN / año</strong> en combustible y una reducción de <strong>38 toneladas de CO₂</strong> anuales.
+            <div style="background: rgba(112, 186, 40, 0.08); border: 1px solid rgba(112, 186, 40, 0.3); padding: 0.9rem; border-radius: var(--radius-md);">
+                <h4 style="font-size: 0.8rem; color: var(--tesco-green); margin-bottom: 0.2rem;">Proyección de Retorno de Inversión Municipal (ROI):</h4>
+                <p style="font-size: 0.75rem; color: var(--text-muted);">
+                    Al optimizar 10 cruces viales con FLUXA, se proyecta un ahorro estimado superior a <strong>$450,000 MXN / año</strong> en combustible y una reducción de <strong>38 toneladas de CO₂</strong> anuales.
                 </p>
             </div>
         </div>
@@ -789,64 +893,64 @@
 
     <!-- MODAL: Comparativa A/B (Semáforo Tradicional vs FLUXA IA) -->
     <div class="modal" id="modal-ab">
-        <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-content" style="max-width: 650px;">
             <div class="panel-header">
-                <div class="panel-title">⚡ Comparativa A/B: Semáforo Convencional vs FLUXA</div>
-                <button class="btn btn-outline" style="padding: 0.3rem 0.6rem;" onclick="closeModal('modal-ab')">✕ Cerrar</button>
+                <div class="panel-title">Comparativa A/B: Semáforo Convencional vs FLUXA</div>
+                <button class="btn btn-outline" style="padding: 0.25rem 0.5rem;" onclick="closeModal('modal-ab')">✕</button>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.2rem;">
+            <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1rem;">
                 Demostración del tiempo acumulado que los autos habrían esperado con ciclos fijos de 45s frente a la asignación dinámica de FLUXA.
             </p>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); padding: 1.2rem; border-radius: 10px; text-align: center;">
-                    <div style="font-size: 1.8rem; font-weight: 800; color: #fca5a5; font-family: 'JetBrains Mono';" id="ab-trad-time">0s</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem;">Semáforo Fijo (45s por fase)</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1.2rem;">
+                <div style="background: rgba(220, 38, 38, 0.08); border: 1px solid rgba(220, 38, 38, 0.3); padding: 1rem; border-radius: var(--radius-md); text-align: center;">
+                    <div style="font-size: 1.6rem; font-weight: 800; color: #fca5a5; font-family: 'JetBrains Mono';" id="ab-trad-time">0s</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">Semáforo Fijo (45s por fase)</div>
                 </div>
-                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--accent); padding: 1.2rem; border-radius: 10px; text-align: center;">
-                    <div style="font-size: 1.8rem; font-weight: 800; color: #a7f3d0; font-family: 'JetBrains Mono';" id="ab-fluxa-time">0s</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem;">FLUXA IA Adaptativo</div>
+                <div style="background: rgba(112, 186, 40, 0.08); border: 1px solid rgba(112, 186, 40, 0.3); padding: 1rem; border-radius: var(--radius-md); text-align: center;">
+                    <div style="font-size: 1.6rem; font-weight: 800; color: #a7f3d0; font-family: 'JetBrains Mono';" id="ab-fluxa-time">0s</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">FLUXA IA Adaptativo</div>
                 </div>
             </div>
 
-            <p style="font-size: 0.82rem; color: #94a3b8; text-align: center;">
-                🚀 <strong>FLUXA redujo el tiempo muerto de semáforos en un <span id="ab-pct-saved" style="color: var(--accent); font-weight: 700;">60%</span></strong>.
+            <p style="font-size: 0.78rem; color: #94a3b8; text-align: center;">
+                FLUXA redujo el tiempo muerto de semáforos en un <span id="ab-pct-saved" style="color: var(--tesco-green); font-weight: 700;">60%</span>.
             </p>
         </div>
     </div>
 
     <!-- Modal 0: Conmutador de Fuente de Video -->
     <div class="modal" id="modal-video-source">
-        <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-content" style="max-width: 600px;">
             <div class="panel-header">
-                <div class="panel-title">🎬 Fuente de Entrada de Video (Demostración Escolar)</div>
-                <button class="btn btn-outline" style="padding: 0.3rem 0.6rem;" onclick="closeModal('modal-video-source')">✕ Cerrar</button>
+                <div class="panel-title">Fuente de Entrada de Video</div>
+                <button class="btn btn-outline" style="padding: 0.25rem 0.5rem;" onclick="closeModal('modal-video-source')">✕</button>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.2rem;">
-                Alterna fácilmente entre la <strong>Cámara en Vivo</strong> (para la maqueta a escala) y <strong>Clips de Video Grabados</strong> (para demostrar la detección de tráfico e IA en el proyector).
+            <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1rem;">
+                Selecciona entre la <strong>Cámara en Vivo</strong> (maqueta a escala / sensor USB) o <strong>Clips de Video Grabados</strong>.
             </p>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1.5rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 1.2rem;">
                 <button class="btn btn-accent" onclick="setVideoSourceCamera(0)">
-                    📹 Usar Cámara USB / Maqueta
+                    Cámara USB / Maqueta
                 </button>
                 <button class="btn btn-primary" onclick="setVideoSourceFile('demo_trafico_4vias.mp4')">
-                    🎬 Usar Clip Tráfico Demo
+                    Clip Tráfico Demo
                 </button>
             </div>
 
-            <h4 style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.6rem;">
-                Clips de Video Disponibles en el Servidor
+            <h4 style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem;">
+                Videos Disponibles en el Servidor
             </h4>
-            <div id="video-sources-list" style="margin-bottom: 1.5rem;"></div>
+            <div id="video-sources-list" style="margin-bottom: 1.2rem;"></div>
 
-            <h4 style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.6rem;">
-                Cargar tu Propio Video de Demostración (.mp4 / .avi)
+            <h4 style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem;">
+                Cargar Video Personalizado (.mp4 / .avi)
             </h4>
-            <div style="background: rgba(0,0,0,0.3); border: 1px dashed var(--panel-border); border-radius: 8px; padding: 1rem; display: flex; gap: 0.8rem; align-items: center;">
-                <input type="file" id="video-upload-input" accept="video/mp4,video/avi,video/mkv" style="font-size: 0.8rem; color: var(--text-muted);">
-                <button class="btn btn-outline" style="white-space: nowrap;" onclick="uploadCustomVideo()">
-                    ⬆ Subir y Reproducir
+            <div style="background: rgba(7, 13, 9, 0.7); border: 1px dashed var(--panel-border); border-radius: var(--radius-md); padding: 0.8rem; display: flex; gap: 0.6rem; align-items: center;">
+                <input type="file" id="video-upload-input" accept="video/mp4,video/avi,video/mkv" style="font-size: 0.75rem; color: var(--text-muted);">
+                <button class="btn btn-outline" style="white-space: nowrap; font-size: 0.75rem;" onclick="uploadCustomVideo()">
+                    Subir y Reproducir
                 </button>
             </div>
         </div>
@@ -854,17 +958,17 @@
 
     <!-- Modal 1: Estudio Visual de Calibración de ROIs, Tiempos y Modelos IA -->
     <div class="modal" id="modal-zones">
-        <div class="modal-content" style="max-width: 1150px; width: 95%;">
+        <div class="modal-content" style="max-width: 1100px; width: 95%;">
             <div class="panel-header">
-                <div class="panel-title">📐 Estudio Visual de Calibración de ROIs, Tiempos y Modelo IA</div>
-                <button class="btn btn-outline" style="padding: 0.3rem 0.6rem;" onclick="closeModal('modal-zones')">✕ Cerrar</button>
+                <div class="panel-title">Estudio Visual de Calibración de ROIs, Tiempos y Modelo IA</div>
+                <button class="btn btn-outline" style="padding: 0.25rem 0.5rem;" onclick="closeModal('modal-zones')">✕</button>
             </div>
             
             <!-- Top Controls: Topology Selection & Snapshot Capture -->
-            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.35); padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.8rem;">
-                <div style="display: flex; align-items: center; gap: 0.8rem;">
-                    <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Topología:</label>
-                    <select id="roi-topo-select" onchange="onTopologyChanged()" style="background: #050811; color: white; border: 1px solid var(--panel-border); padding: 0.45rem 0.8rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(7, 13, 9, 0.7); padding: 0.6rem 0.8rem; border-radius: var(--radius-md); margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.6rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Topología:</label>
+                    <select id="roi-topo-select" onchange="onTopologyChanged()" style="background: #050806; color: white; border: 1px solid var(--panel-border); padding: 0.35rem 0.65rem; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 600;">
                         <option value="4_way">4 Vías (Norte-Sur vs Este-Oeste)</option>
                         <option value="2_way">2 Vías (Vía A vs Vía B)</option>
                         <option value="3_way_t">3 Vías Tipo T (Principal vs Secundaria)</option>
@@ -873,126 +977,126 @@
                     </select>
                 </div>
 
-                <div style="display: flex; gap: 0.6rem;">
-                    <button class="btn btn-accent" onclick="captureLiveSnapshot()" style="padding: 0.45rem 0.9rem; font-size: 0.8rem;">
-                        📸 Capturar Cuadro Actual
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-accent" onclick="captureLiveSnapshot()" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">
+                        Capturar Cuadro Actual
                     </button>
-                    <button class="btn btn-outline" onclick="toggleRawJsonView()" style="padding: 0.45rem 0.8rem; font-size: 0.8rem;">
-                        📝 Modo JSON Crudo
+                    <button class="btn btn-outline" onclick="toggleRawJsonView()" style="padding: 0.35rem 0.65rem; font-size: 0.75rem;">
+                        Modo JSON Crudo
                     </button>
                 </div>
             </div>
 
             <!-- Studio Grid: Canvas Editor on Left, Parameters & Models on Right -->
-            <div style="display: grid; grid-template-columns: 1.35fr 0.85fr; gap: 1.2rem; align-items: start;">
+            <div style="display: grid; grid-template-columns: 1.35fr 0.85fr; gap: 1rem; align-items: start;">
                 
                 <!-- Left: Interactive Canvas -->
                 <div>
                     <!-- Active Lane Palette Pills -->
-                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.6rem; flex-wrap: wrap;" id="roi-lane-pills">
+                    <div style="display: flex; gap: 0.4rem; margin-bottom: 0.5rem; flex-wrap: wrap;" id="roi-lane-pills">
                         <!-- Botones de carril dinámicos -->
                     </div>
 
                     <!-- Canvas Wrapper -->
-                    <div style="position: relative; background: #000; border-radius: 8px; overflow: hidden; border: 1px solid var(--panel-border); aspect-ratio: 16/9;">
+                    <div style="position: relative; background: #000; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--panel-border); aspect-ratio: 16/9;">
                         <canvas id="roi-canvas" width="640" height="360" style="width: 100%; height: 100%; display: block; cursor: crosshair;"></canvas>
-                        <div id="roi-canvas-loading" style="display: none; position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; color:white; font-size:0.9rem; font-weight:600;">
-                            ⏳ Obteniendo cuadro de video...
+                        <div id="roi-canvas-loading" style="display: none; position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; color:white; font-size:0.85rem; font-weight:600;">
+                            Obteniendo cuadro de video...
                         </div>
                     </div>
 
                     <!-- Canvas Tools & Instructions -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.6rem; font-size: 0.75rem; color: var(--text-muted);">
-                        <span>💡 Haz <strong>clic</strong> para añadir esquinas o <strong>arrastra</strong> los puntos con el ratón.</span>
-                        <div style="display: flex; gap: 0.4rem;">
-                            <button class="btn btn-outline" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;" onclick="undoLastPoint()">↶ Deshacer Punto</button>
-                            <button class="btn btn-outline" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; color: var(--danger);" onclick="clearCurrentLanePolygon()">🗑️ Limpiar Carril</button>
-                            <button class="btn btn-outline" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;" onclick="resetCurrentLaneToDefault()">↺ Polígono por Defecto</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.72rem; color: var(--text-muted);">
+                        <span>Haz <strong>clic</strong> para añadir vértices o <strong>arrastra</strong> los puntos con el cursor.</span>
+                        <div style="display: flex; gap: 0.35rem;">
+                            <button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;" onclick="undoLastPoint()">Deshacer</button>
+                            <button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.7rem; color: var(--danger);" onclick="clearCurrentLanePolygon()">Limpiar</button>
+                            <button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;" onclick="resetCurrentLaneToDefault()">Por Defecto</button>
                         </div>
                     </div>
 
                     <!-- Hidden / Collapsible Raw JSON Editor -->
-                    <div id="raw-json-container" style="display: none; margin-top: 0.8rem;">
-                        <textarea id="zones-json-editor" style="width: 100%; height: 130px; background: #050811; color: #a7f3d0; font-family: 'JetBrains Mono'; font-size: 0.75rem; border-radius: 6px; padding: 0.6rem; border: 1px solid var(--panel-border);"></textarea>
+                    <div id="raw-json-container" style="display: none; margin-top: 0.6rem;">
+                        <textarea id="zones-json-editor" style="width: 100%; height: 120px; background: #050806; color: #a7f3d0; font-family: 'JetBrains Mono'; font-size: 0.72rem; border-radius: var(--radius-sm); padding: 0.5rem; border: 1px solid var(--panel-border);"></textarea>
                     </div>
                 </div>
 
                 <!-- Right: Traffic Light Timings & YOLO Model Selector -->
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.8rem;">
                     
                     <!-- Card: YOLO Model Selector & AI Parameters -->
-                    <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 10px; padding: 1rem;">
-                        <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--accent); text-transform: uppercase; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem;">
-                            <span>🧠</span> <span>Modelo YOLO e Inferencia</span>
+                    <div style="background: rgba(7, 13, 9, 0.7); border: 1px solid var(--panel-border); border-radius: var(--radius-md); padding: 0.85rem;">
+                        <h4 style="font-size: 0.76rem; font-weight: 700; color: var(--tesco-green); text-transform: uppercase; margin-bottom: 0.6rem;">
+                            Modelo YOLO e Inferencia Edge
                         </h4>
 
-                        <div style="margin-bottom: 0.8rem;">
-                            <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Arquitectura del Modelo YOLO:</label>
-                            <select id="roi-model-select" style="width: 100%; background: #050811; color: white; border: 1px solid var(--panel-border); padding: 0.45rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
-                                <option value="yolov8n.pt">YOLOv8 Nano (Ultraligero - Máxima Velocidad)</option>
-                                <option value="yolov8s.pt">YOLOv8 Small (Balanceado - 11.2M params)</option>
-                                <option value="yolov8m.pt">YOLOv8 Medium (Alta Precisión - 25.9M params)</option>
-                                <option value="yolov8n.rknn">YOLOv8 Nano RKNN (NPU Orange Pi 5)</option>
-                                <option value="yolov8s.rknn">YOLOv8 Small RKNN (NPU Orange Pi 5)</option>
-                                <option value="yolov8m.rknn">YOLOv8 Medium RKNN (NPU Orange Pi 5)</option>
+                        <div style="margin-bottom: 0.6rem;">
+                            <label style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">Arquitectura del Modelo:</label>
+                            <select id="roi-model-select" style="width: 100%; background: #050806; color: white; border: 1px solid var(--panel-border); padding: 0.4rem 0.55rem; border-radius: var(--radius-sm); font-size: 0.76rem; font-weight: 600;">
+                                <option value="yolov8n.pt">YOLOv8 Nano (PyTorch CPU)</option>
+                                <option value="yolov8s.pt">YOLOv8 Small (PyTorch CPU)</option>
+                                <option value="yolov8m.pt">YOLOv8 Medium (PyTorch CPU)</option>
+                                <option value="yolov8n.rknn">YOLOv8 Nano RKNN (NPU RK3588)</option>
+                                <option value="yolov8s.rknn">YOLOv8 Small RKNN (NPU RK3588)</option>
+                                <option value="yolov8m.rknn">YOLOv8 Medium RKNN (NPU RK3588)</option>
                             </select>
                         </div>
 
                         <div>
-                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.2rem;">
-                                <span style="color: var(--text-muted);">Umbral de Confianza IA:</span>
-                                <strong id="lbl-conf-thresh" style="color: var(--primary);">0.35</strong>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-bottom: 0.15rem;">
+                                <span style="color: var(--text-muted);">Umbral de Confianza:</span>
+                                <strong id="lbl-conf-thresh" style="color: #60a5fa; font-family: 'JetBrains Mono';">0.35</strong>
                             </div>
-                            <input type="range" id="slider-conf-thresh" min="0.15" max="0.85" step="0.05" value="0.35" style="width: 100%; accent-color: var(--primary);" oninput="document.getElementById('lbl-conf-thresh').innerText = this.value">
+                            <input type="range" id="slider-conf-thresh" min="0.15" max="0.85" step="0.05" value="0.35" style="width: 100%; accent-color: #60a5fa;" oninput="document.getElementById('lbl-conf-thresh').innerText = this.value">
                         </div>
                     </div>
 
                     <!-- Card: Traffic Light Phase Timings -->
-                    <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 10px; padding: 1rem;">
-                        <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--warning); text-transform: uppercase; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem;">
-                            <span>⏱️</span> <span>Tiempos del Semáforo</span>
+                    <div style="background: rgba(7, 13, 9, 0.7); border: 1px solid var(--panel-border); border-radius: var(--radius-md); padding: 0.85rem;">
+                        <h4 style="font-size: 0.76rem; font-weight: 700; color: #fbbf24; text-transform: uppercase; margin-bottom: 0.6rem;">
+                            Tiempos del Semáforo
                         </h4>
 
                         <!-- Min Green -->
-                        <div style="margin-bottom: 0.7rem;">
-                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.2rem;">
-                                <span style="color: var(--text-muted);">Tiempo Mínimo de Verde:</span>
-                                <strong id="lbl-min-green" style="color: var(--accent);">5.0 s</strong>
+                        <div style="margin-bottom: 0.55rem;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-bottom: 0.15rem;">
+                                <span style="color: var(--text-muted);">Verde Mínimo:</span>
+                                <strong id="lbl-min-green" style="color: var(--tesco-green); font-family: 'JetBrains Mono';">5.0 s</strong>
                             </div>
-                            <input type="range" id="slider-min-green" min="3.0" max="20.0" step="1.0" value="5.0" style="width: 100%; accent-color: var(--accent);" oninput="document.getElementById('lbl-min-green').innerText = this.value + ' s'">
+                            <input type="range" id="slider-min-green" min="3.0" max="20.0" step="1.0" value="5.0" style="width: 100%; accent-color: var(--tesco-green);" oninput="document.getElementById('lbl-min-green').innerText = this.value + ' s'">
                         </div>
 
                         <!-- Max Green -->
-                        <div style="margin-bottom: 0.7rem;">
-                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.2rem;">
-                                <span style="color: var(--text-muted);">Tiempo Máximo de Verde:</span>
-                                <strong id="lbl-max-green" style="color: var(--accent);">45.0 s</strong>
+                        <div style="margin-bottom: 0.55rem;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-bottom: 0.15rem;">
+                                <span style="color: var(--text-muted);">Verde Máximo:</span>
+                                <strong id="lbl-max-green" style="color: var(--tesco-green); font-family: 'JetBrains Mono';">45.0 s</strong>
                             </div>
-                            <input type="range" id="slider-max-green" min="15.0" max="90.0" step="5.0" value="45.0" style="width: 100%; accent-color: var(--accent);" oninput="document.getElementById('lbl-max-green').innerText = this.value + ' s'">
+                            <input type="range" id="slider-max-green" min="15.0" max="90.0" step="5.0" value="45.0" style="width: 100%; accent-color: var(--tesco-green);" oninput="document.getElementById('lbl-max-green').innerText = this.value + ' s'">
                         </div>
 
                         <!-- Yellow -->
-                        <div style="margin-bottom: 0.7rem;">
-                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.2rem;">
-                                <span style="color: var(--text-muted);">Tiempo de Luz Ámbar:</span>
-                                <strong id="lbl-yellow" style="color: var(--warning);">3.0 s</strong>
+                        <div style="margin-bottom: 0.55rem;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-bottom: 0.15rem;">
+                                <span style="color: var(--text-muted);">Luz Ámbar:</span>
+                                <strong id="lbl-yellow" style="color: #fbbf24; font-family: 'JetBrains Mono';">3.0 s</strong>
                             </div>
-                            <input type="range" id="slider-yellow" min="2.0" max="6.0" step="0.5" value="3.0" style="width: 100%; accent-color: var(--warning);" oninput="document.getElementById('lbl-yellow').innerText = this.value + ' s'">
+                            <input type="range" id="slider-yellow" min="2.0" max="6.0" step="0.5" value="3.0" style="width: 100%; accent-color: #fbbf24;" oninput="document.getElementById('lbl-yellow').innerText = this.value + ' s'">
                         </div>
 
                         <!-- Time factor per car -->
                         <div>
-                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.2rem;">
-                                <span style="color: var(--text-muted);">Factor Segundos / Auto:</span>
-                                <strong id="lbl-factor-car" style="color: white;">3.0 s</strong>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-bottom: 0.15rem;">
+                                <span style="color: var(--text-muted);">Factor Segundos / Vehículo:</span>
+                                <strong id="lbl-factor-car" style="color: white; font-family: 'JetBrains Mono';">3.0 s</strong>
                             </div>
                             <input type="range" id="slider-factor-car" min="1.0" max="5.0" step="0.5" value="3.0" style="width: 100%; accent-color: #64748b;" oninput="document.getElementById('lbl-factor-car').innerText = this.value + ' s'">
                         </div>
                     </div>
 
                     <!-- Save and Apply Button -->
-                    <button class="btn btn-accent" style="padding: 0.85rem; font-size: 0.95rem; font-weight: 800; width: 100%; box-shadow: 0 0 15px var(--accent-glow);" onclick="saveFullStudioConfig()">
-                        💾 GUARDAR Y APLICAR EN CALIENTE
+                    <button class="btn btn-accent" style="padding: 0.75rem; font-size: 0.85rem; font-weight: 700; width: 100%;" onclick="saveFullStudioConfig()">
+                        Guardar y Aplicar en Caliente
                     </button>
 
                 </div>
@@ -1003,22 +1107,22 @@
 
     <!-- Modal 2: Analítica de Hora Pico (MariaDB) -->
     <div class="modal" id="modal-peak">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 650px;">
             <div class="panel-header">
-                <div class="panel-title">📈 Analítica de Hora Pico (MariaDB)</div>
-                <button class="btn btn-outline" style="padding: 0.3rem 0.6rem;" onclick="closeModal('modal-peak')">✕ Cerrar</button>
+                <div class="panel-title">Analítica de Hora Pico (MariaDB)</div>
+                <button class="btn btn-outline" style="padding: 0.25rem 0.5rem;" onclick="closeModal('modal-peak')">✕</button>
             </div>
-            <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between;">
+            <div style="background: rgba(7, 13, 9, 0.7); padding: 0.85rem; border-radius: var(--radius-md); margin-bottom: 0.8rem; display: flex; justify-content: space-between;">
                 <div>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">HORA PICO DEL DÍA:</span>
-                    <h3 id="peak-hour-text" style="color: var(--warning); font-size: 1.3rem;">Calculando...</h3>
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">HORA PICO DEL DÍA:</span>
+                    <h3 id="peak-hour-text" style="color: #fbbf24; font-size: 1.15rem; font-family: 'JetBrains Mono';">Calculando...</h3>
                 </div>
                 <div>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">VOLUMEN PROMEDIO PICO:</span>
-                    <h3 id="peak-vol-text" style="color: var(--accent); font-size: 1.3rem;">0 autos</h3>
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">VOLUMEN PROMEDIO PICO:</span>
+                    <h3 id="peak-vol-text" style="color: var(--tesco-green); font-size: 1.15rem; font-family: 'JetBrains Mono';">0 autos</h3>
                 </div>
             </div>
-            <div style="height: 250px;">
+            <div style="height: 230px;">
                 <canvas id="peakHourChart"></canvas>
             </div>
         </div>
@@ -1026,12 +1130,12 @@
 
     <!-- Modal 3: Infracciones en Luz Roja -->
     <div class="modal" id="modal-violations">
-        <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-content" style="max-width: 850px;">
             <div class="panel-header">
-                <div class="panel-title">🚨 Registro de Infracciones (Paso en Luz Roja)</div>
-                <button class="btn btn-outline" style="padding: 0.3rem 0.6rem;" onclick="closeModal('modal-violations')">✕ Cerrar</button>
+                <div class="panel-title">Registro de Infracciones (Paso en Luz Roja)</div>
+                <button class="btn btn-outline" style="padding: 0.25rem 0.5rem;" onclick="closeModal('modal-violations')">✕</button>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">Captura fotográfica automática y registro en base de datos cuando un vehículo cruza la línea en luz roja.</p>
+            <p style="color: var(--text-muted); font-size: 0.78rem;">Captura fotográfica y registro con cuota de almacenamiento rotativo.</p>
             <table class="viol-table">
                 <thead>
                     <tr>
@@ -1043,11 +1147,24 @@
                     </tr>
                 </thead>
                 <tbody id="violations-table-body">
-                    <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No hay infracciones registradas el día de hoy.</td></tr>
+                    <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding: 1rem;">No hay infracciones registradas el día de hoy.</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
+
+    <!-- Dashboard Footer -->
+    <footer class="dashboard-footer">
+        <div class="footer-inst-info">
+            <img src="/logos/tesco.png" alt="TESCo" style="height: 24px; opacity: 0.85;">
+            <img src="/logos/tecnm.png" alt="TecNM" style="height: 24px; opacity: 0.85;">
+            <img src="/logos/sic.png" alt="ISC" style="height: 24px; opacity: 0.85;">
+            <span>Tecnológico de Estudios Superiores de Coacalco (TESCo) • Tecnológico Nacional de México</span>
+        </div>
+        <div>
+            División de Ingeniería en Sistemas Computacionales | FLUXA Smart Mobility v3.5
+        </div>
+    </footer>
 
     <!-- JavaScript & Chart.js -->
     <script>
@@ -1058,7 +1175,7 @@
             if (b) b.style.display = 'none';
         }
 
-        const colorPalette = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+        const colorPalette = ['#70ba28', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
         
         // Traffic Chart Setup
         const ctx = document.getElementById('trafficChart').getContext('2d');
@@ -1068,10 +1185,10 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } } } },
+                plugins: { legend: { labels: { color: '#8ea395', font: { family: 'Inter', size: 10 } } } },
                 scales: {
-                    x: { ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
-                    y: { beginAtZero: true, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+                    x: { ticks: { color: '#8ea395', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } },
+                    y: { beginAtZero: true, ticks: { color: '#8ea395', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } }
                 },
                 animation: false
             }
@@ -1081,13 +1198,13 @@
         const ctxPeak = document.getElementById('peakHourChart').getContext('2d');
         const peakHourChart = new Chart(ctxPeak, {
             type: 'bar',
-            data: { labels: [], datasets: [{ label: 'Promedio Autos / Hora', data: [], backgroundColor: '#f59e0b88', borderColor: '#f59e0b', borderWidth: 1 }] },
+            data: { labels: [], datasets: [{ label: 'Promedio Autos / Hora', data: [], backgroundColor: '#70ba2888', borderColor: '#70ba28', borderWidth: 1 }] },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#94a3b8' } } },
+                plugins: { legend: { labels: { color: '#8ea395' } } },
                 scales: {
-                    x: { ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
-                    y: { beginAtZero: true, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+                    x: { ticks: { color: '#8ea395', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } },
+                    y: { beginAtZero: true, ticks: { color: '#8ea395', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } }
                 }
             }
         });
@@ -1103,7 +1220,7 @@
                 
                 if (data.camara) {
                     document.getElementById('stream-meta').innerText = `${data.camara.resolution} • ${data.fps} FPS`;
-                    document.getElementById('video-src-badge').innerHTML = `<span>${data.camara.tipo.includes('Clip') ? '🎬' : '📹'} ${data.camara.tipo}</span>`;
+                    document.getElementById('video-src-badge').innerHTML = `<span>${data.camara.tipo.toUpperCase()}</span>`;
                     document.getElementById('val-cam-type').innerText = data.camara.tipo;
                 }
 
@@ -1124,7 +1241,7 @@
                     vidPanel.classList.remove('emergency-mode-active');
                 }
 
-                // Alerta de Arduino Desconectado (>30s) (P2.4)
+                // Alerta de Arduino Desconectado (>30s)
                 const ardBanner = document.getElementById('banner-arduino-disconnect');
                 if (ardBanner) {
                     if (!window.arduinoAlertIgnored && data.arduino && data.arduino.alerta_desconexion_prolongada) {
@@ -1197,7 +1314,7 @@
                         document.getElementById('hw-temp').innerText = `${hw.cpu_temp_c} °C`;
                         if (hw.cpu_temp_c > 75) document.getElementById('hw-temp').style.color = 'var(--danger)';
                         else if (hw.cpu_temp_c > 65) document.getElementById('hw-temp').style.color = 'var(--warning)';
-                        else document.getElementById('hw-temp').style.color = 'var(--accent)';
+                        else document.getElementById('hw-temp').style.color = 'var(--tesco-green)';
                     } else {
                         document.getElementById('hw-temp').innerText = 'N/A';
                     }
@@ -1221,7 +1338,7 @@
                             document.getElementById('npu-freq-val').innerText = hw.npu.freq_mhz ? `${hw.npu.freq_mhz} MHz` : '1000 MHz';
                         } else if (data.ai_engine && data.ai_engine.is_npu) {
                             npuCard.style.display = 'block';
-                            document.getElementById('npu-title-text').innerText = '⚡ NPU Rockchip RK3588 (Hardware Directo)';
+                            document.getElementById('npu-title-text').innerText = 'NPU Rockchip RK3588 (Hardware Directo)';
                             document.getElementById('npu-freq-val').innerText = '6 TOPS Activos';
                             document.getElementById('npu-c0-load').innerText = 'Activo';
                             document.getElementById('npu-c1-load').innerText = 'Activo';
@@ -1238,15 +1355,15 @@
                     const badge = document.getElementById('badge-ai-model');
                     if (badge) {
                         if (ai.is_npu) {
-                            badge.innerHTML = `⚡ <strong>NPU RK3588</strong> • ${ai.model_file}`;
-                            badge.style.background = 'rgba(16, 185, 129, 0.15)';
-                            badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-                            badge.style.color = '#10b981';
+                            badge.innerHTML = `<strong>NPU RK3588</strong> • ${ai.model_file}`;
+                            badge.style.background = 'rgba(112, 186, 40, 0.12)';
+                            badge.style.borderColor = 'rgba(112, 186, 40, 0.35)';
+                            badge.style.color = 'var(--tesco-green)';
                         } else {
-                            badge.innerHTML = `🧠 <strong>CPU PyTorch</strong> • ${ai.model_file}`;
-                            badge.style.background = 'rgba(59, 130, 246, 0.15)';
-                            badge.style.borderColor = 'rgba(59, 130, 246, 0.4)';
-                            badge.style.color = '#38bdf8';
+                            badge.innerHTML = `<strong>CPU PyTorch</strong> • ${ai.model_file}`;
+                            badge.style.background = 'rgba(59, 130, 246, 0.12)';
+                            badge.style.borderColor = 'rgba(59, 130, 246, 0.35)';
+                            badge.style.color = '#60a5fa';
                         }
                     }
                 }
@@ -1285,17 +1402,17 @@
                         container.innerHTML += `
                             <div class="source-card ${isCurrent ? 'active-src' : ''}">
                                 <div>
-                                    <strong style="font-size: 0.85rem; color: white;">🎬 ${v.filename}</strong>
-                                    <div style="font-size: 0.72rem; color: var(--text-muted);">${v.size_mb} MB</div>
+                                    <strong style="font-size: 0.8rem; color: white;">${v.filename}</strong>
+                                    <div style="font-size: 0.68rem; color: var(--text-muted);">${v.size_mb} MB</div>
                                 </div>
-                                <button class="btn btn-outline" style="padding: 0.35rem 0.8rem; font-size: 0.75rem;" onclick="setVideoSourceFile('${v.filename}')">
-                                    ${isCurrent ? '▶ En Reproducción' : 'Seleccionar Clip'}
+                                <button class="btn btn-outline" style="padding: 0.3rem 0.7rem; font-size: 0.72rem;" onclick="setVideoSourceFile('${v.filename}')">
+                                    ${isCurrent ? 'En Reproducción' : 'Seleccionar'}
                                 </button>
                             </div>
                         `;
                     });
                 } else {
-                    container.innerHTML = '<p style="color:var(--text-muted); font-size:0.8rem;">No hay clips en la carpeta videos/.</p>';
+                    container.innerHTML = '<p style="color:var(--text-muted); font-size:0.75rem;">No hay videos en la carpeta videos/.</p>';
                 }
             } catch(e) {}
         }
@@ -1309,7 +1426,7 @@
                 });
                 const resData = await res.json();
                 if (!res.ok) {
-                    alert("⚠️ Error: " + (resData.error || "No se pudo conectar a la cámara."));
+                    alert("Error: " + (resData.error || "No se pudo conectar a la cámara."));
                     return;
                 }
                 closeModal('modal-video-source');
@@ -1327,7 +1444,7 @@
                 });
                 const resData = await res.json();
                 if (!res.ok) {
-                    alert("⚠️ Error: " + (resData.error || "No se pudo cargar el video."));
+                    alert("Error: " + (resData.error || "No se pudo cargar el video."));
                     return;
                 }
                 closeModal('modal-video-source');
@@ -1344,7 +1461,7 @@
             }
             const file = input.files[0];
             if (file.name.includes('.crdownload') || file.name.includes('.part')) {
-                alert("⚠️ El archivo seleccionado parece estar descargándose o incompleto. Espera a que termine la descarga.");
+                alert("El archivo seleccionado parece estar incompleto. Espera a que termine la descarga.");
                 return;
             }
 
@@ -1354,7 +1471,7 @@
 
             const btn = document.querySelector('#modal-video-source button[onclick="uploadCustomVideo()"]');
             const originalText = btn ? btn.innerText : '';
-            if (btn) btn.innerText = "⏳ Subiendo y Verificando...";
+            if (btn) btn.innerText = "Subiendo...";
 
             try {
                 const res = await fetch('/api/video_source/upload', {
@@ -1363,7 +1480,7 @@
                 });
                 const resData = await res.json();
                 if (!res.ok) {
-                    alert("⚠️ Error: " + (resData.error || "El video no es compatible."));
+                    alert("Error: " + (resData.error || "El video no es compatible."));
                     return;
                 }
                 alert(resData.message || "Video cargado con éxito");
@@ -1459,12 +1576,12 @@
                         data.forEach(v => {
                             const laneName = (v.lane_name || v.lane || 'CARRIL').toUpperCase();
                             const snapLink = v.snapshot_path ? 
-                                `<a href="/api/violations/snapshot/${v.snapshot_path}" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: 600;">📷 Ver Evidencia</a>` :
+                                `<a href="/api/violations/snapshot/${v.snapshot_path}" target="_blank" style="color: var(--tesco-green); text-decoration: none; font-weight: 600;">Ver Evidencia</a>` :
                                 `<span style="color: var(--text-muted);">Sin foto</span>`;
                             tbody.innerHTML += `
                                 <tr>
                                     <td>${v.timestamp || 'N/D'}</td>
-                                    <td><strong style="color: var(--accent);">${laneName}</strong></td>
+                                    <td><strong style="color: var(--tesco-green);">${laneName}</strong></td>
                                     <td>#${v.track_id || 'N/D'}</td>
                                     <td><span style="color: var(--danger); font-weight: bold;">${v.phase_state || 'ROJO'}</span></td>
                                     <td>${snapLink}</td>
@@ -1541,19 +1658,19 @@
         const roiCtx = roiCanvas ? roiCanvas.getContext('2d') : null;
 
         const laneColorMap = {
-            "norte": "#ef4444",
-            "sur": "#3b82f6",
-            "este": "#10b981",
-            "oeste": "#f59e0b",
-            "principal_izq": "#ef4444",
-            "principal_der": "#3b82f6",
-            "secundaria": "#10b981",
-            "zona_a": "#ef4444",
-            "zona_b": "#3b82f6",
-            "frente": "#ef4444",
-            "giro_izq": "#f59e0b",
+            "norte": "#dc2626",
+            "sur": "#2563eb",
+            "este": "#70ba28",
+            "oeste": "#d97706",
+            "principal_izq": "#dc2626",
+            "principal_der": "#2563eb",
+            "secundaria": "#70ba28",
+            "zona_a": "#dc2626",
+            "zona_b": "#2563eb",
+            "frente": "#dc2626",
+            "giro_izq": "#d97706",
             "peatones_esperando": "#8b5cf6",
-            "vehiculos_aproximando": "#10b981"
+            "vehiculos_aproximando": "#70ba28"
         };
 
         function getLaneColor(laneName, idx) {
@@ -1644,15 +1761,14 @@
                 
                 const btn = document.createElement('button');
                 btn.className = `btn ${isActive ? 'btn-accent' : 'btn-outline'}`;
-                btn.style.padding = '0.35rem 0.8rem';
-                btn.style.fontSize = '0.78rem';
+                btn.style.padding = '0.3rem 0.65rem';
+                btn.style.fontSize = '0.74rem';
                 btn.style.display = 'flex';
                 btn.style.alignItems = 'center';
-                btn.style.gap = '0.4rem';
+                btn.style.gap = '0.35rem';
                 btn.style.borderColor = color;
-                if (isActive) btn.style.boxShadow = `0 0 10px ${color}66`;
 
-                btn.innerHTML = `<span style="width:8px; height:8px; border-radius:50%; background:${color};"></span> <strong>${lane.toUpperCase()}</strong> <span style="font-size:0.7rem; color:${isActive ? '#022c22' : 'var(--text-muted)'};">(${pts.length} pts)</span>`;
+                btn.innerHTML = `<span style="width:7px; height:7px; border-radius:50%; background:${color};"></span> <strong>${lane.toUpperCase()}</strong> <span style="font-size:0.68rem; color:${isActive ? '#07120a' : 'var(--text-muted)'};">(${pts.length} pts)</span>`;
                 btn.onclick = () => {
                     activeLane = lane;
                     populateLanePills();
@@ -1701,17 +1817,17 @@
             if (isSnapshotLoaded && snapshotImage.complete) {
                 roiCtx.drawImage(snapshotImage, 0, 0, w, h);
             } else {
-                roiCtx.fillStyle = "#0a0f1d";
+                roiCtx.fillStyle = "#070c09";
                 roiCtx.fillRect(0, 0, w, h);
                 // Grid
-                roiCtx.strokeStyle = "rgba(255,255,255,0.05)";
+                roiCtx.strokeStyle = "rgba(255,255,255,0.04)";
                 roiCtx.lineWidth = 1;
                 for(let x=0; x<w; x+=40) { roiCtx.beginPath(); roiCtx.moveTo(x,0); roiCtx.lineTo(x,h); roiCtx.stroke(); }
                 for(let y=0; y<h; y+=40) { roiCtx.beginPath(); roiCtx.moveTo(0,y); roiCtx.lineTo(w,y); roiCtx.stroke(); }
-                roiCtx.fillStyle = "#94a3b8";
-                roiCtx.font = "13px Inter";
+                roiCtx.fillStyle = "#8ea395";
+                roiCtx.font = "12px Inter";
                 roiCtx.textAlign = "center";
-                roiCtx.fillText("📸 Haz clic en 'Capturar Cuadro Actual' para cargar la vista en vivo", w/2, h/2);
+                roiCtx.fillText("Haz clic en 'Capturar Cuadro Actual' para cargar la vista en vivo", w/2, h/2);
             }
 
             if (!studioConfig || !studioConfig.zones || !studioConfig.zones[activeTopology]) return;
@@ -1738,7 +1854,7 @@
                 roiCtx.fillStyle = isCurrent ? `${colorHex}44` : `${colorHex}18`;
                 roiCtx.fill();
                 roiCtx.strokeStyle = colorHex;
-                roiCtx.lineWidth = isCurrent ? 3 : 1.5;
+                roiCtx.lineWidth = isCurrent ? 2.5 : 1.5;
                 roiCtx.stroke();
 
                 // Centroide para la etiqueta
@@ -1747,14 +1863,14 @@
                 avgX = (avgX / pts.length) * w;
                 avgY = (avgY / pts.length) * h;
 
-                roiCtx.fillStyle = "rgba(10, 15, 29, 0.85)";
-                roiCtx.fillRect(avgX - 35, avgY - 12, 70, 24);
+                roiCtx.fillStyle = "rgba(7, 13, 9, 0.9)";
+                roiCtx.fillRect(avgX - 32, avgY - 11, 64, 22);
                 roiCtx.strokeStyle = colorHex;
                 roiCtx.lineWidth = 1;
-                roiCtx.strokeRect(avgX - 35, avgY - 12, 70, 24);
+                roiCtx.strokeRect(avgX - 32, avgY - 11, 64, 22);
                 
                 roiCtx.fillStyle = "#ffffff";
-                roiCtx.font = "bold 11px Inter";
+                roiCtx.font = "bold 10px Inter";
                 roiCtx.textAlign = "center";
                 roiCtx.textBaseline = "middle";
                 roiCtx.fillText(laneName.toUpperCase(), avgX, avgY);
@@ -1765,17 +1881,17 @@
                     const py = pt[1] * h;
 
                     roiCtx.beginPath();
-                    roiCtx.arc(px, py, isCurrent ? 7 : 4, 0, Math.PI * 2);
+                    roiCtx.arc(px, py, isCurrent ? 6 : 3.5, 0, Math.PI * 2);
                     roiCtx.fillStyle = colorHex;
                     roiCtx.fill();
                     roiCtx.strokeStyle = "#ffffff";
-                    roiCtx.lineWidth = isCurrent ? 2 : 1;
+                    roiCtx.lineWidth = isCurrent ? 1.5 : 1;
                     roiCtx.stroke();
 
                     if (isCurrent) {
                         roiCtx.fillStyle = "#ffffff";
                         roiCtx.font = "9px JetBrains Mono";
-                        roiCtx.fillText(i + 1, px, py - 11);
+                        roiCtx.fillText(i + 1, px, py - 9);
                     }
                 });
 
@@ -1806,7 +1922,6 @@
                 const pos = getCanvasCoords(e);
                 const pts = studioConfig.zones[activeTopology][activeLane] || [];
                 
-                // Verificar si se hizo clic en un vértice existente para arrastrarlo
                 const grabRadius = 14;
                 draggedVertexIdx = -1;
 
@@ -1821,7 +1936,6 @@
                     }
                 }
 
-                // Si no se tocó ningún vértice, añadir nuevo punto al polígono del carril activo
                 if (draggedVertexIdx === -1) {
                     if (!studioConfig.zones[activeTopology][activeLane]) {
                         studioConfig.zones[activeTopology][activeLane] = [];
@@ -1905,14 +2019,13 @@
         async function saveFullStudioConfig() {
             if (!studioConfig) return;
 
-            // Sincronizar editor de texto crudo si fue editado manualmente
             const rawArea = document.getElementById('zones-json-editor');
             if (rawArea && document.getElementById('raw-json-container').style.display !== 'none') {
                 try {
                     const parsed = JSON.parse(rawArea.value);
                     studioConfig.zones[activeTopology] = parsed;
                 } catch(e) {
-                    alert("⚠️ El JSON ingresado contiene errores de sintaxis: " + e.message);
+                    alert("El JSON ingresado contiene errores de sintaxis: " + e.message);
                     return;
                 }
             }
@@ -1939,11 +2052,11 @@
                 });
                 const resData = await res.json();
                 if (res.ok) {
-                    alert("✅ " + (resData.message || "Configuración y ROIs guardados y aplicados en caliente."));
+                    alert(resData.message || "Configuración guardada y aplicada en caliente.");
                     closeModal('modal-zones');
                     fetchStatus();
                 } else {
-                    alert("❌ Error al guardar: " + (resData.error || "Falla en el servidor"));
+                    alert("Error al guardar: " + (resData.error || "Falla en el servidor"));
                 }
             } catch(e) {
                 alert("Error de conexión: " + e.message);
@@ -1963,7 +2076,7 @@
         }
 
         function switchView(view) {
-            // Placeholder para futuras vistas
+            // Dashboard principal
         }
 
         // Loop de actualización

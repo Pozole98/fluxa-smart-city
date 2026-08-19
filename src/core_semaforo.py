@@ -867,11 +867,51 @@ class CoreSemaforoBase:
                 
                 try:
                     cv2.imwrite(snapshot_path, evidence)
+                    self._rotar_almacenamiento_infracciones()
                 except Exception:
                     pass
                 
                 self.db.log_violation_async(zona_nombre, track_id, estado_str, snapshot_name)
-                self.api.log_event('WARN', f"⚠️ Infracción: Vehículo ID:{track_id} cruzó en Rojo en zona {zona_nombre.upper()}")
+                self.api.log_event('WARN', f"Infracción detectada: Vehículo ID:{track_id} cruzó en luz roja en carril {zona_nombre.upper()}")
+
+    def _rotar_almacenamiento_infracciones(self):
+        """
+        Garantiza que el almacenamiento en disco no se llene con fotos de infracciones.
+        Mantiene un límite razonable de archivos (por defecto 300) y de cuota (máximo 150 MB),
+        eliminando automáticamente las capturas más antiguas con política FIFO.
+        """
+        try:
+            cfg_storage = self.config.get("storage", {})
+            limite_archivos = cfg_storage.get("max_violation_snapshots", 300)
+            limite_mb = cfg_storage.get("max_violation_storage_mb", 150)
+            
+            if not os.path.exists(self.dir_infracciones):
+                return
+                
+            archivos = []
+            peso_total_bytes = 0
+            for f in os.listdir(self.dir_infracciones):
+                if f.endswith('.jpg') or f.endswith('.png'):
+                    ruta = os.path.join(self.dir_infracciones, f)
+                    try:
+                        st = os.stat(ruta)
+                        archivos.append((st.st_mtime, st.st_size, ruta))
+                        peso_total_bytes += st.st_size
+                    except Exception:
+                        pass
+                        
+            limite_bytes = limite_mb * 1024 * 1024
+            if len(archivos) > limite_archivos or peso_total_bytes > limite_bytes:
+                archivos.sort(key=lambda x: x[0])  # Más antiguos primero
+                while archivos and (len(archivos) > limite_archivos or peso_total_bytes > limite_bytes):
+                    _, tam, ruta_eliminar = archivos.pop(0)
+                    try:
+                        os.remove(ruta_eliminar)
+                        peso_total_bytes -= tam
+                    except Exception:
+                        pass
+        except Exception as e:
+            logging.warning(f"Error en rotación de almacenamiento de infracciones: {e}")
 
     def _generar_frame_failsafe(self, estado_str):
         """Genera un cuadro de respaldo si la fuente de video se interrumpe temporalmente"""
