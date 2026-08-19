@@ -65,6 +65,11 @@ fi
 # Crear estructura esencial de directorios
 mkdir -p "$SCRIPT_DIR/instance" "$SCRIPT_DIR/data/calibration_images" "$SCRIPT_DIR/logs/violations" "$SCRIPT_DIR/videos" "$SCRIPT_DIR/models" "$SCRIPT_DIR/logos" "$SCRIPT_DIR/static/logos"
 
+# Inicializar config.json local a partir de la plantilla segura
+if [ ! -f "$SCRIPT_DIR/config.json" ] && [ -f "$SCRIPT_DIR/config.example.json" ]; then
+    cp "$SCRIPT_DIR/config.example.json" "$SCRIPT_DIR/config.json"
+fi
+
 # 4. Instalación Automática de Python, MariaDB y Librerías de Sistema
 echo -e "\n${C_YELLOW}📦 [1/6] Verificando e instalando Python 3, MariaDB y dependencias del sistema...${C_RESET}"
 
@@ -147,8 +152,19 @@ echo -e "\n${C_YELLOW}🗄️ [4/6] Desplegando e inicializando Base de Datos Ma
 
 DB_PASS="${DATABASE_PASSWORD:-}"
 if [ -z "$DB_PASS" ]; then
-    # Generar contraseña segura aleatoria si no fue provista
-    DB_PASS=$(openssl rand -hex 12 2>/dev/null || echo "fluxa_db_pass_2026")
+    if [ -t 0 ]; then
+        echo -e "${C_CYAN}Ingresa una contraseña para el usuario de base de datos 'fluxa' (o presiona ENTER para generar una aleatoria segura):${C_RESET} "
+        read -s -r user_db_pass
+        echo
+        if [ -n "$user_db_pass" ]; then
+            DB_PASS="$user_db_pass"
+        else
+            DB_PASS=$(openssl rand -hex 12 2>/dev/null || echo "fluxa_db_$(date +%s)")
+            echo -e "${C_BLUE}ℹ️  Contraseña generada aleatoriamente y guardada en .env protegido.${C_RESET}"
+        fi
+    else
+        DB_PASS=$(openssl rand -hex 12 2>/dev/null || echo "fluxa_db_$(date +%s)")
+    fi
 fi
 
 if command -v systemctl &>/dev/null; then
@@ -166,23 +182,27 @@ if command -v systemctl &>/dev/null; then
     
     # Persistir en archivo .env local
     ENV_FILE="$SCRIPT_DIR/.env"
-    if [ ! -f "$ENV_FILE" ]; then
-        echo "DATABASE_HOST=localhost" > "$ENV_FILE"
-        echo "DATABASE_USER=fluxa" >> "$ENV_FILE"
-        echo "DATABASE_PASSWORD=$DB_PASS" >> "$ENV_FILE"
-        echo "DATABASE_NAME=fluxa_traffic" >> "$ENV_FILE"
-        echo "DATABASE_PORT=3306" >> "$ENV_FILE"
-        chmod 600 "$ENV_FILE"
-    fi
+    cat << EOF > "$ENV_FILE"
+DATABASE_HOST=localhost
+DATABASE_USER=fluxa
+DATABASE_PASSWORD=$DB_PASS
+DATABASE_NAME=fluxa_traffic
+DATABASE_PORT=3306
+EOF
+    chmod 600 "$ENV_FILE"
     
-    echo -e "${C_GREEN}✅ Servidor MariaDB activo y base de datos 'fluxa_traffic' lista con credenciales configuradas.${C_RESET}"
+    echo -e "${C_GREEN}✅ Servidor MariaDB activo y base de datos 'fluxa_traffic' lista con credenciales configuradas en .env.${C_RESET}"
 fi
 
 # 7.1. Inicializar Credenciales de Administrador C5 si no existen
 if [ ! -f "$SCRIPT_DIR/instance/admin_credentials.json" ]; then
-    echo -e "\n${C_BLUE}🔐 Configurando credenciales iniciales de Administrador C5...${C_RESET}"
-    $PYTHON_CMD "$SCRIPT_DIR/scripts/set_admin_password.py" --username admin --password "admin1234" --force 2>/dev/null || true
-    echo -e "${C_GREEN}✅ Credenciales iniciales configuradas (Usuario: admin / Clave inicial: admin1234).${C_RESET}"
+    echo -e "\n${C_BLUE}🔐 Configurando credenciales de Operador Administrador C5...${C_RESET}"
+    if [ -t 0 ]; then
+        $PYTHON_CMD "$SCRIPT_DIR/scripts/set_admin_password.py"
+    else
+        AUTO_ADMIN_PASS=$(openssl rand -hex 8 2>/dev/null || echo "admin1234")
+        $PYTHON_CMD "$SCRIPT_DIR/scripts/set_admin_password.py" --username admin --password "$AUTO_ADMIN_PASS" --force 2>/dev/null || true
+    fi
 fi
 
 # 7.2. Verificación e Instalación Automática de NPU en Orange Pi 5 (aarch64)
