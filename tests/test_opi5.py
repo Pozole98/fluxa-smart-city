@@ -21,8 +21,9 @@ except ImportError:
         IS_LITE = False
         print("--> RKNNLite no detectado. Cargado RKNN estándar para simulación.")
     except ImportError:
-        print("[ERROR] No se pudo importar rknnlite o rknn. Instala la librería apropiada.")
-        sys.exit(1)
+        RKNN = None
+        IS_LITE = False
+        print("--> rknnlite no detectado en este entorno (ejecución en modo simulación/x86).")
 
 # 80 Clases del dataset COCO (YOLOv8 estándar)
 COCO_CLASSES = [

@@ -33,4 +33,4 @@ EXPOSE 5000
 
 # Punto de entrada predeterminado
 ENTRYPOINT ["python3", "main.py"]
-CMD ["--topology", "4_way", "--backend", "cpu", "--headless", "--video", "videos/13868586_1280_720_24fps.mp4", "--port", "5000"]
+CMD ["--topology", "4_way", "--backend", "cpu", "--headless", "--video", "videos/demo.mp4", "--port", "5000"]

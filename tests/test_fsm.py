@@ -226,3 +226,29 @@ def test_pedestrian_midblock_cycle():
         ctrl._procesar_logica_semaforo({'vehiculos': 0, 'peatones_esperando': 2}, tiempo_minimo_actual=5.0)
         assert ctrl.fase_tiempo_asignado >= 10.0
 
+
+def test_rknn_npu_to_cpu_fallback():
+    """
+    Test 8: Tolerancia a Fallos y Fail-Safe Fallback (NPU -> CPU).
+    Verifica que si la NPU Rockchip no está disponible o el modelo RKNN falla,
+    el controlador CoreSemaforoRKNN conmute automáticamente a inferencia por CPU sin crash.
+    """
+    from core_semaforo_rknn import CoreSemaforoRKNN
+    
+    with patch('core_semaforo.VideoStream', return_value=MockVideoCapture()), \
+         patch('core_semaforo.TelemetryAPI'), \
+         patch('core_semaforo.DatabaseManager'), \
+         patch('ultralytics.YOLO') as mock_yolo:
+        
+        mock_yolo_instance = MagicMock()
+        mock_yolo.return_value = mock_yolo_instance
+        
+        # Instanciar controlador RKNN sin hardware NPU
+        ctrl = CoreSemaforoRKNN(topology_name="4_way", port="mock", video_source="mock")
+        
+        # Debe haber detectado la ausencia de RKNN/NPU y activado el fallback a CPU
+        assert ctrl.is_cpu_fallback is True
+        assert "CPU" in ctrl.backend_name
+        assert ctrl.cpu_model is not None
+
+

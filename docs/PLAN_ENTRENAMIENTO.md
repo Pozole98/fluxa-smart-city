@@ -81,7 +81,7 @@ Para la cuantización sin pérdida (*INT8 Quantization*), la NPU RK3588 requiere
 
 ```bash
 # Ejecutar extractor automatizado de FLUXA
-python3 scripts/extraer_frames_calibracion.py --video videos/demo_trafico_4vias.mp4 --num-frames 80
+python3 scripts/extraer_frames_calibracion.py --video videos/demo.mp4 --num-frames 80
 ```
 Este script genera automáticamente:
 * `data/calibration_images/calib_*.jpg` (640x640)

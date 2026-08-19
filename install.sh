@@ -63,7 +63,7 @@ if [ -f /etc/os-release ]; then
 fi
 
 # Crear estructura esencial de directorios
-mkdir -p "$SCRIPT_DIR/instance" "$SCRIPT_DIR/data/calibration_images" "$SCRIPT_DIR/logs/violations"
+mkdir -p "$SCRIPT_DIR/instance" "$SCRIPT_DIR/data/calibration_images" "$SCRIPT_DIR/logs/violations" "$SCRIPT_DIR/videos" "$SCRIPT_DIR/models" "$SCRIPT_DIR/logos" "$SCRIPT_DIR/static/logos"
 
 # 4. Instalación Automática de Python, MariaDB y Librerías de Sistema
 echo -e "\n${C_YELLOW}📦 [1/6] Verificando e instalando Python 3, MariaDB y dependencias del sistema...${C_RESET}"
