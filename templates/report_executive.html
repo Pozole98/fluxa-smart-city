@@ -284,15 +284,15 @@
                 <div class="lbl">Volumen Total Vehículos</div>
             </div>
             <div class="kpi-card">
-                <div class="val" style="color: #0e3b22;">{{ telemetry.sostenibilidad.combustible_ahorrado_litros or 0.0 }} L</div>
+                <div class="val" style="color: #0e3b22;">{{ "%.2f"|format(telemetry.sostenibilidad.combustible_ahorrado_litros|float) if telemetry.sostenibilidad and telemetry.sostenibilidad.combustible_ahorrado_litros else "0.00" }} L</div>
                 <div class="lbl">Combustible Ahorrado</div>
             </div>
             <div class="kpi-card">
-                <div class="val" style="color: #166534;">{{ telemetry.sostenibilidad.co2_mitigado_kg or 0.0 }} kg</div>
+                <div class="val" style="color: #166534;">{{ "%.2f"|format(telemetry.sostenibilidad.co2_mitigado_kg|float) if telemetry.sostenibilidad and telemetry.sostenibilidad.co2_mitigado_kg else "0.00" }} kg</div>
                 <div class="lbl">CO₂ Evitado</div>
             </div>
             <div class="kpi-card">
-                <div class="val" style="color: #1b396a;">{{ telemetry.sostenibilidad.eficiencia_flujo_pct or 88 }}%</div>
+                <div class="val" style="color: #1b396a;">{{ "%.1f"|format(telemetry.sostenibilidad.eficiencia_flujo_pct|float) if telemetry.sostenibilidad and telemetry.sostenibilidad.eficiencia_flujo_pct else "88.0" }}%</div>
                 <div class="lbl">Índice de Fluidez</div>
             </div>
         </div>
