@@ -660,20 +660,21 @@ def manage_zones_config():
 def list_video_sources():
     """Lista los clips de video válidos disponibles en el servidor y la fuente actual activa"""
     video_files = []
-    for ext in VALID_VIDEO_EXTENSIONS:
-        for path in glob.glob(os.path.join(videos_directory, f"*{ext}")):
-            base_fn = os.path.basename(path)
-            if base_fn.startswith('.') or '.crdownload' in base_fn or '.part' in base_fn:
+    if os.path.exists(videos_directory):
+        for fn in sorted(os.listdir(videos_directory)):
+            if fn.startswith('.') or '.crdownload' in fn or '.part' in fn:
                 continue
-            try:
-                size_mb = round(os.path.getsize(path) / (1024 * 1024), 2)
-                video_files.append({
-                    "filename": base_fn,
-                    "path": path,
-                    "size_mb": size_mb
-                })
-            except Exception:
-                pass
+            if any(fn.lower().endswith(ext) for ext in VALID_VIDEO_EXTENSIONS):
+                path = os.path.join(videos_directory, fn)
+                try:
+                    size_mb = round(os.path.getsize(path) / (1024 * 1024), 2)
+                    video_files.append({
+                        "filename": fn,
+                        "path": path,
+                        "size_mb": size_mb
+                    })
+                except Exception:
+                    pass
             
     return jsonify({
         "current_source": estado_global.get("camara", {}).get("source_raw", "0"),

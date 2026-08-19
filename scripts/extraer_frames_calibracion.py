@@ -87,7 +87,7 @@ def extraer_cuadros(video_path, num_frames=60, output_dir=None, dataset_txt_path
     return True
 
 if __name__ == "__main__":
-    default_video = os.path.join(os.path.dirname(__file__), '..', 'videos', 'demo_trafico_4vias.mp4')
+    default_video = os.path.join(os.path.dirname(__file__), '..', 'videos', 'demo.mp4')
     if not os.path.exists(default_video):
         all_videos = glob.glob(os.path.join(os.path.dirname(__file__), '..', 'videos', '*.mp4'))
         if all_videos:

@@ -30,10 +30,13 @@ class SemaforoController4VProtected_CPU(CoreSemaforoBase):
 
     def _init_model(self):
         model_name = self.config.get("ai_model", {}).get("model_file", "yolov8n.pt")
+        if model_name.endswith('.rknn'):
+            model_name = model_name.rsplit('.', 1)[0] + '.pt'
         model_path = model_name
         possible_paths = [
             os.path.join(os.path.dirname(__file__), '..', 'models', model_name),
             os.path.join(os.path.dirname(__file__), '..', model_name),
+            os.path.join(os.path.dirname(__file__), '..', 'yolov8n.pt'),
             model_name
         ]
         for p in possible_paths:
