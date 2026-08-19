@@ -127,9 +127,12 @@ flowchart TD
 
 ## 🚀 Características Principales
 
-* 🧠 **Doble Motor de Inferencia Edge:**
+* 🧠 **Doble Motor de Inferencia Edge con Fail-Safe Fallback:**
   * **Aceleración NPU en Orange Pi 5:** Modelo cuantizado en INT8 sobre la NPU Rockchip RK3588 (6 TOPS) con latencias de inferencia **< 12 ms**.
+  * **Tolerancia a Fallos Automática (NPU -> CPU):** Si la NPU o el modelo `.rknn` presentan fallas o indisponibilidad, conmuta en tiempo real a CPU (YOLOv8 PyTorch) sin interrumpir el servicio.
   * **Backend CPU Universal:** Ejecutable en cualquier laptop o servidor x86_64 / ARM con PyTorch.
+* 🏛️ **Identidad Institucional Profesional:**
+  * Interfaz SCADA y Portal Ciudadano adaptados con la identidad visual y logos de **TESCo**, **TecNM** y la **División de Ingeniería en Sistemas Computacionales**.
 * 🎨 **Estudio Visual de Calibración de ROIs en Canvas:**
   * Delimita y ajusta los polígonos de los carriles haciendo clics y arrastrando puntos directamente sobre el fotograma de video en el navegador.
   * Selector dinámico de variantes de YOLO (`yolov8n.pt`, `yolov8s.pt`, `yolov8m.pt`) y sliders de tiempos semafóricos con aplicación en caliente (*Hot-Reload*).
@@ -140,8 +143,8 @@ flowchart TD
   * Ponderación matemática sin reentrenamiento: Autobuses ($4.0\times$), Camiones ($2.5\times$), Peatones ($1.5\times$), Autos ($1.0\times$).
 * 🚨 **Corredor Verde de Emergencia C5:**
   * Mando de despeje prioritario para ambulancias, bomberos y patrullas con alerta visual estroboscópica y cronometraje de respuesta.
-* 📷 **Fotomultas por Cruce en Luz Roja:**
-  * Captura fotográfica automática con evidencia fechada (`logs/violations/`) y registro en MariaDB.
+* 📷 **Fotomultas por Cruce en Luz Roja & Control de Almacenamiento:**
+  * Captura fotográfica automática con evidencia fechada (`logs/violations/`), registro en MariaDB y **rotación FIFO automática de almacenamiento** para proteger el disco del gabinete.
 * 🌿 **Calculadora de Impacto Ambiental & Smart City ROI:**
   * Contadores en vivo de litros de combustible ahorrados, $\text{kg}$ de $\text{CO}_2$ mitigados y horas de espera evitadas.
 * 📡 **Protocolo V2X Conectado (SPaT):**
@@ -202,9 +205,9 @@ Una vez instalado con el **Método 1**, puedes lanzar FLUXA desde cualquier term
 ### Modo Servicio Headless (Recomendado para Producción y WebUI)
 ```bash
 # Intersección de 4 vías en CPU con clip demo en puerto 5000
-fluxa --topology 4_way --backend cpu --headless --video videos/13868586_1280_720_24fps.mp4 --port 5000
+fluxa --topology 4_way --backend cpu --headless --video videos/demo.mp4 --port 5000
 
-# Intersección en Orange Pi 5 (NPU RK3588 con aceleración por hardware)
+# Intersección en Orange Pi 5 (NPU RK3588 con aceleración por hardware y fallback CPU)
 fluxa --topology 4_way --backend rknn --headless --port 5000
 ```
 
