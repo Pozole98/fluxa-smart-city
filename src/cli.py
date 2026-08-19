@@ -137,7 +137,7 @@ Ejemplos de Uso:
         "--video", "-v",
         type=str,
         default=None,
-        help="Ruta a un archivo de video de demostración o flujo RTSP (ej: videos/demo_trafico_4vias.mp4)"
+        help="Ruta a un archivo de video de demostración o flujo RTSP (ej: videos/demo.mp4)"
     )
 
     parser.add_argument(

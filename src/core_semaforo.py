@@ -646,7 +646,13 @@ class CoreSemaforoBase:
                 
                 if not ret or frame is None:
                     new_cap.stop()
-                    fallback_demo = os.path.join(os.path.dirname(__file__), '..', 'videos', 'demo_trafico_4vias.mp4')
+                    videos_dir = os.path.join(os.path.dirname(__file__), '..', 'videos')
+                    fallback_demo = os.path.join(videos_dir, 'demo.mp4')
+                    if not os.path.exists(fallback_demo) and os.path.exists(videos_dir):
+                        for fn in os.listdir(videos_dir):
+                            if fn.endswith(('.mp4', '.avi', '.mkv', '.mov')) and not fn.startswith('.'):
+                                fallback_demo = os.path.join(videos_dir, fn)
+                                break
                     self.cap = VideoStream(src=fallback_demo).start()
                     err = "No se pudieron obtener cuadros de la nueva fuente. Restaurando respaldo."
                     print(f"❌ {err}")
@@ -940,7 +946,13 @@ class CoreSemaforoBase:
         if not ret or frame is None:
             self.consecutive_failed_frames += 1
             if self.consecutive_failed_frames > 40:
-                fallback_demo = os.path.join(os.path.dirname(__file__), '..', 'videos', 'demo_trafico_4vias.mp4')
+                videos_dir = os.path.join(os.path.dirname(__file__), '..', 'videos')
+                fallback_demo = os.path.join(videos_dir, 'demo.mp4')
+                if not os.path.exists(fallback_demo) and os.path.exists(videos_dir):
+                    for fn in os.listdir(videos_dir):
+                        if fn.endswith(('.mp4', '.avi', '.mkv', '.mov')) and not fn.startswith('.'):
+                            fallback_demo = os.path.join(videos_dir, fn)
+                            break
                 if os.path.exists(fallback_demo) and self.fuente_actual != fallback_demo:
                     print("⚠️ Fallo prolongado de video. Conmutando a clip de respaldo...")
                     self.cambiar_fuente_video(fallback_demo)

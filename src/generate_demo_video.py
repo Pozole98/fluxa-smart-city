@@ -2,7 +2,7 @@ import os
 import cv2
 import numpy as np
 
-def generar_video_demostracion(output_path="videos/demo_trafico_4vias.mp4", duration_sec=25, fps=30):
+def generar_video_demostracion(output_path="videos/demo.mp4", duration_sec=25, fps=30):
     """
     Genera un clip de video sintetizado en MP4 de alta calidad simulando una intersección de 4 vías
     con flujo continuo de automóviles, autobuses de transporte público y motocicletas.

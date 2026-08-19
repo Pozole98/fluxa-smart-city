@@ -131,8 +131,14 @@ class VideoStream:
             except Exception:
                 pass
                 
-        # 3.4. Último recurso: video demo sintético en carpeta videos/
-        fallback_demo = os.path.join(os.path.dirname(__file__), '..', 'videos', 'demo_trafico_4vias.mp4')
+        # 3.4. Último recurso: video demo en carpeta videos/
+        videos_dir = os.path.join(os.path.dirname(__file__), '..', 'videos')
+        fallback_demo = os.path.join(videos_dir, 'demo.mp4')
+        if not os.path.exists(fallback_demo) and os.path.exists(videos_dir):
+            for fn in os.listdir(videos_dir):
+                if fn.endswith(('.mp4', '.avi', '.mkv', '.mov')) and not fn.startswith('.'):
+                    fallback_demo = os.path.join(videos_dir, fn)
+                    break
         if os.path.exists(fallback_demo):
             try:
                 cap = cv2.VideoCapture(fallback_demo)
@@ -141,7 +147,7 @@ class VideoStream:
                     if ret:
                         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                         self.is_file = True
-                        print("🎬 Activando clip de respaldo predeterminado: demo_trafico_4vias.mp4")
+                        print(f"🎬 Activando clip de video predeterminado: {os.path.basename(fallback_demo)}")
                         return cap
                     cap.release()
             except Exception:

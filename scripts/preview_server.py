@@ -330,12 +330,20 @@ def api_models_list():
 
 @app.route('/api/video_source/list')
 def api_video_source_list():
+    videos_dir = os.path.join(base_dir, 'videos')
+    available = []
+    if os.path.exists(videos_dir):
+        for fn in os.listdir(videos_dir):
+            if fn.endswith(('.mp4', '.avi', '.mkv', '.mov')) and not fn.startswith('.'):
+                path = os.path.join(videos_dir, fn)
+                try:
+                    size_mb = round(os.path.getsize(path) / (1024 * 1024), 2)
+                    available.append({"filename": fn, "size_mb": size_mb})
+                except Exception:
+                    pass
     return jsonify({
-        "current_source": "demo_trafico_4vias.mp4",
-        "available_videos": [
-            {"filename": "demo_trafico_4vias.mp4", "size_mb": 18.5},
-            {"filename": "cruce_avenida_coacalco.mp4", "size_mb": 42.1}
-        ]
+        "current_source": "demo.mp4",
+        "available_videos": available
     })
 
 @app.route('/api/config/full', methods=['GET', 'POST'])
