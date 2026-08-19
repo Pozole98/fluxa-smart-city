@@ -60,8 +60,17 @@ fi
 echo -e "\n${C_YELLOW}¿Deseas eliminar la base de datos 'fluxa_traffic' de MariaDB? (Se borrará el historial) [s/N]:${C_RESET} "
 read -r resp_db
 if [[ "$resp_db" =~ ^[sSyY]$ ]]; then
-    run_sudo mysql -e "DROP DATABASE IF EXISTS fluxa_traffic;" 2>/dev/null || true
-    echo -e "${C_GREEN}✅ Base de datos 'fluxa_traffic' eliminada.${C_RESET}"
+    run_sudo mysql -e "DROP DATABASE IF EXISTS fluxa_traffic; DROP USER IF EXISTS 'fluxa'@'localhost'; FLUSH PRIVILEGES;" 2>/dev/null || true
+    echo -e "${C_GREEN}✅ Base de datos 'fluxa_traffic' y usuario 'fluxa' eliminados.${C_RESET}"
+fi
+
+# 5. Limpieza de credenciales locales (.env e instance/)
+echo -e "\n${C_YELLOW}¿Deseas eliminar credenciales locales (.env e instance/)? [s/N]:${C_RESET} "
+read -r resp_creds
+if [[ "$resp_creds" =~ ^[sSyY]$ ]]; then
+    rm -f "$SCRIPT_DIR/.env"
+    rm -rf "$SCRIPT_DIR/instance"
+    echo -e "${C_GREEN}✅ Archivos de credenciales locales eliminados.${C_RESET}"
 fi
 
 echo -e "\n${C_GREEN}${C_BOLD}"

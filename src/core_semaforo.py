@@ -539,12 +539,20 @@ class CoreSemaforoBase:
 
     def _load_config(self):
         config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
-        try:
-            with open(config_path, 'r') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"⚠️ Error cargando config.json: {e}")
-            return {}
+        example_path = os.path.join(os.path.dirname(__file__), '..', 'config.example.json')
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"⚠️ Error cargando config.json: {e}")
+        if os.path.exists(example_path):
+            try:
+                with open(example_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return {}
 
     def reload_zones(self):
         """Recarga la configuración de polígonos, tiempos semafóricos y modelo en caliente tras edición en la WebUI"""

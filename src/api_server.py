@@ -292,11 +292,11 @@ def api_login():
     if username == expected_user:
         if expected_hash:
             try:
-                is_valid = check_password_hash(expected_hash, password) or password in ("admin1234", "fluxa2026")
+                is_valid = check_password_hash(expected_hash, password)
             except Exception:
-                is_valid = password in ("admin1234", "fluxa2026")
-        else:
-            is_valid = (password == expected_raw) or password in ("admin1234", "fluxa2026")
+                is_valid = False
+        elif expected_raw:
+            is_valid = (password == expected_raw)
             # Auto-migración a hash seguro
             if is_valid:
                 try:
