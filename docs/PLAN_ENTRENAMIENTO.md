@@ -45,11 +45,11 @@ El ciclo de entrenamiento y despliegue a la NPU se divide en 4 fases estructurad
 
 ```mermaid
 graph LR
-    A["Dataset Vial (UA-DETRAC / BDD100K)"] --> B["Entrenamiento YOLOv8 (PyTorch / GPU)"]
-    B --> C["Exportación a ONNX (640x640)"]
-    D["Extracción Frames Calibración (demo.mp4)"] --> E["RKNN-Toolkit2 (Cuantización INT8)"]
+    A[Dataset Vial: UA-DETRAC y BDD100K] --> B[Entrenamiento YOLOv8 en GPU]
+    B --> C[Exportacion a ONNX 640x640]
+    D[Extraccion Frames Calibracion demo.mp4] --> E[RKNN-Toolkit2 - Cuantizacion INT8]
     C --> E
-    E --> F["Modelo Compilado: yolov8s.rknn (Orange Pi 5)"]
+    E --> F[Modelo Compilado: yolov8s.rknn]
 ```
 
 ### Fase 1: Fine-Tuning con Ultralytics (Python / PyTorch)
