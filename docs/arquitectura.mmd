@@ -1,15 +1,15 @@
 flowchart TD
-    subgraph SENSORICA ["📷 CAPA DE CAPTURA & SENSORES (EDGE)"]
-        CAM["Cámara Vial / Flujo RTSP / Clip de Video"]
+    subgraph SENSORICA ["CAPA DE CAPTURA & SENSORES (EDGE)"]
+        CAM["Cámara Vial / Flujo RTSP / Clip de Video (demo.mp4)"]
         CALL_BTN["Botón Peatonal / Mando C5"]
     end
 
-    subgraph PROCESAMIENTO ["⚡ NÚCLEO DE INTELIGENCIA ARTIFICIAL (ORANGE PI 5 / X86)"]
+    subgraph PROCESAMIENTO ["NÚCLEO DE INTELIGENCIA ARTIFICIAL (ORANGE PI 5 / X86)"]
         direction TB
         PRE["Normalización y Preprocesamiento (640x640)"]
         
-        subgraph INFERENCIA ["Motor de Inferencia Dual"]
-            RKNN["NPU RK3588 (INT8 - 3 Cores Tri-Core)"]
+        subgraph INFERENCIA ["Motor de Inferencia Dual con Fail-Safe"]
+            RKNN["NPU RK3588 (INT8 - Tri-Core 6 TOPS)"]
             CPU_ENGINE["PyTorch YOLOv8 (CPU Fallback)"]
         end
         
@@ -19,7 +19,7 @@ flowchart TD
         TSP["Ponderación Matemática TSP (Transporte Público)"]
     end
 
-    subgraph FSM_CORE ["🚦 MÁQUINA DE ESTADOS FINITOS & SEGURIDAD VIAL"]
+    subgraph FSM_CORE ["MÁQUINA DE ESTADOS FINITOS & SEGURIDAD VIAL"]
         direction TB
         FSM["CoreSemaforoBase (FSM Adaptativa)"]
         CLEARANCE["Protocolo de Despeje Vial (Ámbar + Todo-Rojo)"]
@@ -27,19 +27,19 @@ flowchart TD
         SUSTAIN["Motor de Métricas Sustentables & Comparativa A/B"]
     end
 
-    subgraph HARDWARE_OUTPUT ["🔌 CONTROLADORES FÍSICOS EN CAMPO"]
+    subgraph HARDWARE_OUTPUT ["CONTROLADORES FÍSICOS EN CAMPO"]
         ARDUINO["Arduino UNO R4 / PLC / Módulo de Relevadores"]
-        LIGHTS["Cabezales Semafóricos Físicos (Leds Calle)"]
+        LIGHTS["Cabezales Semafóricos Físicos (LEDs)"]
         CONTROLLER_EX["Controlador de Tráfico Existente (NEMA TS2 / 170 / 2070)"]
     end
 
-    subgraph SERVICIOS ["🌐 SERVICIOS DE TELEMETRÍA, PERSISTENCIA & SCADA"]
+    subgraph SERVICIOS ["SERVICIOS DE TELEMETRÍA, PERSISTENCIA & SCADA"]
         direction TB
         MARIADB[("MariaDB (Persistencia No Bloqueante en Cola Async)")]
-        FLASK_API["API REST & WebSockets (Flask-Limiter + CSRF)"]
+        FLASK_API["API REST & WebSockets (Flask)"]
         SCADA["Centro de Mando C5 SCADA (/admin)"]
         PUBLIC_PORTAL["Portal Ciudadano & GLOSA V2X (/)"]
-        VIOLATIONS["Módulo Forense de Fotomultas (Snapshots JPG)"]
+        VIOLATIONS["Módulo Forense de Infracciones (Snapshots JPG)"]
     end
 
     %% Conexiones

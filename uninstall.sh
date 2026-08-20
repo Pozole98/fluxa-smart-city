@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#  🗑️ FLUXA Smart Mobility • Script de Desinstalación Limpia
+#  FLUXA Smart Mobility • Script de Desinstalación
+#  Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
 # ==============================================================================
 
 set -e
@@ -14,7 +15,8 @@ C_CYAN='\033[36m'
 
 echo -e "${C_YELLOW}${C_BOLD}"
 echo "======================================================================"
-echo "   🗑️  DESINSTALADOR DE FLUXA SMART MOBILITY"
+echo "   FLUXA SMART MOBILITY • DESINSTALADOR DEL SISTEMA"
+echo "   TESCo • División de Ingeniería en Sistemas Computacionales"
 echo "======================================================================"
 echo -e "${C_RESET}"
 
@@ -75,6 +77,7 @@ fi
 
 echo -e "\n${C_GREEN}${C_BOLD}"
 echo "======================================================================"
-echo "✅ DESINSTALACIÓN DE FLUXA FINALIZADA EXITOSAMENTE."
+echo "   DESINSTALACIÓN DE FLUXA FINALIZADA CORRECTAMENTE"
+echo "   TESCo • División de Ingeniería en Sistemas Computacionales"
 echo "======================================================================"
 echo -e "${C_RESET}\n"
