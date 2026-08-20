@@ -27,7 +27,7 @@ class VideoStream:
         self.frame = None
         self.failed = False
         self.stopped = False
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.thread = None
 
         self.stream = self._conectar_fuente()
@@ -239,13 +239,29 @@ class VideoStream:
             return True, self.frame.copy()
 
     def stop(self):
-        """Detiene el hilo de forma síncrona esperando a que termine limpiamente"""
+        """Detiene el hilo de forma síncrona esperando a que termine limpiamente sin bloquearse"""
         self.stopped = True
         if self.thread is not None and self.thread.is_alive() and threading.current_thread() != self.thread:
             try:
-                self.thread.join(timeout=1.5)
+                self.thread.join(timeout=0.5)
             except Exception:
                 pass
-        with self.lock:
+        acquired = False
+        try:
+            acquired = self.lock.acquire(timeout=0.5)
             self.grabbed = False
             self.failed = True
+            if self.stream is not None:
+                try:
+                    self.stream.release()
+                except Exception:
+                    pass
+                self.stream = None
+        except Exception:
+            pass
+        finally:
+            if acquired:
+                try:
+                    self.lock.release()
+                except Exception:
+                    pass

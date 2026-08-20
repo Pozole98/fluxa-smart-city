@@ -52,7 +52,7 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
     4. Conmutación en caliente segura sin fugas de memoria.
     """
     def __init__(self, topology_name="4_way", port=None, video_source=None):
-        self._rknn_lock = threading.Lock()
+        self._rknn_lock = threading.RLock()
         self.rknn = None
         self.cpu_model = None
         self.is_cpu_fallback = False
@@ -247,12 +247,26 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
                 return None
 
     def stop(self):
-        super().stop()
-        with self._rknn_lock:
-            if hasattr(self, 'rknn') and self.rknn:
+        try:
+            super().stop()
+        except Exception:
+            pass
+            
+        acquired = False
+        try:
+            acquired = self._rknn_lock.acquire(timeout=1.0)
+            if hasattr(self, 'rknn') and self.rknn is not None:
                 try:
                     self.rknn.release()
                 except Exception:
                     pass
                 self.rknn = None
             self.cpu_model = None
+        except Exception:
+            pass
+        finally:
+            if acquired:
+                try:
+                    self._rknn_lock.release()
+                except Exception:
+                    pass

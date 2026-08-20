@@ -773,16 +773,26 @@ class CoreSemaforoBase:
 
     def stop(self):
         self.running = False
-        if self.cap:
-            self.cap.stop()
-        if self.arduino:
+        if hasattr(self, 'cap') and self.cap:
+            try:
+                self.cap.stop()
+            except Exception:
+                pass
+        if hasattr(self, 'arduino') and self.arduino:
             try:
                 self.arduino.close()
             except Exception:
                 pass
-        if self.db:
-            self.db.close()
-        self.api.log_event('WARN', "Sistema FLUXA detenido de forma segura")
+        if hasattr(self, 'db') and self.db:
+            try:
+                self.db.close()
+            except Exception:
+                pass
+        if hasattr(self, 'api') and self.api:
+            try:
+                self.api.log_event('WARN', "Sistema FLUXA detenido de forma segura")
+            except Exception:
+                pass
 
     def enviar_comando(self, comando):
         if self.arduino and comando != self.ultimo_comando:
@@ -1334,10 +1344,18 @@ class CoreSemaforoBase:
                 os._exit(0)
             _terminating = True
             print("\n🛑 Señal de terminación recibida. Deteniendo servicio FLUXA...")
-            try:
-                self.stop()
-            except Exception:
-                pass
+            self.running = False
+            
+            def _cleanup():
+                try:
+                    self.stop()
+                except Exception:
+                    pass
+                    
+            t = threading.Thread(target=_cleanup, daemon=True)
+            t.start()
+            t.join(timeout=1.0)
+            print("✅ Servicio FLUXA finalizado.")
             os._exit(0)
             
         signal.signal(signal.SIGINT, _sig_handler)
