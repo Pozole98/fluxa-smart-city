@@ -33,42 +33,42 @@ El sistema sustituye los ciclos semafóricos tradicionales de tiempo fijo por un
 
 ```mermaid
 graph TD
-    subgraph INGESTION ["1. Ingestión de Video"]
-        CAM["Cámara MIPI CSI / USB / RTSP"] --> VS["VideoStream (Hilo Daemon OpenCV)"]
-        VID["Clip de Video Demo (demo.mp4)"] --> VS
+    subgraph SENSORICA [Capa de Ingestion de Video]
+        CAM[Camara MIPI CSI / USB / RTSP] --> VS[VideoStream OpenCV]
+        VID[Clip de Video demo.mp4] --> VS
     end
 
-    subgraph AI_PIPELINE ["2. Pipeline de Visión e IA Edge"]
-        VS --> INFER["Inferencia YOLOv8 (RKNN NPU / CPU Fallback)"]
-        INFER --> DETS["Detecciones [x1, y1, x2, y2, conf, cls]"]
-        DETS --> TRACK["BYTETracker (Asignación de Track IDs)"]
-        TRACK --> PIP["Test Punto-en-Polígono (ROIs de Carril)"]
+    subgraph AI_PIPELINE [Pipeline de Vision e Inteligencia Artificial]
+        VS --> INFER[Inferencia YOLOv8: RKNN NPU / CPU Fallback]
+        INFER --> DETS[Detecciones x1, y1, x2, y2, conf, cls]
+        DETS --> TRACK[BYTETracker - Asignacion de IDs]
+        TRACK --> PIP[Test Punto en Poligono - ROIs]
     end
 
-    subgraph CONTROL_LOGIC ["3. Máquina de Estados y Control"]
-        PIP --> TSP["Ponderación TSP (Buses 4x, Camiones 2.5x, Peatones 1.5x)"]
-        TSP --> FSM["Máquina de Estados Semafórica Finita (FSM)"]
-        FSM --> ARD["Enlace Serial Arduino UNO R4 (Semáforos Físicos)"]
-        FSM --> RED_LIGHT["Verificador de Infracción en Luz Roja"]
-        RED_LIGHT --> SNAP["Captura de Evidencia Fotográfica (JPG)"]
+    subgraph CONTROL_LOGIC [Maquina de Estados y Control Vial]
+        PIP --> TSP[Ponderacion TSP: Buses 4x, Camiones 2.5x, Peatones 1.5x]
+        TSP --> FSM[Maquina de Estados Semaforica Finita]
+        FSM --> ARD[Enlace Serial Arduino UNO R4]
+        FSM --> RED_LIGHT[Verificador de Infraccion en Luz Roja]
+        RED_LIGHT --> SNAP[Captura de Evidencia Fotografica]
     end
 
-    subgraph TELEMETRY_STORAGE ["4. Telemetría y Persistencia"]
-        FSM --> DB["MariaDB Async Engine (fluxa_traffic)"]
+    subgraph TELEMETRY_STORAGE [Telemetria y Persistencia]
+        FSM --> DB[MariaDB Async Engine - fluxa_traffic]
         SNAP --> DB
-        SNAP --> DISK["Almacenamiento Local (logs/violations/)"]
-        FSM --> V2X["Broadcast V2X (SPaT / GLOSA)"]
-        FSM --> ROI_CALC["Calculadora de Impacto Ambiental (CO2 / Combustible)"]
+        SNAP --> DISK[Almacenamiento Local - logs/violations/]
+        FSM --> V2X[Broadcast V2X - SPaT y GLOSA]
+        FSM --> ROI_CALC[Calculadora de Impacto Ambiental CO2 y Combustible]
     end
 
-    subgraph WEB_SCADA ["5. Capa Web y Centros de Mando"]
-        DB --> REST["Servidor REST API / Flask"]
+    subgraph WEB_SCADA [Capa Web y Centros de Mando]
+        DB --> REST[Servidor REST API y Flask]
         DISK --> REST
         ROI_CALC --> REST
         V2X --> REST
-        REST --> PUB_UI["Portal Ciudadano (Público)"]
-        REST --> ADM_UI["Centro de Mando SCADA C5 (Protegido)"]
-        ADM_UI --> CANVAS["Estudio Visual de ROIs en Canvas"]
+        REST --> PUB_UI[Portal Ciudadano - Publico]
+        REST --> ADM_UI[Centro de Mando SCADA C5 - Protegido]
+        ADM_UI --> CANVAS[Estudio Visual de ROIs en Canvas]
     end
 ```
 
@@ -77,9 +77,9 @@ graph TD
 ## 3. Modelado Matemático y Algoritmos de Control
 
 ### 3.1. Prioridad de Transporte Público (TSP - Transit Signal Priority)
-En lugar de basarse en conteos simples de vehículos, FLUXA calcula la **Demanda Ponderada ($D_j$)** para cada carril $j$:
+En lugar de basarse en conteos simples de vehículos, FLUXA calcula la Demanda Ponderada ($D_j$) para cada carril $j$:
 
-$$D_j = \sum_{k \in \text{Clases}} w_k \cdot N_{j,k}$$
+$$D_j = \sum_{k} w_k \cdot N_{j,k}$$
 
 Donde:
 * $N_{j,k}$ es el número de vehículos de la clase $k$ detectados dentro del polígono del carril $j$.
@@ -94,7 +94,7 @@ Donde:
 ### 3.2. Asignación Dinámica del Tiempo de Verde
 El tiempo asignado a la fase verde activa ($T_{\text{verde}}$) se calcula dinámicamente mediante una función acotada:
 
-$$T_{\text{verde}} = \min\left(T_{\text{max}}, \max\left(T_{\text{min}}, T_{\text{min}} + f \cdot \max_{j \in \text{Fase}}(D_j)\right)\right)$$
+$$T_{\text{verde}} = \min\left(T_{\text{max}}, \max\left(T_{\text{min}}, T_{\text{min}} + f \cdot \max(D_j)\right)\right)$$
 
 Donde:
 * $T_{\text{min}}$: Tiempo mínimo de verde garantizado (por defecto: $5.0\,\text{s}$).
@@ -109,17 +109,17 @@ Para estimar el combustible y emisiones mitigadas en tiempo real frente a un cic
 
 2. **Litros de Combustible Ahorrados ($V_{\text{combustible}}$):**
    Considerando una tasa promedio de consumo de $0.8\,\text{litros/hora}$ en ralentí (*idle*):
-   $$V_{\text{combustible}} = \Delta t_{\text{espera}} \cdot \left(\frac{0.8\,\text{L}}{3600\,\text{s}}\right)$$
+   $$V_{\text{combustible}} = \Delta t_{\text{espera}} \cdot \left(\frac{0.8}{3600}\right)$$
 
-3. **Kilogramos de $\text{CO}_2$ Mitigados ($M_{\text{CO}_2}$):**
+3. **Kilogramos de CO₂ Mitigados ($M_{\text{CO2}}$):**
    Utilizando el factor de emisión estándar de $2.31\,\text{kg de CO}_2$ por litro de gasolina no quemado:
-   $$M_{\text{CO}_2} = V_{\text{combustible}} \cdot 2.31\,\text{kg/L}$$
+   $$M_{\text{CO2}} = V_{\text{combustible}} \cdot 2.31$$
 
 ### 3.4. Detección Espaciotemporal de Infracciones en Luz Roja
-1. Se obtiene el estado semafórico activo $S_t \in \{\text{VERDE\_NS}, \text{AMARILLO\_NS}, \text{VERDE\_EO}, \dots\}$.
+1. Se obtiene el estado semafórico activo (por ejemplo: `VERDE_NS`, `AMARILLO_NS`, `VERDE_EO`, `ROJO_TODOS`).
 2. Para cada vehículo rastreado con identificador $ID_i$ y centroide $(c_x, c_y)$:
-   $$\text{Infracción} \iff (c_x, c_y) \in \text{Polígono}(\text{Carril}_j) \land \text{Semaforo}(\text{Carril}_j) = \text{ROJO}$$
-3. Para evitar duplicados en el mismo ciclo, se registra la tupla $(S_t, \text{Carril}_j, ID_i)$ en memoria y se dispara la captura fotográfica con rotación FIFO.
+   $$\text{Infraccion} \iff (c_x, c_y) \in \text{ROI}(\text{Carril}_j) \land \text{Fase}(\text{Carril}_j) = \text{ROJO}$$
+3. Para evitar duplicados en el mismo ciclo, se registra la tupla de clave única en memoria y se dispara la captura fotográfica con rotación FIFO.
 
 ---
 
@@ -154,7 +154,7 @@ Para estimar el combustible y emisiones mitigadas en tiempo real frente a un cic
 * `GET /api/frame/snapshot`: Fotograma JPEG congelado para el editor gráfico en Canvas.
 * `GET /api/status`: Estado integral del sistema (fase activa, aforo por carril, métricas de hardware, latencias).
 * `GET /api/v2x/spat`: Mensaje SPaT con fase actual, tiempo restante y velocidad aconsejada.
-* `GET /api/kpis/sustainability`: Métricas acumuladas de ahorro de combustible, $\text{CO}_2$ y tiempo.
+* `GET /api/kpis/sustainability`: Métricas acumuladas de ahorro de combustible, CO₂ y tiempo.
 * `GET /api/history`: Muestras temporales para gráficas de flujo vehicular en tiempo real.
 * `GET /api/reports/summary?date=YYYY-MM-DD`: Análisis de hora pico y volumen vehicular del día.
 

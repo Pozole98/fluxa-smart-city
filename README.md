@@ -28,7 +28,7 @@ El sistema opera como una **capa de control superpuesta (*Overlay Controller*)**
 
 * **Visión Computacional en el Borde (YOLOv8 + BYTETracker):** Cuantificación de colas vehiculares carril por carril y monitoreo de peatones con latencias de inferencia inferiores a **12 ms** en NPU Rockchip RK3588 (Orange Pi 5) o CPU x86/ARM64.
 * **Prioridad de Transporte Público (TSP) y Corredores de Emergencia C5:** Ajuste dinámico de tiempos de verde asignando mayor peso al transporte masivo y despeje seguro de vía para vehículos de emergencia mediante intervalos normativos de Ámbar y Todo-Rojo.
-* **Sustentabilidad y Analítica V2X:** Reducción de hasta un **60% en tiempos de ralentí vehicular**, mitigación de emisiones de $\text{CO}_2$ y emisión de telemetría de velocidad óptima (GLOSA / SPaT) para vehículos conectados.
+* **Sustentabilidad y Analítica V2X:** Reducción de hasta un **60% en tiempos de ralentí vehicular**, mitigación de emisiones de CO₂ y emisión de telemetría de velocidad óptima (GLOSA / SPaT) para vehículos conectados.
 * **Auditoría Forense de Infracciones:** Detección de cruces en fase roja con captura fotográfica automática, rotación FIFO de almacenamiento y persistencia asíncrona tolerante a fallos.
 
 ```
@@ -51,74 +51,63 @@ El sistema opera como una **capa de control superpuesta (*Overlay Controller*)**
 ## 2. Diagrama de Arquitectura del Sistema
 
 ```mermaid
-flowchart TD
-    subgraph SENSORICA ["CAPA DE CAPTURA & SENSORES (EDGE)"]
-        CAM["Cámara Vial / Flujo RTSP / Clip de Video (demo.mp4)"]
-        CALL_BTN["Botón Peatonal / Mando C5"]
+graph TD
+    subgraph SENSORICA [Capa de Captura y Sensores]
+        CAM[Camara Vial / RTSP / Video demo.mp4]
+        CALL_BTN[Boton Peatonal / Mando C5]
     end
 
-    subgraph PROCESAMIENTO ["NÚCLEO DE INTELIGENCIA ARTIFICIAL (ORANGE PI 5 / X86)"]
-        direction TB
-        PRE["Normalización y Preprocesamiento (640x640)"]
-        
-        subgraph INFERENCIA ["Motor de Inferencia Dual con Fail-Safe"]
-            RKNN["NPU RK3588 (INT8 - Tri-Core 6 TOPS)"]
-            CPU_ENGINE["PyTorch YOLOv8 (CPU Fallback)"]
-        end
-        
-        POST["Postprocesamiento & NMS (Detección de Objetos)"]
-        TRACKER["BYTETracker (Seguimiento de IDs Únicos)"]
-        ROI["Filtro Espacial de ROIs Poligonales (Zonas)"]
-        TSP["Ponderación Matemática TSP (Transporte Público)"]
+    subgraph PROCESAMIENTO [Procesamiento e Inferencia Edge]
+        PRE[Normalizacion 640x640]
+        INFER[Inferencia Dual: NPU RKNN / CPU PyTorch]
+        POST[Postprocesamiento y NMS]
+        TRACKER[BYTETracker - IDs Unicos]
+        ROI[Filtro Espacial de ROIs]
+        TSP[Ponderacion Matematica TSP]
     end
 
-    subgraph FSM_CORE ["MÁQUINA DE ESTADOS FINITOS & SEGURIDAD VIAL"]
-        direction TB
-        FSM["CoreSemaforoBase (FSM Adaptativa)"]
-        CLEARANCE["Protocolo de Despeje Vial (Ámbar + Todo-Rojo)"]
-        EMERGENCY["Controlador de Corredor de Emergencia"]
-        SUSTAIN["Motor de Métricas Sustentables & Comparativa A/B"]
+    subgraph FSM_CORE [Maquina de Estados Finitos]
+        FSM[CoreSemaforo - FSM Adaptativa]
+        CLEARANCE[Protocolo Despeje: Ambar y Todo-Rojo]
+        EMERGENCY[Controlador de Emergencia C5]
+        SUSTAIN[Calculo de CO2 y Ahorro Energetico]
     end
 
-    subgraph HARDWARE_OUTPUT ["CONTROLADORES FÍSICOS EN CAMPO"]
-        ARDUINO["Arduino UNO R4 / PLC / Módulo de Relevadores"]
-        LIGHTS["Cabezales Semafóricos Físicos (LEDs)"]
-        CONTROLLER_EX["Controlador Existente (NEMA TS2 / 170 / 2070)"]
+    subgraph HARDWARE_OUTPUT [Controladores Fisicos]
+        ARDUINO[Arduino UNO R4 / PLC / Relevadores]
+        LIGHTS[Cabezales Semaforicos Fisicos]
+        CONTROLLER_EX[Controlador Existente NEMA / 170 / 2070]
     end
 
-    subgraph SERVICIOS ["SERVICIOS DE TELEMETRÍA, PERSISTENCIA & SCADA"]
-        direction TB
-        MARIADB[("MariaDB (Persistencia No Bloqueante en Cola Async)")]
-        FLASK_API["API REST & WebSockets (Flask)"]
-        SCADA["Centro de Mando C5 SCADA (/admin)"]
-        PUBLIC_PORTAL["Portal Ciudadano & GLOSA V2X (/)"]
-        VIOLATIONS["Módulo Forense de Infracciones (Snapshots JPG)"]
+    subgraph SERVICIOS [Servicios Web y Base de Datos]
+        MARIADB[(MariaDB - Persistencia Asincrona)]
+        FLASK_API[Servidor Flask y API REST]
+        SCADA[Consola SCADA C5 - /admin]
+        PUBLIC_PORTAL[Portal Ciudadano y V2X - /]
+        VIOLATIONS[Modulo Forense de Infracciones]
     end
 
-    %% Conexiones
     CAM --> PRE
     CALL_BTN --> FSM
-    PRE --> RKNN
-    PRE --> CPU_ENGINE
-    RKNN --> POST
-    CPU_ENGINE --> POST
+    PRE --> INFER
+    INFER --> POST
     POST --> TRACKER
     TRACKER --> ROI
     ROI --> TSP
     TSP --> FSM
-    
-    FSM <--> CLEARANCE
-    FSM <--> EMERGENCY
+
+    FSM --- CLEARANCE
+    FSM --- EMERGENCY
     FSM --> SUSTAIN
-    
-    FSM -->|"Comandos Seriales ('1' a '5')"| ARDUINO
+
+    FSM -->|Comandos Seriales| ARDUINO
     ARDUINO --> LIGHTS
-    ARDUINO -.->|"Integración de Gabinete"| CONTROLLER_EX
-    
-    FSM -->|"Eventos y Telemetría"| FLASK_API
-    FSM -->|"Cola Asíncrona"| MARIADB
-    FSM -->|"Detección de Infracciones"| VIOLATIONS
-    
+    ARDUINO -.->|Integracion Gabinete| CONTROLLER_EX
+
+    FSM -->|Eventos y Telemetria| FLASK_API
+    FSM -->|Cola Asincrona| MARIADB
+    FSM -->|Deteccion Infracciones| VIOLATIONS
+
     FLASK_API --> SCADA
     FLASK_API --> PUBLIC_PORTAL
     VIOLATIONS --> MARIADB
