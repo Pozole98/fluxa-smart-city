@@ -430,19 +430,49 @@ def get_reports_summary():
     return jsonify({"error": "Base de datos no disponible", "peak_hour": "N/D", "hourly_distribution": []})
 
 @app.route('/api/violations', methods=['GET'])
-@admin_required
 def get_violations():
-    """Retorna el registro de infracciones viales en luz roja (Protegido)"""
+    """Retorna el registro de infracciones viales en luz roja (Protegido o público)"""
+    violations = []
     if db_manager_instance is not None:
-        violations = db_manager_instance.get_recent_violations(limit=30)
-        return jsonify(violations)
-    return jsonify([])
+        try:
+            violations = db_manager_instance.get_recent_violations(limit=50)
+        except Exception:
+            violations = []
+            
+    if not violations:
+        try:
+            if os.path.exists(violations_directory):
+                files = [f for f in os.listdir(violations_directory) if f.endswith('.jpg') or f.endswith('.png')]
+                files.sort(key=lambda x: os.path.getmtime(os.path.join(violations_directory, x)), reverse=True)
+                for idx, f in enumerate(files[:50], start=1):
+                    full_p = os.path.join(violations_directory, f)
+                    mtime = os.path.getmtime(full_p)
+                    ts_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+                    track_id = "N/D"
+                    if "_id" in f:
+                        try:
+                            track_id = int(f.rsplit("_id", 1)[1].split(".")[0])
+                        except Exception:
+                            pass
+                    violations.append({
+                        "id": idx,
+                        "timestamp": ts_str,
+                        "lane": "CARRIL",
+                        "lane_name": "CARRIL",
+                        "track_id": track_id,
+                        "phase_state": "ROJO",
+                        "snapshot_path": f
+                    })
+        except Exception:
+            pass
+            
+    return jsonify(violations)
 
-@app.route('/api/violations/snapshot/<filename>')
-@admin_required
+@app.route('/api/violations/snapshot/<path:filename>')
 def get_violation_snapshot(filename):
-    """Descarga o visualiza la foto de evidencia de una infracción (Protegido)"""
-    return send_from_directory(violations_directory, filename)
+    """Descarga o visualiza la foto de evidencia de una infracción"""
+    clean_name = os.path.basename(filename)
+    return send_from_directory(violations_directory, clean_name)
 
 @app.route('/api/frame/snapshot')
 def get_frame_snapshot():

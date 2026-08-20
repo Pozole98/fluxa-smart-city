@@ -856,13 +856,37 @@ class CoreSemaforoBase:
         estado_str = estado_nombre.name if estado_nombre else ""
         
         es_luz_roja = False
-        if "ROJO_TODOS" in estado_str:
+        if "ROJO_TODOS" in estado_str or "EMERGENCIA" in estado_str or "DESPEJE" in estado_str:
             es_luz_roja = True
         elif "VERDE_NS" in estado_str or "AMARILLO_NS" in estado_str:
-            if zona_nombre in ['este', 'oeste', 'secundaria', 'zona_b', 'giro_izq', 'peatones_esperando']:
+            if zona_nombre in ['este', 'oeste']:
                 es_luz_roja = True
         elif "VERDE_EO" in estado_str or "AMARILLO_EO" in estado_str:
-            if zona_nombre in ['norte', 'sur', 'principal_izq', 'principal_der', 'zona_a']:
+            if zona_nombre in ['norte', 'sur']:
+                es_luz_roja = True
+        elif "VERDE_A" in estado_str or "AMARILLO_A" in estado_str:
+            if zona_nombre in ['zona_b']:
+                es_luz_roja = True
+        elif "VERDE_B" in estado_str or "AMARILLO_B" in estado_str:
+            if zona_nombre in ['zona_a']:
+                es_luz_roja = True
+        elif "VERDE_PRINCIPAL" in estado_str or "AMARILLO_PRINCIPAL" in estado_str:
+            if zona_nombre in ['secundaria']:
+                es_luz_roja = True
+        elif "VERDE_SECUNDARIA" in estado_str or "AMARILLO_SECUNDARIA" in estado_str:
+            if zona_nombre in ['principal_izq', 'principal_der']:
+                es_luz_roja = True
+        elif "VERDE_FRENTE" in estado_str or "AMARILLO_FRENTE" in estado_str:
+            if zona_nombre in ['giro_izq']:
+                es_luz_roja = True
+        elif "VERDE_GIRO" in estado_str or "AMARILLO_GIRO" in estado_str:
+            if zona_nombre in ['frente']:
+                es_luz_roja = True
+        elif "VERDE_VEHICULOS" in estado_str or "AMARILLO_VEHICULOS" in estado_str:
+            if zona_nombre in ['peatones_esperando']:
+                es_luz_roja = True
+        elif "VERDE_PEATONES" in estado_str or "AMARILLO_PEATONES" in estado_str:
+            if zona_nombre in ['vehiculos']:
                 es_luz_roja = True
 
         if es_luz_roja:
