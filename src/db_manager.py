@@ -3,14 +3,17 @@ import time
 import json
 import queue
 import threading
+import collections
+import logging
 from datetime import datetime
 import pymysql
 
 class DatabaseManager:
     """
-    Gestor asíncrono de persistencia en MariaDB para FLUXA.
+    Gestor asíncrono de persistencia en MariaDB para FLUXA con tolerancia a fallos.
     Utiliza una cola en segundo plano (Worker Thread) para garantizar que las escrituras
     en base de datos nunca bloqueen el ciclo de procesamiento de IA ni bajen los FPS.
+    Si MariaDB no está disponible, mantiene un buffer local en memoria y en disco.
     """
     def __init__(self, host="localhost", user="root", password=None, db_name="fluxa_traffic", port=3306, enabled=True):
         self.host = os.environ.get("DATABASE_HOST", host)
@@ -18,6 +21,11 @@ class DatabaseManager:
         self.db_name = os.environ.get("DATABASE_NAME", db_name)
         self.port = int(os.environ.get("DATABASE_PORT", port))
         self.enabled = enabled
+        
+        # Buffer en memoria para tolerancia a fallos (Fail-Safe)
+        self._local_violations = collections.deque(maxlen=200)
+        self._local_events = collections.deque(maxlen=200)
+        self._lock = threading.Lock()
         
         # Resolución segura de contraseña (P0.1)
         db_pass = os.environ.get("DATABASE_PASSWORD", password)
@@ -126,7 +134,7 @@ class DatabaseManager:
             except queue.Empty:
                 continue
             except Exception as e:
-                print(f"⚠️ Error en worker MariaDB: {e}")
+                logging.warning(f"⚠️ Error en worker MariaDB: {e}")
 
     def _execute_insert(self, task_type, data):
         try:
@@ -160,7 +168,7 @@ class DatabaseManager:
             conn.commit()
             conn.close()
             self.connected = True
-        except Exception as e:
+        except Exception:
             self.connected = False
 
     def log_telemetry_async(self, topology, active_phase, total_cars, lane_counts, weighted_demand=0.0, cpu_percent=0.0, cpu_temp_c=0.0, ram_percent=0.0, fps=0.0):
@@ -185,31 +193,46 @@ class DatabaseManager:
             pass
 
     def log_event_async(self, event_type, message):
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with self._lock:
+            self._local_events.appendleft({"timestamp": now_str, "event_type": event_type, "message": message})
         if not self.enabled:
             return
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
             self.write_queue.put_nowait(("EVENT", {"timestamp": now_str, "event_type": event_type, "message": message}))
         except queue.Full:
             pass
 
     def log_violation_async(self, lane, track_id, phase_state, snapshot_path):
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        clean_snapshot = os.path.basename(snapshot_path) if snapshot_path else ""
+        record = {
+            "id": int(time.time() * 1000) % 10000000,
+            "timestamp": now_str,
+            "lane": lane,
+            "lane_name": lane,
+            "track_id": track_id,
+            "phase_state": phase_state,
+            "snapshot_path": clean_snapshot
+        }
+        with self._lock:
+            self._local_violations.appendleft(record)
+
         if not self.enabled:
             return
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
             self.write_queue.put_nowait(("VIOLATION", {
                 "timestamp": now_str,
                 "lane": lane,
                 "track_id": track_id,
                 "phase_state": phase_state,
-                "snapshot_path": snapshot_path
+                "snapshot_path": clean_snapshot
             }))
         except queue.Full:
             pass
 
     def get_peak_hour_summary(self, target_date=None):
-        """Calcula analítica de Hora Pico y volumen vehicular del día desde MariaDB"""
+        """Calcula analítica de Hora Pico y volumen vehicular del día desde MariaDB con fallback local"""
         if target_date is None:
             target_date = datetime.now().strftime("%Y-%m-%d")
             
@@ -263,26 +286,88 @@ class DatabaseManager:
                     "avg_fps": round(hw_summary.get("avg_fps") or 0.0, 1)
                 }
             }
-        except Exception as e:
-            return {"error": str(e), "peak_hour": "N/D", "hourly_distribution": []}
+        except Exception:
+            # Fallback local
+            with self._lock:
+                local_count = sum(1 for v in self._local_violations if str(v.get("timestamp", "")).startswith(target_date))
+            return {
+                "date": target_date,
+                "peak_hour": "N/D (Modo local)",
+                "peak_avg_volume": 0.0,
+                "hourly_distribution": [],
+                "total_violations_today": local_count,
+                "hardware_averages": {
+                    "avg_cpu": 0.0, "avg_temp_c": 0.0, "avg_ram": 0.0, "avg_fps": 0.0
+                }
+            }
 
     def get_recent_violations(self, limit=50):
-        """Retorna las infracciones más recientes registradas en MariaDB"""
-        try:
-            conn = self._get_connection(use_db=True)
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT id, DATE_FORMAT(timestamp, '%%Y-%%m-%%d %%H:%%i:%%s') as timestamp, 
-                           lane, lane as lane_name, track_id, phase_state, snapshot_path
-                    FROM red_light_violations
-                    ORDER BY id DESC
-                    LIMIT %s;
-                """, (limit,))
-                rows = cur.fetchall()
-            conn.close()
-            return rows
-        except Exception:
+        """Retorna las infracciones más recientes registradas en MariaDB o en el buffer local de respaldo"""
+        if self.enabled:
+            try:
+                conn = self._get_connection(use_db=True)
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT id, DATE_FORMAT(timestamp, '%%Y-%%m-%%d %%H:%%i:%%s') as timestamp, 
+                               lane, lane as lane_name, track_id, phase_state, snapshot_path
+                        FROM red_light_violations
+                        ORDER BY id DESC
+                        LIMIT %s;
+                    """, (limit,))
+                    rows = cur.fetchall()
+                conn.close()
+                if rows and len(rows) > 0:
+                    return rows
+            except Exception:
+                pass
+
+        # 1. Fallback a buffer local en RAM
+        with self._lock:
+            if self._local_violations and len(self._local_violations) > 0:
+                return list(self._local_violations)[:limit]
+
+        # 2. Fallback escaneando archivos en logs/violations/
+        return self._scan_disk_violations(limit=limit)
+
+    def _scan_disk_violations(self, limit=50):
+        """Reconstruye infracciones a partir de las fotos guardadas en el disco"""
+        violations_dir = os.path.join(os.path.dirname(__file__), '..', 'logs', 'violations')
+        if not os.path.exists(violations_dir):
             return []
+            
+        results = []
+        try:
+            files = [f for f in os.listdir(violations_dir) if f.endswith('.jpg') or f.endswith('.png')]
+            # Ordenar por fecha de modificación descendente
+            files.sort(key=lambda x: os.path.getmtime(os.path.join(violations_dir, x)), reverse=True)
+            
+            for idx, f in enumerate(files[:limit], start=1):
+                full_path = os.path.join(violations_dir, f)
+                mtime = os.path.getmtime(full_path)
+                ts_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+                
+                # Extraer track_id si el nombre sigue el patrón violation_YYYYMMDD_HHMMSS_idX.jpg
+                track_id = "N/D"
+                if "_id" in f:
+                    try:
+                        part = f.rsplit("_id", 1)[1].split(".")[0]
+                        track_id = int(part)
+                    except Exception:
+                        pass
+                        
+                results.append({
+                    "id": idx,
+                    "timestamp": ts_str,
+                    "lane": "CARRIL",
+                    "lane_name": "CARRIL",
+                    "track_id": track_id,
+                    "phase_state": "ROJO",
+                    "snapshot_path": f
+                })
+        except Exception:
+            pass
+            
+        return results
 
     def close(self):
         self.running = False

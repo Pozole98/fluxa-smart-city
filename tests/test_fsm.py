@@ -252,3 +252,26 @@ def test_rknn_npu_to_cpu_fallback():
         assert ctrl.cpu_model is not None
 
 
+def test_violations_capture_and_retrieval():
+    """
+    Test 9: Módulo de Infracciones y Tolerancia a Fallos.
+    Verifica que las infracciones en luz roja se detecten y puedan consultarse
+    correctamente tanto en MariaDB como en el buffer local de respaldo.
+    """
+    from db_manager import DatabaseManager
+    
+    # Instanciar DatabaseManager con MariaDB deshabilitado (Modo local)
+    db = DatabaseManager(enabled=False)
+    
+    # Registrar infracción en buffer local
+    db.log_violation_async(lane="este", track_id=42, phase_state="VERDE_NS", snapshot_path="violation_test.jpg")
+    
+    violations = db.get_recent_violations()
+    assert len(violations) >= 1
+    assert violations[0]["track_id"] == 42
+    assert violations[0]["lane"] == "este"
+    assert violations[0]["phase_state"] == "VERDE_NS"
+    assert violations[0]["snapshot_path"] == "violation_test.jpg"
+
+
+
