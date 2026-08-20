@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#  🚦 FLUXA Smart Mobility • Script Instalador Universal de 1-Clic
-#  Cero fricción: Instala Python, MariaDB, dependencias y reglas de hardware.
+#  FLUXA Smart Mobility • Script de Instalación Automatizada
+#  Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
 #  Compatible con: Armbian 24.04 (Orange Pi 5), Fedora, Ubuntu 24.04/22.04, Debian 12
 # ==============================================================================
 
@@ -18,13 +18,9 @@ C_CYAN='\033[36m'
 
 echo -e "${C_CYAN}${C_BOLD}"
 echo "======================================================================"
-echo "   ███████╗██╗     ██╗   ██╗██╗  ██╗ █████╗ "
-echo "   ██╔════╝██║     ██║   ██║╚██╗██╔╝██╔══██╗"
-echo "   █████╗  ██║     ██║   ██║ ╚███╔╝ ███████║"
-echo "   ██╔══╝  ██║     ██║   ██║ ██╔██╗ ██╔══██║"
-echo "   ██║     ███████╗╚██████╔╝██╔╝ ██╗██║  ██║"
-echo "   ╚═╝     ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝"
-echo "   INSTALADOR UNIVERSAL CERO-FRICCIÓN (EDGE & NATIVE)"
+echo "   FLUXA: SISTEMA DE CONTROL SEMAFÓRICO INTELIGENTE Y TELEMETRÍA EDGE"
+echo "   INSTALADOR AUTOMATIZADO DE PRODUCCIÓN (EDGE & NATIVE)"
+echo "   TESCo • División de Ingeniería en Sistemas Computacionales"
 echo "======================================================================"
 echo -e "${C_RESET}"
 
@@ -312,27 +308,28 @@ echo -e "${C_GREEN}✅ Servicio systemd creado en ${SERVICE_FILE} (Backend: ${BA
 # Resumen Final
 echo -e "\n${C_GREEN}${C_BOLD}"
 echo "======================================================================"
-echo "🎉 ¡FLUXA SMART MOBILITY HA SIDO INSTALADO Y CONFIGURADO AL 100%!"
+echo "   INSTALACIÓN Y CONFIGURACIÓN DE FLUXA COMPLETADA CON ÉXITO"
+echo "   TESCo • División de Ingeniería en Sistemas Computacionales"
 echo "======================================================================"
 echo -e "${C_RESET}"
 
-echo -e "Tu sistema está listo para operar inmediatamente:\n"
-echo -e "1️⃣  ${C_BOLD}Ejecutar manualmente:${C_RESET}"
+echo -e "El sistema está listo para operar:\n"
+echo -e "1. ${C_BOLD}Ejecución manual por CLI:${C_RESET}"
 echo -e "   ${C_CYAN}fluxa --topology 4_way --backend cpu --headless --port 5000${C_RESET}"
 echo -e "   ${C_CYAN}fluxa --topology 4_way --backend cpu --gui${C_RESET}"
 if [ "$ARCH" = "aarch64" ]; then
     echo -e "   ${C_CYAN}fluxa --topology 4_way --backend rknn --headless --port 5000${C_RESET}"
 fi
 
-echo -e "\n2️⃣  ${C_BOLD}Control del Servicio de Gabinete (Systemd):${C_RESET}"
+echo -e "\n2. ${C_BOLD}Control del Servicio de Gabinete (Systemd):${C_RESET}"
 echo -e "   Iniciar servicio:    ${C_CYAN}sudo systemctl start fluxa${C_RESET}"
 echo -e "   Habilitar al inicio: ${C_CYAN}sudo systemctl enable fluxa${C_RESET}"
 echo -e "   Ver registros:       ${C_CYAN}journalctl -u fluxa -f${C_RESET}"
 
-echo -e "\n3️⃣  ${C_BOLD}Centros de Mando Web:${C_RESET}"
+echo -e "\n3. ${C_BOLD}Interfaces Web y Centros de Mando:${C_RESET}"
 echo -e "   Portal Ciudadano:    ${C_GREEN}http://localhost:5000${C_RESET}"
 echo -e "   Consola C5 SCADA:    ${C_GREEN}http://localhost:5000/admin${C_RESET}"
-echo -e "   (Cambiar contraseña: ${C_CYAN}python3 scripts/set_admin_password.py${C_RESET})"
+echo -e "   (Actualizar credenciales: ${C_CYAN}python3 scripts/set_admin_password.py${C_RESET})"
 
-echo -e "\n🗑️  ${C_BOLD}Desinstalación limpia:${C_RESET}"
+echo -e "\n4. ${C_BOLD}Desinstalación del sistema:${C_RESET}"
 echo -e "   ${C_YELLOW}bash uninstall.sh${C_RESET}\n"

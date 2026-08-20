@@ -1,34 +1,35 @@
-# 🚦 FLUXA • Sistema Integrado de Control Semafórico Inteligente y Telemetría Edge
+# FLUXA: Sistema de Control Semafórico Inteligente y Telemetría Edge
 
 <div align="center">
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python&logoColor=white)
-![YOLOv8](https://img.shields.io/badge/AI-YOLOv8%20%7C%20BYTETracker-00FFFF?style=for-the-badge&logo=opencv&logoColor=white)
-![Edge AI](https://img.shields.io/badge/Hardware-Orange%20Pi%205%20(RK3588)-red?style=for-the-badge&logo=raspberrypi&logoColor=white)
-![Arduino](https://img.shields.io/badge/MCU-Arduino%20UNO%20R4-teal?style=for-the-badge&logo=arduino&logoColor=white)
-![MariaDB](https://img.shields.io/badge/Database-MariaDB%20%2F%20MySQL-brown?style=for-the-badge&logo=mariadb&logoColor=white)
-![Flask](https://img.shields.io/badge/Web-Flask%20%7C%20SCADA%20C5-green?style=for-the-badge&logo=flask&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
+![YOLOv8](https://img.shields.io/badge/AI-YOLOv8%20%7C%20BYTETracker-008080?style=for-the-badge&logo=opencv&logoColor=white)
+![Hardware](https://img.shields.io/badge/Hardware-Orange%20Pi%205%20(RK3588)-005500?style=for-the-badge)
+![MCU](https://img.shields.io/badge/MCU-Arduino%20UNO%20R4-teal?style=for-the-badge&logo=arduino&logoColor=white)
+![Database](https://img.shields.io/badge/Database-MariaDB%20%2F%20MySQL-brown?style=for-the-badge&logo=mariadb&logoColor=white)
+![Web](https://img.shields.io/badge/Web-Flask%20%7C%20SCADA%20C5-004400?style=for-the-badge&logo=flask&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-gray?style=for-the-badge)
 
 **Tecnológico de Estudios Superiores de Coacalco (TESCo)**  
-*División de Ingeniería en Sistemas Computacionales • Proyecto Smart Cities 2026*
+*División de Ingeniería en Sistemas Computacionales • Tecnológico Nacional de México (TecNM)*  
+*Proyecto de Investigación y Desarrollo en Movilidad Inteligente (Smart Mobility 2026)*
 
-[📖 Manual Técnico para Desarrolladores](docs/MANUAL_TECNICO.md) • [🌐 Arquitectura y APIs](#-especificación-de-interfaces-web-y-apis) • [🚀 Guía Rápida](#-guía-rápida-de-instalación-y-uso)
+[Manual Técnico para Desarrolladores](docs/MANUAL_TECNICO.md) • [Plan de Entrenamiento y Cuantización](docs/PLAN_ENTRENAMIENTO.md) • [Especificación de APIs](#especificación-de-interfaces-web-y-apis)
 
 </div>
 
 ---
 
-## 🌟 ¿Qué es FLUXA?
+## 1. Descripción General del Sistema
 
-**FLUXA** es una plataforma de **Inteligencia y Orquestación Edge para Tráfico Urbano** diseñada para modernizar la infraestructura semafórica sin requerir la sustitución costosa de los gabinetes y cabezales existentes. 
+**FLUXA** es una plataforma de **Inteligencia y Orquestación Edge para Tráfico Urbano** diseñada para modernizar intersecciones viales sin requerir el reemplazo de los gabinetes electromecánicos ni cabezales semafóricos existentes.
 
-FLUXA actúa como una **capa de decisión inteligente (*Overlay Controller*)** compatible con controladores estándar de la industria (NEMA TS2, Tipo 170/2070, o relevadores directos vía microcontrolador industrial/PLC):
+El sistema opera como una **capa de control superpuesta (*Overlay Controller*)**, compatible con estándares normativos (NEMA TS2, Tipo 170/2070 o interfaces de relevadores directos vía microcontrolador o PLC):
 
-* 👁️ **Visión Artificial Edge (YOLOv8 + BYTETracker):** Cuantifica colas vehiculares carril por carril y monitorea peatones con latencias de inferencia de **< 12 ms** en NPU Rockchip RK3588 (Orange Pi 5) o CPU x86.
-* ⚖️ **Prioridad de Transporte Público (TSP) y Corredores de Emergencia C5:** Ajusta dinámicamente los tiempos de verde asignando mayor peso al transporte masivo y despejando la vía a ambulancias con **intervalos seguros de despeje vial (Ámbar + Todo-Rojo)**.
-* 🌿 **Sustentabilidad y Analítica V2X:** Reduce hasta un **60% el tiempo de ralentí vehicular**, mitigando emisiones de $\text{CO}_2$ y transmitiendo avisos de velocidad óptima (GLOSA) a vehículos conectados.
-* 📷 **Auditoría Forense de Fotomultas:** Captura fotográfica automática de cruces indebidos en fase roja con persistencia asíncrona en MariaDB.
+* **Visión Computacional en el Borde (YOLOv8 + BYTETracker):** Cuantificación de colas vehiculares carril por carril y monitoreo de peatones con latencias de inferencia inferiores a **12 ms** en NPU Rockchip RK3588 (Orange Pi 5) o CPU x86/ARM64.
+* **Prioridad de Transporte Público (TSP) y Corredores de Emergencia C5:** Ajuste dinámico de tiempos de verde asignando mayor peso al transporte masivo y despeje seguro de vía para vehículos de emergencia mediante intervalos normativos de Ámbar y Todo-Rojo.
+* **Sustentabilidad y Analítica V2X:** Reducción de hasta un **60% en tiempos de ralentí vehicular**, mitigación de emisiones de $\text{CO}_2$ y emisión de telemetría de velocidad óptima (GLOSA / SPaT) para vehículos conectados.
+* **Auditoría Forense de Infracciones:** Detección de cruces en fase roja con captura fotográfica automática, rotación FIFO de almacenamiento y persistencia asíncrona tolerante a fallos.
 
 ```
                   ┌───────────────────────────────────────────────────────────┐
@@ -37,31 +38,31 @@ FLUXA actúa como una **capa de decisión inteligente (*Overlay Controller*)** c
                   │     Semáforo Tradicional    │       FLUXA Edge AI         │
 ├─────────────────┼─────────────────────────────┼─────────────────────────────┤
 │ Asignación Fase │ 45s fijos (Calle vacía)     │ Dinámica (5s a 45s por cola)│
-│ Prioridad Bus   │ ❌ Ninguna                  │ ✅ TSP Automático (Peso 4x) │
-│ Huella de CO₂   │ 🔴 Alta por ralentí inútil  │ 🟢 Reducción de hasta el 60%│
-│ Emergencias C5  │ ❌ Manual o inexistente     │ 🚨 Despeje Vial Seguro (C5) │
-│ Autos Conectados│ ❌ Desconectado             │ 📡 V2X Broadcast (SPaT)    │
-│ Integración     │ ❌ Rígido                   │ 🔌 Capa Overlay (NEMA / MCU)│
+│ Prioridad Bus   │ Ninguna                     │ TSP Ponderado (Factor 4.0x) │
+│ Huella de CO₂   │ Alta por ralentí inútil     │ Reducción de hasta el 60%   │
+│ Emergencias C5  │ Manual o inexistente        │ Despeje Vial Seguro (C5)    │
+│ Autos Conectados│ Desconectado                │ V2X Broadcast (SPaT/GLOSA)  │
+│ Integración     │ Rígido                      │ Capa Overlay (NEMA / MCU)   │
 └─────────────────┴─────────────────────────────┴─────────────────────────────┘
 ```
 
 ---
 
-## 🏛️ Diagrama de Arquitectura del Sistema
+## 2. Diagrama de Arquitectura del Sistema
 
 ```mermaid
 flowchart TD
-    subgraph SENSORICA ["📷 CAPA DE CAPTURA & SENSORES (EDGE)"]
-        CAM["Cámara Vial / Flujo RTSP / Clip de Video"]
+    subgraph SENSORICA ["CAPA DE CAPTURA & SENSORES (EDGE)"]
+        CAM["Cámara Vial / Flujo RTSP / Clip de Video (demo.mp4)"]
         CALL_BTN["Botón Peatonal / Mando C5"]
     end
 
-    subgraph PROCESAMIENTO ["⚡ NÚCLEO DE INTELIGENCIA ARTIFICIAL (ORANGE PI 5 / X86)"]
+    subgraph PROCESAMIENTO ["NÚCLEO DE INTELIGENCIA ARTIFICIAL (ORANGE PI 5 / X86)"]
         direction TB
         PRE["Normalización y Preprocesamiento (640x640)"]
         
-        subgraph INFERENCIA ["Motor de Inferencia Dual"]
-            RKNN["NPU RK3588 (INT8 - 3 Cores Tri-Core)"]
+        subgraph INFERENCIA ["Motor de Inferencia Dual con Fail-Safe"]
+            RKNN["NPU RK3588 (INT8 - Tri-Core 6 TOPS)"]
             CPU_ENGINE["PyTorch YOLOv8 (CPU Fallback)"]
         end
         
@@ -71,7 +72,7 @@ flowchart TD
         TSP["Ponderación Matemática TSP (Transporte Público)"]
     end
 
-    subgraph FSM_CORE ["🚦 MÁQUINA DE ESTADOS FINITOS & SEGURIDAD VIAL"]
+    subgraph FSM_CORE ["MÁQUINA DE ESTADOS FINITOS & SEGURIDAD VIAL"]
         direction TB
         FSM["CoreSemaforoBase (FSM Adaptativa)"]
         CLEARANCE["Protocolo de Despeje Vial (Ámbar + Todo-Rojo)"]
@@ -79,19 +80,19 @@ flowchart TD
         SUSTAIN["Motor de Métricas Sustentables & Comparativa A/B"]
     end
 
-    subgraph HARDWARE_OUTPUT ["🔌 CONTROLADORES FÍSICOS EN CAMPO"]
+    subgraph HARDWARE_OUTPUT ["CONTROLADORES FÍSICOS EN CAMPO"]
         ARDUINO["Arduino UNO R4 / PLC / Módulo de Relevadores"]
-        LIGHTS["Cabezales Semafóricos Físicos (Leds Calle)"]
-        CONTROLLER_EX["Controlador de Tráfico Existente (NEMA TS2 / 170 / 2070)"]
+        LIGHTS["Cabezales Semafóricos Físicos (LEDs)"]
+        CONTROLLER_EX["Controlador Existente (NEMA TS2 / 170 / 2070)"]
     end
 
-    subgraph SERVICIOS ["🌐 SERVICIOS DE TELEMETRÍA, PERSISTENCIA & SCADA"]
+    subgraph SERVICIOS ["SERVICIOS DE TELEMETRÍA, PERSISTENCIA & SCADA"]
         direction TB
         MARIADB[("MariaDB (Persistencia No Bloqueante en Cola Async)")]
-        FLASK_API["API REST & WebSockets (Flask-Limiter + CSRF)"]
+        FLASK_API["API REST & WebSockets (Flask)"]
         SCADA["Centro de Mando C5 SCADA (/admin)"]
         PUBLIC_PORTAL["Portal Ciudadano & GLOSA V2X (/)"]
-        VIOLATIONS["Módulo Forense de Fotomultas (Snapshots JPG)"]
+        VIOLATIONS["Módulo Forense de Infracciones (Snapshots JPG)"]
     end
 
     %% Conexiones
@@ -115,7 +116,7 @@ flowchart TD
     ARDUINO -.->|"Integración de Gabinete"| CONTROLLER_EX
     
     FSM -->|"Eventos y Telemetría"| FLASK_API
-    FSM -->|"Worker Queue (Queue)"| MARIADB
+    FSM -->|"Cola Asíncrona"| MARIADB
     FSM -->|"Detección de Infracciones"| VIOLATIONS
     
     FLASK_API --> SCADA
@@ -125,146 +126,141 @@ flowchart TD
 
 ---
 
-## 🚀 Características Principales
+## 3. Especificaciones de Ingeniería
 
-* 🧠 **Doble Motor de Inferencia Edge con Fail-Safe Fallback:**
-  * **Aceleración NPU en Orange Pi 5:** Modelo cuantizado en INT8 sobre la NPU Rockchip RK3588 (6 TOPS) con latencias de inferencia **< 12 ms**.
-  * **Tolerancia a Fallos Automática (NPU -> CPU):** Si la NPU o el modelo `.rknn` presentan fallas o indisponibilidad, conmuta en tiempo real a CPU (YOLOv8 PyTorch) sin interrumpir el servicio.
-  * **Backend CPU Universal:** Ejecutable en cualquier laptop o servidor x86_64 / ARM con PyTorch.
-* 🏛️ **Identidad Institucional Profesional:**
-  * Interfaz SCADA y Portal Ciudadano adaptados con la identidad visual y logos de **TESCo**, **TecNM** y la **División de Ingeniería en Sistemas Computacionales**.
-* 🎨 **Estudio Visual de Calibración de ROIs en Canvas:**
-  * Delimita y ajusta los polígonos de los carriles haciendo clics y arrastrando puntos directamente sobre el fotograma de video en el navegador.
-  * Selector dinámico de variantes de YOLO (`yolov8n.pt`, `yolov8s.pt`, `yolov8m.pt`) y sliders de tiempos semafóricos con aplicación en caliente (*Hot-Reload*).
-* 🛡️ **Seguridad por Roles y Doble Interfaz Web:**
-  * **Portal Ciudadano Público (`/`):** Streaming en vivo, semáforo con cuenta regresiva, métricas ecológicas y Asesor de Velocidad V2X (*GLOSA*).
-  * **Centro de Mando C5 SCADA (`/admin`):** Portal protegido por login con hash criptográfico (`admin` / Contraseña configurable con `scripts/set_admin_password.py`) para control remoto, calibración de carriles y fotomultas.
-* ⚖️ **Prioridad de Transporte Público (TSP):**
-  * Ponderación matemática sin reentrenamiento: Autobuses ($4.0\times$), Camiones ($2.5\times$), Peatones ($1.5\times$), Autos ($1.0\times$).
-* 🚨 **Corredor Verde de Emergencia C5:**
-  * Mando de despeje prioritario para ambulancias, bomberos y patrullas con alerta visual estroboscópica y cronometraje de respuesta.
-* 📷 **Fotomultas por Cruce en Luz Roja & Control de Almacenamiento:**
-  * Captura fotográfica automática con evidencia fechada (`logs/violations/`), registro en MariaDB y **rotación FIFO automática de almacenamiento** para proteger el disco del gabinete.
-* 🌿 **Calculadora de Impacto Ambiental & Smart City ROI:**
-  * Contadores en vivo de litros de combustible ahorrados, $\text{kg}$ de $\text{CO}_2$ mitigados y horas de espera evitadas.
-* 📡 **Protocolo V2X Conectado (SPaT):**
-  * Emisión de telemetría para vehículos autónomos y recomendación de velocidad (*Green Wave Advice*).
-* 🔌 **Watchdog de Hardware con Arduino UNO R4:**
-  * Conmutación de relés de potencia con enlace serial a prueba de fallos y reconexión automática en caliente.
+### 3.1. Inferencia Dual con Tolerancia a Fallos (NPU / CPU)
+* **Aceleración NPU en Orange Pi 5:** Modelos cuantizados en INT8 (`yolov8n.rknn`, `yolov8s.rknn`, `yolov8m.rknn`) sobre el acelerador Rockchip RK3588 (3 núcleos, 6 TOPS) con latencias de inferencia de **~3.4 ms a 14 ms**.
+* **Fail-Safe Fallback Automático:** Si la librería `rknnlite`, el hardware de la NPU o el archivo `.rknn` presentan fallas en tiempo de ejecución, el sistema conmuta automáticamente y sin interrupción al motor PyTorch en CPU (`yolov8n.pt`).
+* **Multiplataforma Universal:** Operativo de forma nativa tanto en entornos embebidos ARM64 (Armbian, Debian) como en servidores y laptops x86_64 (Fedora, RHEL, Ubuntu).
+
+### 3.2. Módulo Forense de Infracciones y Cuotas de Almacenamiento
+* **Detección Espaciotemporal:** Validación automática de cruces vehiculares durante fase roja en carriles conflictivos.
+* **Persistencia Multicapa:** Registro en MariaDB con respaldo simultáneo en búfer circular de memoria RAM y escaneo de disco para asegurar disponibilidad inmediata incluso sin base de datos.
+* **Control de Almacenamiento:** Política FIFO automática con límites configurables (por defecto 300 capturas y 150 MB máximo) para proteger el almacenamiento del hardware en campo.
+
+### 3.3. Seguridad Criptográfica y Gestión de Credenciales
+* **Autenticación Basada en PBKDF2-SHA256:** Las credenciales del operador C5 se almacenan exclusivamente como hashes criptográficos en `instance/admin_credentials.json` con permisos de sistema `0600`.
+* **Configuración Segregada:** Los archivos con credenciales locales (`config.json`, `.env`, `instance/`) se encuentran desindexados del repositorio. El proyecto distribuye la plantilla pública `config.example.json`.
+* **Instalador Interactivo:** `install.sh` solicita contraseñas de forma segura durante el despliegue o genera cadenas aleatorias de alta entropía.
 
 ---
 
-## 🚦 Catálogo de Topologías Viales Soportadas
+## 4. Catálogo de Topologías Viales Soportadas
 
 | Topología CLI | Nombre del Cruce | Descripción Operativa |
 | :--- | :--- | :--- |
 | `4_way` | **4 Vías Clásica** | Intersección ortogonal de 4 accesos (Eje Norte-Sur vs Eje Este-Oeste). |
 | `2_way` | **2 Vías / Avenida** | Avenida bidireccional continua con optimización de flujo por sentido (Zona A vs B). |
 | `3_way_t` | **3 Vías Tipo T** | Intersección en T (Avenida Principal continua vs Calle Secundaria). |
-| `4_way_protected` | **Giro Protegido** | 4 vías con fase exclusiva de flecha izquierda y salto inteligente de fase vacía. |
-| `pedestrian` | **Cruce Peatonal** | Cruce *mid-block* con detección inteligente de peatones esperando en banqueta. |
+| `4_way_protected` | **Giro Protegido** | 4 vías con fase exclusiva de flecha izquierda y salto inteligente de fase vacía (*Phase-skipping*). |
+| `pedestrian` | **Cruce Peatonal** | Cruce *mid-block* con detección de demanda peatonal en banqueta y tiempos seguros de cruce. |
 
 ---
 
-## 📦 Guía de Instalación y Despliegue
+## 5. Instalación y Despliegue
 
-Dispones de dos métodos de instalación según tu entorno de trabajo:
-
-### 🏆 Método 1: Instalador Universal Nativo de 1-Clic (Recomendado para Producción & Edge)
-Compatible con **Armbian 24.04 (Orange Pi 5)**, **Ubuntu**, **Debian** y **Fedora/RHEL (x86_64)**. Configura automáticamente librerías, permisos seriales para Arduino (`dialout`), base de datos MariaDB, acceso global `fluxa` y servicio `systemd` para gabinete vial:
+### Método 1: Instalador Universal Nativo (Recomendado para Producción & Edge)
+Compatible con **Armbian 24.04 (Orange Pi 5)**, **Fedora/RHEL**, **Ubuntu** y **Debian**:
 
 ```bash
-# Clonar y ejecutar instalador automático
 git clone https://github.com/Pozole98/fluxa-smart-city.git
 cd fluxa-smart-city
 bash install.sh
 ```
 
-> **Para desinstalar limpiamente en el futuro:**  
-> `bash uninstall.sh`
+El script configura automáticamente dependencias de sistema, reglas udev para Arduino y cámaras, entorno virtual aislado `.venv`, base de datos MariaDB, acceso global `fluxa` y servicio `systemd`.
+
+Para desinstalar limpiamente:
+```bash
+bash uninstall.sh
+```
 
 ---
 
-### 🐳 Método 2: Despliegue con Docker / Podman (Contenedores)
-Ideal para servidores centrales, simulaciones o pruebas rápidas sin tocar dependencias del sistema operativo:
-
+### Método 2: Despliegue con Contenedores (Docker / Podman)
 ```bash
-# Iniciar FLUXA + MariaDB con Podman o Docker
+# Iniciar servicios en segundo plano
 docker compose up -d
 
-# Ver logs del contenedor
+# Visualizar registros
 docker compose logs -f
 ```
 
 ---
 
-## 💻 Ejecución y Control del Sistema
+## 6. Ejecución del Sistema
 
-Una vez instalado con el **Método 1**, puedes lanzar FLUXA desde cualquier terminal con el comando global `fluxa`:
-
-### Modo Servicio Headless (Recomendado para Producción y WebUI)
+### Ejecución por Línea de Comandos (CLI)
 ```bash
 # Intersección de 4 vías en CPU con clip demo en puerto 5000
 fluxa --topology 4_way --backend cpu --headless --video videos/demo.mp4 --port 5000
 
-# Intersección en Orange Pi 5 (NPU RK3588 con aceleración por hardware y fallback CPU)
+# Intersección en Orange Pi 5 (NPU RK3588 con aceleración por hardware)
 fluxa --topology 4_way --backend rknn --headless --port 5000
 ```
 
 ### Control del Servicio de Gabinete Vial (Systemd)
 ```bash
-sudo systemctl start fluxa      # Iniciar servicio en segundo plano
-sudo systemctl enable fluxa     # Activar arranque automático con el gabinete
-journalctl -u fluxa -f          # Ver telemetría en tiempo real
+sudo systemctl start fluxa      # Iniciar servicio
+sudo systemctl stop fluxa       # Detener servicio
+sudo systemctl restart fluxa    # Reiniciar servicio
+journalctl -u fluxa -f          # Telemetría en tiempo real
 ```
 
 ---
 
-## 🌐 Ecosistema de Portales y Acceso a la Red
+## 7. Especificación de Interfaces Web y APIs
 
-Al iniciar FLUXA, la plataforma expone sus servicios en el puerto configurado (por defecto `5000`):
+Al iniciar el servicio, los siguientes puntos de acceso quedan habilitados en el puerto configurado (por defecto `5000`):
 
-| Portal | URL | Credenciales | Descripción |
+| Endpoint / Vista | Ruta | Nivel de Acceso | Descripción |
 | :--- | :--- | :--- | :--- |
-| **Portal Ciudadano Público** | `http://localhost:5000/` | Libre | Semáforo en vivo, aforo, asesor de velocidad V2X y sustentabilidad. |
-| **Inicio de Sesión C5** | `http://localhost:5000/login` | `admin` / `<TU_CONTRASEÑA>` | Portal de autenticación con hash seguro y protección *Rate-Limiting*. |
-| **Centro de Mando SCADA C5** | `http://localhost:5000/admin` | Requiere Login | Control remoto C5, Calibrador Canvas, Selector de Video y Fotomultas. |
-| **Informe Ejecutivo Oficial** | `http://localhost:5000/report/executive` | Requiere Login | Reporte de movilidad listo para imprimir o exportar a PDF (`Ctrl+P`). |
-| **Streaming MJPEG** | `http://localhost:5000/video_feed` | Libre | Flujo de video continuo con overlay de IA y HUD semafórico. |
+| **Portal Ciudadano** | `/` | Público | Visualización de tráfico, estado semafórico, métricas de sustentabilidad y recomendación V2X (GLOSA). |
+| **Autenticación C5** | `/login` | Público | Inicio de sesión para operadores de control con protección de tasa de intentos (*Rate Limiting*). |
+| **Centro de Mando SCADA C5** | `/admin` | Operador C5 | Mando de emergencias, conmutador de modelos YOLO, selector de video y visor de infracciones. |
+| **Calibrador Visual Canvas** | `/admin` (Modal) | Operador C5 | Edición gráfica interactiva de polígonos de carriles con recarga en caliente (*Hot-Reload*). |
+| **Informe Ejecutivo Oficial** | `/report/executive` | Operador C5 | Reporte de movilidad urbana y auditoría vial listo para exportar a PDF (`Ctrl + P`). |
+| **Streaming de Video MJPEG** | `/video_feed` | Público | Transmisión de video continua con HUD semafórico y cajas de seguimiento de IA. |
+| **API Telemetría Global** | `/api/status` | Público | Métricas de aforo vehicular, FPS, estado de FSM, hardware y watchdog de Arduino. |
+| **API Infracciones** | `/api/violations` | Operador C5 | Consulta de registros de cruces en luz roja con enlaces a evidencia fotográfica. |
 
 ---
 
-## 📂 Estructura del Repositorio
+## 8. Estructura del Repositorio
 
 ```text
 yolov8_semaforo_advanced/
-├── config.json               # Configuración maestra (tiempos, polígonos, base de datos, auth)
+├── config.example.json       # Plantilla maestra de configuración (sanitizada)
 ├── main.py                   # Punto de entrada universal por CLI
-├── requirements.txt          # Dependencias del proyecto
-├── yolov8n.pt                # Pesos de red neuronal YOLOv8 Nano
-├── models/                   # Modelos neuronales cuantizados (.rknn, .onnx)
+├── requirements.txt          # Dependencias de Python
+├── yolov8n.pt                # Pesos neuronales YOLOv8 Nano para CPU
+├── models/                   # Modelos cuantizados (.rknn) para Orange Pi 5 NPU
 ├── docs/
-│   └── MANUAL_TECNICO.md     # 📘 Manual técnico exhaustivo para desarrolladores e ingenieros
-├── logs/                     # Archivos de analítica CSV
-│   └── violations/           # 📷 Fotografías de evidencia de infracciones en luz roja
+│   ├── MANUAL_TECNICO.md     # Manual técnico detallado para ingeniería y desarrollo
+│   ├── PLAN_ENTRENAMIENTO.md # Guía de entrenamiento, fine-tuning y cuantización RKNN
+│   └── arquitectura.mmd      # Diagrama de arquitectura del sistema en Mermaid
+├── logs/
+│   └── violations/           # Fotografías de evidencia de infracciones en luz roja
+├── videos/
+│   └── demo.mp4              # Clip de video estándar para demostración y pruebas
 ├── src/                      # Módulos del núcleo del sistema
-│   ├── cli.py                # Analizador CLI y banner de bienvenida
-│   ├── core_semaforo.py      # Clase base universal (CPU, TSP, ROIs, Tracking, ROI Ambiental)
-│   ├── core_semaforo_rknn.py # Clase base para aceleración en NPU RKNN (Orange Pi 5)
-│   ├── db_manager.py         # Gestor asíncrono MariaDB / MySQL
-│   ├── hardware_monitor.py   # Telemetría de hardware (CPU, Temp °C, RAM, Disco, Red)
-│   ├── api_server.py         # Servidor Web Flask, APIs REST, Autenticación y Streaming
-│   ├── videostream.py        # Ingestión de video en hilo secundario con fallback MIPI/USB
+│   ├── cli.py                # Analizador CLI y presentación de consola
+│   ├── core_semaforo.py      # Clase base de control semafórico, FSM, ROIs, TSP y fotomultas
+│   ├── core_semaforo_rknn.py # Controlador para aceleración NPU RKNN con fallback a CPU
+│   ├── db_manager.py         # Gestor asíncrono MariaDB con búfer local tolerante a fallos
+│   ├── hardware_monitor.py   # Telemetría de hardware (CPU, temperatura, RAM, disco)
+│   ├── api_server.py         # Servidor Web Flask, APIs REST, autenticación y streaming
+│   ├── videostream.py        # Ingestión de video en hilo secundario con reconexión
 │   ├── ui4_way_cpu.py / ui4_way.py
 │   ├── ui2_way_cpu.py / ui2_way.py
 │   ├── ui3_tee_cpu.py / ui3_tee.py
 │   ├── ui4_protected_cpu.py / ui4_protected.py
 │   └── ui_pedestrian_cpu.py / ui_pedestrian.py
-├── systemd/                  # Despliegue como servicio del sistema operativo
-│   ├── fluxa.service         # Servicio systemd
-│   └── install_service.sh    # Script de autoinstalación
-└── templates/                # Plantillas Web
-    ├── index.html            # Consola SCADA C5 y Calibrador Visual en Canvas
+├── systemd/
+│   ├── fluxa.service         # Unidad de servicio systemd
+│   └── install_service.sh    # Script de despliegue de servicio
+└── templates/                # Plantillas Web (HTML5 / Vanilla CSS / JS)
+    ├── index.html            # Consola SCADA C5 y Calibrador Visual Canvas
     ├── public.html           # Portal Ciudadano de Movilidad
     ├── login.html            # Portal de Autenticación C5
     └── report_executive.html # Reporte Oficial de Auditoría Vial en PDF
@@ -272,8 +268,11 @@ yolov8_semaforo_advanced/
 
 ---
 
-## 🤝 Contribución y Licencia
+## 9. Licencia y Créditos
 
-Este proyecto está bajo la Licencia **MIT**. Consulta el [Manual Técnico](docs/MANUAL_TECNICO.md) para conocer las directrices de contribución y extensiones de código.
+Este proyecto se distribuye bajo los términos de la Licencia **MIT**.
 
-Desarrollado con ❤️ para transformar la movilidad urbana hacia un futuro más inteligente, limpio y seguro.
+**Desarrollado en:**  
+Tecnológico de Estudios Superiores de Coacalco (TESCo)  
+División de Ingeniería en Sistemas Computacionales  
+Tecnológico Nacional de México (TecNM)
