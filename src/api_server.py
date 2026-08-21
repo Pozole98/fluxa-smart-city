@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Servidor Web, Interfaces REST API, Transmisión MJPEG y Autenticación C5
+Desarrollador Principal: Moisés Emilio Martínez Arias
+"""
+
 import os
 import csv
 import json
@@ -23,21 +33,21 @@ except ImportError:
 
 from hardware_monitor import HardwareMonitor
 
-# Silenciar logs excesivos de Flask/Werkzeug
+# Silenciar logs excesivos del servidor WSGI interno
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
 app.secret_key = os.environ.get("FLUXA_SECRET_KEY", secrets.token_hex(32))
 
-# Endurecimiento de cookies de sesión (P0.4)
+# Configuración de seguridad para cookies de sesión HTTPOnly y SameSite
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_COOKIE_SECURE=os.environ.get("FLUXA_ENV", "dev").lower() == "production"
 )
 
-# Rate Limiter (P0.3)
+# Control de tasa de peticiones (Rate Limiting) para protección contra ataques de fuerza bruta
 if LIMITER_AVAILABLE and get_remote_address:
     limiter = Limiter(
         get_remote_address,

@@ -1,12 +1,23 @@
+# -*- coding: utf-8 -*-
+"""
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Monitor de Telemetría de Hardware y Recursos para Orange Pi 5 (RK3588) y Plataformas x86_64
+Desarrollador Principal: Moisés Emilio Martínez Arias
+"""
+
 import os
 import time
 import socket
 import psutil
 from datetime import timedelta
 
+
 class HardwareMonitor:
     """
-    Monitor de métricas de bajo nivel para plataformas Edge (Linux x86/ARM, Orange Pi 5 RK3588, Fedora/Ubuntu).
+    Monitor de métricas de bajo nivel para plataformas Edge (Linux x86/ARM, Orange Pi 5 RK3588).
     Captura temperatura de CPU/SoC, uso de recursos, espacio en disco, I/O de red y tiempo de actividad.
     """
     def __init__(self):

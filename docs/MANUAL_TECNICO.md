@@ -2,7 +2,7 @@
 
 **Plataforma de Control Semafórico Inteligente, Telemetría Edge AI y Gestión de Movilidad Urbana**  
 *Tecnológico de Estudios Superiores de Coacalco (TESCo) • División de Ingeniería en Sistemas Computacionales*  
-*Tecnológico Nacional de México (TecNM) • Proyecto Smart Mobility 2026*
+*Tecnológico Nacional de México (TecNM) • Desarrollador Principal: Moisés Emilio Martínez Arias*
 
 ---
 

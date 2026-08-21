@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-FLUXA - Gestor de Credenciales de Administrador C5
-Permite fijar o actualizar interactivamente la contraseña del operador C5 de forma segura,
-almacenándola como un hash criptográfico (PBKDF2-SHA256) sin exponer texto plano.
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Utilidad de Configuración Segura de Credenciales C5 (Hash PBKDF2-SHA256)
+Desarrollador Principal: Moisés Emilio Martínez Arias
 """
 
 import os
@@ -14,8 +18,7 @@ from datetime import datetime
 try:
     from werkzeug.security import generate_password_hash
 except ImportError:
-    print("❌ Error: Werkzeug no está instalado en el entorno Python actual.")
-    print("💡 Ejecuta: pip install werkzeug")
+    print("[ERROR] Werkzeug no se encuentra instalado en el entorno Python actual.")
     sys.exit(1)
 
 import argparse
@@ -28,9 +31,9 @@ def set_password(username=None, password=None):
 
     if not username:
         print("\n" + "=" * 65)
-        print("🔐 FLUXA SMART CITY • GESTOR DE CREDENCIALES DE ADMINISTRADOR C5")
+        print("   FLUXA • CONFIGURACIÓN DE CREDENCIALES DE OPERADOR C5")
         print("=" * 65)
-        username = input("\n👤 Ingrese el nombre de usuario administrador [admin]: ").strip()
+        username = input("\nIngrese el nombre de usuario administrador [admin]: ").strip()
         if not username:
             username = "admin"
 

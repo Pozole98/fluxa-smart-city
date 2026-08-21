@@ -17,6 +17,7 @@ echo -e "${C_YELLOW}${C_BOLD}"
 echo "======================================================================"
 echo "   FLUXA SMART MOBILITY • DESINSTALADOR DEL SISTEMA"
 echo "   TESCo • División de Ingeniería en Sistemas Computacionales"
+echo "   Desarrollador Principal: Moisés Emilio Martínez Arias"
 echo "======================================================================"
 echo -e "${C_RESET}"
 

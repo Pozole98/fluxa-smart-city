@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Controlador de Inferencia Acelerada en NPU (Rockchip RK3588) con Fallback en CPU
+Desarrollador Principal: Moisés Emilio Martínez Arias
+"""
+
 import os
 import sys
 import numpy as np
@@ -17,14 +27,8 @@ try:
 except ImportError:
     RKNN_AVAILABLE = False
     if IS_AARCH64:
-        print("\n" + "="*70)
-        print("❌ [ADVERTENCIA NPU] La librería 'rknnlite' no está instalada en este entorno.")
-        print("💡 Para habilitar la NPU Rockchip RK3588 en Orange Pi 5, ejecuta:")
-        py_ver = f"{sys.version_info.major}{sys.version_info.minor}"
-        print(f"   pip install wheels/rknn_toolkit_lite2-2.3.2-cp{py_ver}-cp{py_ver}-manylinux_2_17_aarch64.manylinux2014_aarch64.whl --break-system-packages")
-        print("="*70 + "\n")
+        logging.info("Librería rknnlite no detectada en el entorno aarch64 actual.")
 
-    # Clase dummy para evitar NameError en entornos sin RKNN
     class RKNNLite:
         NPU_CORE_0_1_2 = 1
         def __init__(self, verbose=False): pass
@@ -42,15 +46,10 @@ except ImportError:
 
 class CoreSemaforoRKNN(CoreSemaforoBase):
     """
-    Controlador de Inferencia Acelerada en NPU (Rockchip RK3588 en Orange Pi 5)
-    con tolerancia total a fallos (Fail-Safe CPU Fallback).
-    
-    Características:
-    1. Aceleración NPU multi-núcleo (Core 0, 1 y 2 = 6 TOPS INT8).
-    2. Fallback automático a CPU (YOLOv8 PyTorch) si la NPU o el modelo .rknn no están disponibles.
-    3. Cadencia adaptativa para YOLOv8 Medium en hardware embebido.
-    4. Conmutación en caliente segura sin fugas de memoria.
+    Controlador de inferencia acelerada sobre la NPU de la Orange Pi 5 (Rockchip RK3588)
+    con arquitectura de respaldo automático en CPU (PyTorch) para alta disponibilidad.
     """
+
     def __init__(self, topology_name="4_way", port=None, video_source=None):
         self._rknn_lock = threading.RLock()
         self.rknn = None
@@ -63,12 +62,12 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
 
     def _init_cpu_fallback(self, reason="Falla en NPU"):
         """Inicializa el motor de respaldo PyTorch en CPU de forma transparente"""
-        print(f"\n⚠️ [FALLBACK NPU -> CPU] {reason}. Activando motor YOLOv8 en CPU...")
+        logging.warning(f"Activando motor de respaldo YOLOv8 en CPU: {reason}")
         self.is_cpu_fallback = True
         self.backend_name = "CPU (Fallback)"
         
         if not ULTRALYTICS_AVAILABLE:
-            print("❌ Ultralytics no disponible para fallback en CPU.")
+            logging.error("Ultralytics no se encuentra disponible para el motor de respaldo en CPU.")
             return False
 
         try:
@@ -89,17 +88,17 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
                     cpu_model_path = p
                     break
 
-            print(f"📦 Cargando modelo PyTorch de respaldo: {cpu_model_path}")
+            logging.info(f"Cargando modelo PyTorch de respaldo: {cpu_model_path}")
             self.cpu_model = YOLO(cpu_model_path)
             if hasattr(self, 'api') and self.api:
                 self.api.log_event('WARN', f"NPU no disponible. Operando en modo de respaldo CPU ({os.path.basename(cpu_model_path)})")
-            print("✅ Motor de respaldo en CPU activado exitosamente.")
             return True
         except Exception as e:
-            print(f"❌ Error al inicializar fallback CPU: {e}")
+            logging.error(f"Error al inicializar motor de respaldo en CPU: {e}")
             return False
 
     def _init_model(self):
+        """Carga y configura el modelo de red neuronal en los 3 núcleos de la NPU"""
         with self._rknn_lock:
             self.IOU_THRESH = self.config.get("ai_model", {}).get("iou_threshold", 0.45)
             self._cached_dets_m = None
@@ -132,7 +131,7 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
                 self._init_cpu_fallback(f"Archivo de modelo RKNN '{model_name}' no encontrado")
                 return
 
-            print(f"📦 Cargando modelo RKNN en la NPU desde: {model_path}")
+            logging.info(f"Cargando modelo RKNN en la NPU desde: {model_path}")
             
             try:
                 new_rknn = RKNNLite(verbose=False)
@@ -141,7 +140,7 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
                     self._init_cpu_fallback(f"Error cargando archivo RKNN (código {ret})")
                     return
                     
-                # Activar los 3 núcleos de la NPU (Core 0 + Core 1 + Core 2 = 6 TOPS)
+                # Activar los 3 núcleos del acelerador NPU (Core 0 + Core 1 + Core 2 = 6 TOPS)
                 core_mask = getattr(RKNNLite, 'NPU_CORE_0_1_2', 1)
                 try:
                     ret = new_rknn.init_runtime(core_mask=core_mask)
@@ -167,12 +166,12 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
                         old_rknn.release()
                     except Exception:
                         pass
-                print(f"✅ Modelo RKNN {os.path.basename(model_path)} cargado y activo en los 3 núcleos de la NPU.")
+                logging.info(f"Modelo RKNN {os.path.basename(model_path)} cargado y activo en los 3 núcleos de la NPU.")
             except Exception as e:
                 self._init_cpu_fallback(f"Excepción al inicializar NPU: {e}")
 
     def _predict(self, frame):
-        # 1. Modo Fallback CPU
+        """Ejecuta inferencia con la NPU o con el motor de respaldo en CPU"""
         if self.is_cpu_fallback:
             if self.cpu_model is not None:
                 try:
@@ -183,14 +182,13 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
                     logging.warning(f"Error en inferencia CPU fallback: {e}")
             return None
 
-        # 2. Cadencia temporal para YOLOv8 Medium en NPU (Inferencia intercalada + Kalman Tracking)
+        # Cadencia temporal optimizada para YOLOv8 Medium en hardware embebido
         model_name = self.config.get("ai_model", {}).get("model_file", "")
         if "yolov8m" in model_name:
             self._frame_count += 1
             if self._frame_count % 2 != 0 and self._cached_dets_m is not None:
                 return self._cached_dets_m.copy()
 
-        # 3. Inferencia NPU con RKNN
         with self._rknn_lock:
             if self.rknn is None:
                 return None
@@ -241,12 +239,13 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
 
             except Exception as e:
                 self.npu_error_count += 1
-                logging.warning(f"⚠️ Error en inferencia RKNN ({self.npu_error_count}/3): {e}")
+                logging.warning(f"Error en inferencia RKNN ({self.npu_error_count}/3): {e}")
                 if self.npu_error_count >= 3:
                     self._init_cpu_fallback(f"Falla repetida de inferencia en NPU ({e})")
                 return None
 
     def stop(self):
+        """Libera de forma ordenada los recursos de la NPU y el controlador base"""
         try:
             super().stop()
         except Exception:

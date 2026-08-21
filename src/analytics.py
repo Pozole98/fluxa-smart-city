@@ -1,11 +1,22 @@
+# -*- coding: utf-8 -*-
+"""
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Módulo de Registro Periódico de Telemetría y Aforo en CSV
+Desarrollador Principal: Moisés Emilio Martínez Arias
+"""
+
 import csv
 import os
 import time
 from datetime import datetime
 
+
 class TrafficAnalyticsLogger:
     """
-    Registra datos de tráfico de forma dinámica sin importar la topología.
+    Registra datos de aforo vehicular en archivos CSV diarios de forma desacoplada de la topología activa.
     """
     def __init__(self, log_dir="logs", enabled=True):
         self.enabled = enabled

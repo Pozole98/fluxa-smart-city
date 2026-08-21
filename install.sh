@@ -21,6 +21,7 @@ echo "======================================================================"
 echo "   FLUXA: SISTEMA DE CONTROL SEMAFÓRICO INTELIGENTE Y TELEMETRÍA EDGE"
 echo "   INSTALADOR AUTOMATIZADO DE PRODUCCIÓN (EDGE & NATIVE)"
 echo "   TESCo • División de Ingeniería en Sistemas Computacionales"
+echo "   Desarrollador Principal: Moisés Emilio Martínez Arias"
 echo "======================================================================"
 echo -e "${C_RESET}"
 
