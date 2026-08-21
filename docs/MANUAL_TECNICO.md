@@ -243,3 +243,17 @@ Detiene y remueve el servicio `systemd`, borra el acceso global `/usr/local/bin/
 docker compose up -d
 docker compose logs -f
 ```
+
+---
+
+## 8. Seguridad Perimetral, Protección de Modelos y Licenciamiento Comercial
+
+### 8.1. Protección del Runtime en Hardware Edge
+1. **Modelos Compilados en Formato Binario:** Las redes neuronales se distribuyen en formato cuantizado INT8 binario (`.rknn`), evitando la exposición de hiperparámetros y pesos en texto plano o estructuras desprotegidas.
+2. **Cifrado de Credenciales C5:** Almacenamiento local mediante hashes criptográficos PBKDF2-SHA256 con salt dinámico y endurecimiento de cookies HTTPOnly / SameSite.
+3. **Persistencia Híbrida y Blindaje de Red:** Cola asíncrona no bloqueante en MariaDB con aislamiento en red local y conmutación transparente a búfer en memoria ante pérdidas de enlace.
+
+### 8.2. Régimen de Propiedad Intelectual
+* **Titularidad:** Moisés Emilio Martínez Arias © 2026. Todos los derechos reservados.
+* **Respaldo Institucional:** Tecnológico de Estudios Superiores de Coacalco (TESCo) • Tecnológico Nacional de México (TecNM).
+* **Marco Legal:** Consulte el contrato de licenciamiento en [LICENSE.md](../LICENSE.md) y la justificación económica en [Modelo de Negocio B2G y ROI](MODELO_NEGOCIO_B2G.md).

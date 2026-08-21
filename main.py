@@ -6,7 +6,8 @@ Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
 División de Ingeniería en Sistemas Computacionales
 
 Punto de entrada principal para la ejecución del sistema vía interfaz de línea de comandos (CLI).
-Desarrollador Principal: Moisés Emilio Martínez Arias
+Desarrollador Principal y Titular de Derechos: Moisés Emilio Martínez Arias
+Todos los derechos reservados © 2026.
 """
 
 import os
