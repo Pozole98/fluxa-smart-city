@@ -5,7 +5,8 @@ Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
 División de Ingeniería en Sistemas Computacionales
 
 Módulo de Gestión de Persistencia y Telemetría Asíncrona (MariaDB / Fallback Local)
-Desarrollador Principal: Moisés Emilio Martínez Arias
+Desarrollador Principal y Titular de Derechos: Moisés Emilio Martínez Arias
+Todos los derechos reservados © 2026.
 """
 
 import os

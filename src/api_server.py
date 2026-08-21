@@ -5,7 +5,8 @@ Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
 División de Ingeniería en Sistemas Computacionales
 
 Servidor Web, Interfaces REST API, Transmisión MJPEG y Autenticación C5
-Desarrollador Principal: Moisés Emilio Martínez Arias
+Desarrollador Principal y Titular de Derechos: Moisés Emilio Martínez Arias
+Todos los derechos reservados © 2026.
 """
 
 import os

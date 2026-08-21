@@ -5,7 +5,8 @@ Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
 División de Ingeniería en Sistemas Computacionales
 
 Controlador de Inferencia Acelerada en NPU (Rockchip RK3588) con Fallback en CPU
-Desarrollador Principal: Moisés Emilio Martínez Arias
+Desarrollador Principal y Titular de Derechos: Moisés Emilio Martínez Arias
+Todos los derechos reservados © 2026.
 """
 
 import os

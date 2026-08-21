@@ -8,14 +8,14 @@
 ![MCU](https://img.shields.io/badge/MCU-Arduino%20UNO%20R4-teal?style=for-the-badge&logo=arduino&logoColor=white)
 ![Database](https://img.shields.io/badge/Database-MariaDB%20%2F%20MySQL-brown?style=for-the-badge&logo=mariadb&logoColor=white)
 ![Web](https://img.shields.io/badge/Web-Flask%20%7C%20SCADA%20C5-004400?style=for-the-badge&logo=flask&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-gray?style=for-the-badge)
+![License](https://img.shields.io/badge/License-Propietaria%20%2F%20Comercial-1b396a?style=for-the-badge)
 
 **Tecnológico de Estudios Superiores de Coacalco (TESCo)**  
 *División de Ingeniería en Sistemas Computacionales • Tecnológico Nacional de México (TecNM)*  
-*Desarrollador Principal: Moisés Emilio Martínez Arias*  
-*Proyecto de Titulación e Investigación en Movilidad Inteligente (Smart Mobility)*
+*Desarrollador Principal y Titular de Derechos: Moisés Emilio Martínez Arias*  
+*Proyecto de Innovación Tecnológica y Emprendimiento en Movilidad Inteligente (Smart Mobility)*
 
-[Manual Técnico para Desarrolladores](docs/MANUAL_TECNICO.md) • [Plan de Entrenamiento y Cuantización](docs/PLAN_ENTRENAMIENTO.md) • [Especificación de APIs](#especificación-de-interfaces-web-y-apis)
+[Manual Técnico para Desarrolladores](docs/MANUAL_TECNICO.md) • [Modelo de Negocio B2G y ROI](docs/MODELO_NEGOCIO_B2G.md) • [Plan de Entrenamiento](docs/PLAN_ENTRENAMIENTO.md) • [Especificación de APIs](#especificación-de-interfaces-web-y-apis)
 
 </div>
 
@@ -258,14 +258,15 @@ yolov8_semaforo_advanced/
 
 ---
 
-## 9. Licencia y Créditos
- 
-Este proyecto se distribuye bajo los términos de la Licencia **MIT**.
+## 9. Propiedad Intelectual y Licenciamiento Comercial
 
-**Desarrollador Principal:**  
-Moisés Emilio Martínez Arias  
+Este software constituye una obra propietaria protegida por las leyes de Propiedad Intelectual aplicables (Ley Federal del Derecho de Autor / INDAUTOR y tratados internacionales de la OMPI).
 
-**Institución:**  
-Tecnológico de Estudios Superiores de Coacalco (TESCo)  
-División de Ingeniería en Sistemas Computacionales  
-Tecnológico Nacional de México (TecNM)
+**Todos los derechos morales y patrimoniales reservados © 2026.**  
+Queda prohibida su reproducción, distribución, venta, ingeniería inversa o uso en licitaciones públicas sin la formalización de un contrato de licencia comercial.
+
+* **Desarrollador Principal y Titular:** Moisés Emilio Martínez Arias
+* **Institución de Respaldo Académico:** Tecnológico de Estudios Superiores de Coacalco (TESCo) • Tecnológico Nacional de México (TecNM)
+* **División:** Ingeniería en Sistemas Computacionales
+* **Modelo de Implementación:** Consultar [Modelo de Negocio B2G y Viabilidad Financiera](docs/MODELO_NEGOCIO_B2G.md) para detalles sobre adquisición de kits *Edge Appliance*, licenciamiento por intersección y convenios de vinculación tecnológica.
+* **Licencia Completa:** Consultar el archivo [LICENSE.md](LICENSE.md).
