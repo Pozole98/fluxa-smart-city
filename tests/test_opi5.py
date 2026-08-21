@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Prueba de Desempeño y Validación de Inferencia NPU en Orange Pi 5 (RK3588)
+Desarrollador Principal: Moisés Emilio Martínez Arias
+"""
 
 import os
 import sys
@@ -11,19 +19,14 @@ import cv2
 # Configuración de importación de RKNN
 try:
     from rknnlite.api import RKNNLite as RKNN
-
     IS_LITE = True
-    print("--> Cargado RKNNLite para Orange Pi 5.")
 except ImportError:
     try:
         from rknn.api import RKNN
-
         IS_LITE = False
-        print("--> RKNNLite no detectado. Cargado RKNN estándar para simulación.")
     except ImportError:
         RKNN = None
         IS_LITE = False
-        print("--> rknnlite no detectado en este entorno (ejecución en modo simulación/x86).")
 
 # 80 Clases del dataset COCO (YOLOv8 estándar)
 COCO_CLASSES = [

@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-FLUXA SCADA - Servidor de Demostración y Previsualización UI
-Permite previsualizar el diseño de todas las vistas sin requerir hardware físico ni OpenCV.
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Servidor de Demostración y Simulación Visual de Interfaz SCADA
+Desarrollador Principal: Moisés Emilio Martínez Arias
 """
 
 import os

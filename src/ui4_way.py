@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Controlador y GUI para Intersección de 4 Vías (Motor NPU RKNN)
+Desarrollador Principal: Moisés Emilio Martínez Arias
+"""
+
 import time
 from enum import Enum
 try:

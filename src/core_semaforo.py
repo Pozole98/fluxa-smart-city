@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Controlador Núcleo de Máquina de Estados Finitos (FSM), Priorización TSP y Detección Vial
+Desarrollador Principal: Moisés Emilio Martínez Arias
+"""
+
 import os
 import sys
 import time
@@ -90,7 +100,7 @@ class CoreSemaforoBase:
         else:
             self.fuente_actual = self.config.get("system", {}).get("camera_source", self.config.get("system", {}).get("camera_index", 0))
         
-        # Telemetría de Arduino y Watchdog de Desconexión Prolongada (P2.4)
+        # Supervisión de enlace serial y watchdog de reconexión con microcontrolador
         self.arduino_port_actual = self.config.get("system", {}).get("serial_port", "/dev/ttyACM0")
         self.arduino_baud = self.config.get("system", {}).get("serial_baudrate", 9600)
         self.arduino_tx_count = 0
@@ -228,7 +238,7 @@ class CoreSemaforoBase:
         self.tracker = BYTETracker(args)
 
     def _configurar_topologia_fsm(self):
-        """Mapeo de zonas y características operativas según la topología activa (P1.2)"""
+        """Mapeo de zonas y características operativas según la topología activa"""
         cfg_tl = self.config.get("traffic_light", {})
         self.TIEMPO_BUFFER_EMERGENCIA = cfg_tl.get("tiempo_buffer_emergencia", 1.0)
         self.has_phase_skipping = False
@@ -349,7 +359,7 @@ class CoreSemaforoBase:
 
     def _procesar_transicion_emergencia_segura(self, eje_dest, tiempo_transcurrido):
         """
-        Transición de Emergencia Segura con Intervalo de Despeje Vial Obligatorio (P1.1 y P1.3).
+        Transición de Emergencia Segura con Intervalo de Despeje Vial Obligatorio.
         
         Fundamento de Seguridad Vial:
         Bajo ninguna circunstancia normativa se debe retirar la luz verde a una vía en flujo sin
@@ -445,10 +455,8 @@ class CoreSemaforoBase:
                     self.enviar_comando(self.fsm_commands.get('VERDE_2', '3'))
                 return
 
-    def _procesar_logica_semaforo(self, autos, tiempo_minimo_actual):
-        """
-        Lógica unificada de la máquina de estados semafórica adaptativa (P1.2).
-        Calcula tiempos dinámicos, gestiona intervalos de despeje y transiciones seguras.
+    def _procesar_logica_semaforo(self, autos, tiempo_minimo_actual=5.0):
+        """Lógica unificada de la máquina de estados semafórica adaptativa. Calcula tiempos dinámicos, gestiona intervalos de despeje y transiciones seguras.
         """
         tiempo_transcurrido = time.time() - self.tiempo_ultimo_cambio
         

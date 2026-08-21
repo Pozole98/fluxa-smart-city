@@ -12,7 +12,8 @@
 
 **Tecnológico de Estudios Superiores de Coacalco (TESCo)**  
 *División de Ingeniería en Sistemas Computacionales • Tecnológico Nacional de México (TecNM)*  
-*Proyecto de Investigación y Desarrollo en Movilidad Inteligente (Smart Mobility 2026)*
+*Desarrollador Principal: Moisés Emilio Martínez Arias*  
+*Proyecto de Titulación e Investigación en Movilidad Inteligente (Smart Mobility)*
 
 [Manual Técnico para Desarrolladores](docs/MANUAL_TECNICO.md) • [Plan de Entrenamiento y Cuantización](docs/PLAN_ENTRENAMIENTO.md) • [Especificación de APIs](#especificación-de-interfaces-web-y-apis)
 
@@ -258,10 +259,13 @@ yolov8_semaforo_advanced/
 ---
 
 ## 9. Licencia y Créditos
-
+ 
 Este proyecto se distribuye bajo los términos de la Licencia **MIT**.
 
-**Desarrollado en:**  
+**Desarrollador Principal:**  
+Moisés Emilio Martínez Arias  
+
+**Institución:**  
 Tecnológico de Estudios Superiores de Coacalco (TESCo)  
 División de Ingeniería en Sistemas Computacionales  
 Tecnológico Nacional de México (TecNM)

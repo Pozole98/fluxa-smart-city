@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Interfaz de Línea de Comandos (CLI) y Despachador de Topologías Viales
+Desarrollador Principal: Moisés Emilio Martínez Arias
+"""
+
 import os
 import sys
 import argparse
@@ -67,22 +77,18 @@ def get_local_ip():
 
 def print_banner(topology, backend, is_headless, port):
     ip = get_local_ip()
-    print("=" * 70)
-    print("   ███████╗██╗     ██╗   ██╗██╗  ██╗ █████╗ ")
-    print("   ██╔════╝██║     ██║   ██║╚██╗██╔╝██╔══██╗")
-    print("   █████╗  ██║     ██║   ██║ ╚███╔╝ ███████║")
-    print("   ██╔══╝  ██║     ██║   ██║ ██╔██╗ ██╔══██║")
-    print("   ██║     ███████╗╚██████╔╝██╔╝ ██╗██║  ██║")
-    print("   ╚═╝     ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝")
-    print("     CONTROL SEMAFÓRICO INTELIGENTE Y TELEMETRÍA EDGE")
-    print("=" * 70)
-    print(f"🚦 Topología Activa:   {topology.upper()} ({TOPOLOGIAS_DISPONIBLES[topology]['descripcion']})")
-    print(f"⚡ Motor de Inferencia: {backend.upper()}")
-    print(f"🖥️ Modo de Ejecución:  {'HEADLESS (Servicio en Segundo Plano)' if is_headless else 'DESKTOP GUI'}")
-    print(f"🌐 Dashboard WebUI:     http://{ip}:{port} (o http://localhost:{port})")
-    print(f"📹 Streaming MJPEG:     http://{ip}:{port}/video_feed")
-    print(f"📊 API Telemetría:      http://{ip}:{port}/api/status")
-    print("=" * 70)
+    print("=" * 72)
+    print("   FLUXA: CONTROL SEMAFÓRICO INTELIGENTE Y TELEMETRÍA EDGE")
+    print("   Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM")
+    print("   Desarrollador Principal: Moisés Emilio Martínez Arias")
+    print("=" * 72)
+    print(f"Topología Activa:   {topology.upper()} ({TOPOLOGIAS_DISPONIBLES[topology]['descripcion']})")
+    print(f"Motor Inferencia:   {backend.upper()}")
+    print(f"Modo de Operación:  {'HEADLESS (Servicio de Fondo)' if is_headless else 'DESKTOP GUI'}")
+    print(f"Consola WebUI:      http://{ip}:{port} (o http://localhost:{port})")
+    print(f"Streaming MJPEG:    http://{ip}:{port}/video_feed")
+    print(f"API Telemetría:     http://{ip}:{port}/api/status")
+    print("=" * 72)
     print()
 
 def ejecutar_cli():

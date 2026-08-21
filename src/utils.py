@@ -1,7 +1,18 @@
+# -*- coding: utf-8 -*-
+"""
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Utilidades de Preprocesamiento, Letterbox, DFL y Postprocesamiento NMS para Inferencia RKNN
+Desarrollador Principal: Moisés Emilio Martínez Arias
+"""
+
 import cv2
 import numpy as np
 
 def letterbox(im, new_shape=(640, 640), color=(114, 114, 114)):
+    """Ajusta proporcionalmente las dimensiones de la imagen con relleno de bordes para la red neuronal"""
     shape = im.shape[:2]
     if isinstance(new_shape, int):
         new_shape = (new_shape, new_shape)

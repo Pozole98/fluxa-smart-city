@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Módulo de Ingestión de Video en Hilo Asíncrono para Cámaras USB, MIPI CSI y Archivos
+Desarrollador Principal: Moisés Emilio Martínez Arias
+"""
+
 import cv2
 import threading
 import time
@@ -5,15 +15,11 @@ import os
 
 VALID_VIDEO_EXTENSIONS = ('.mp4', '.avi', '.mkv', '.mov', '.webm', '.mpg', '.mpeg', '.m4v')
 
+
 class VideoStream:
     """
-    Captura de video industrial ultrarrobusta y 100% libre de condiciones de carrera (Zero Double-Free).
-    Soporta:
-    1. Archivos de video locales (.mp4, .avi, etc.) con bucle infinito y control de FPS.
-    2. Flujos de red (RTSP / HTTP).
-    3. Cámara MIPI CSI en Orange Pi 5 (Rockchip RK3588).
-    4. Cámaras USB V4L2 en cascada (/dev/video0, /dev/video1, /dev/video2).
-    5. Recuperación automática y liberación segura de memoria C++ / FFmpeg.
+    Gestor multihilo de ingestión de video continuo con control de cuadros y reconexión automática.
+    Soporta flujos RTSP, dispositivos de captura V4L2 (/dev/video*), cámaras MIPI CSI y archivos locales.
     """
     def __init__(self, src=0, width=640, height=480):
         self.src = src

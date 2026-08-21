@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-FLUXA - Extractor de Cuadros de Calibración para Cuantización INT8 RKNN (P3.1).
-Extrae fotogramas representativos espaciados uniformemente desde videos de tráfico,
-los normaliza a 640x640 y genera el archivo dataset.txt requerido por RKNN-Toolkit2.
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Utilidad de Extracción de Cuadros de Calibración para Cuantización INT8 RKNN
+Desarrollador Principal: Moisés Emilio Martínez Arias
 """
 
 import os
@@ -21,12 +25,12 @@ def extraer_cuadros(video_path, num_frames=60, output_dir=None, dataset_txt_path
     os.makedirs(os.path.dirname(dataset_txt_path), exist_ok=True)
     
     if not os.path.exists(video_path):
-        print(f"❌ Error: El video especificado no existe: {video_path}")
+        print(f"[ERROR] El archivo de video especificado no existe: {video_path}")
         return False
         
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        print(f"❌ Error: No se pudo abrir el archivo de video: {video_path}")
+        print(f"[ERROR] No se pudo abrir el flujo de video: {video_path}")
         return False
         
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -34,10 +38,10 @@ def extraer_cuadros(video_path, num_frames=60, output_dir=None, dataset_txt_path
     duracion_seg = total_frames / fps if fps > 0 else 0
     
     print("=" * 65)
-    print("🎞️  EXTRACTOR DE CALIBRACIÓN RKNN INT8 - FLUXA SMART CITY")
+    print("   FLUXA • EXTRACCIÓN DE FOTOGRAMAS PARA CALIBRACIÓN INT8")
     print("=" * 65)
-    print(f"📹 Video origen:        {video_path}")
-    print(f"⏱️  Duración:           {duracion_seg:.1f}s ({total_frames} cuadros totales)")
+    print(f"Video origen:        {video_path}")
+    print(f"Duración:           {duracion_seg:.1f}s ({total_frames} cuadros totales)")
     print(f"🎯 Cuadros a extraer:   {num_frames}")
     print(f"📁 Directorio destino:  {output_dir}")
     print(f"📄 Archivo de dataset:  {dataset_txt_path}")

@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+FLUXA - Control Semafórico Inteligente y Telemetría Edge
+Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+División de Ingeniería en Sistemas Computacionales
+
+Módulo de Gestión de Persistencia y Telemetría Asíncrona (MariaDB / Fallback Local)
+Desarrollador Principal: Moisés Emilio Martínez Arias
+"""
+
 import os
 import time
 import json
@@ -8,13 +18,16 @@ import logging
 from datetime import datetime
 import pymysql
 
+
 class DatabaseManager:
     """
-    Gestor asíncrono de persistencia en MariaDB para FLUXA con tolerancia a fallos.
-    Utiliza una cola en segundo plano (Worker Thread) para garantizar que las escrituras
-    en base de datos nunca bloqueen el ciclo de procesamiento de IA ni bajen los FPS.
-    Si MariaDB no está disponible, mantiene un buffer local en memoria y en disco.
+    Gestor asíncrono de persistencia en MariaDB con arquitectura tolerante a fallos.
+    Utiliza una cola en segundo plano (Worker Thread) para garantizar que las operaciones de
+    escritura no bloqueen el ciclo de inferencia de IA ni degraden la tasa de cuadros (FPS).
+    En caso de desconexión o indisponibilidad del motor de base de datos, mantiene un búfer
+    en memoria RAM y realiza recuperación forense desde el almacenamiento local.
     """
+
     def __init__(self, host="localhost", user="root", password=None, db_name="fluxa_traffic", port=3306, enabled=True):
         self.host = os.environ.get("DATABASE_HOST", host)
         self.user = os.environ.get("DATABASE_USER", user)
@@ -22,20 +35,18 @@ class DatabaseManager:
         self.port = int(os.environ.get("DATABASE_PORT", port))
         self.enabled = enabled
         
-        # Buffer en memoria para tolerancia a fallos (Fail-Safe)
+        # Búfer circular en memoria para garantizar disponibilidad continua
         self._local_violations = collections.deque(maxlen=200)
         self._local_events = collections.deque(maxlen=200)
         self._lock = threading.Lock()
         
-        # Resolución segura de contraseña (P0.1)
+        # Validación de credenciales de base de datos
         db_pass = os.environ.get("DATABASE_PASSWORD", password)
         if self.enabled and (db_pass is None or db_pass == ""):
             raise ValueError(
-                "\n❌ Error de configuración crítico en DatabaseManager:\n"
-                "   La contraseña de MariaDB no está definida.\n"
-                "💡 Solución:\n"
-                "   • Exporta la variable de entorno: export DATABASE_PASSWORD='<TU_CONTRASEÑA>'\n"
-                "   • O especifícala en tu archivo config.json / .env / docker-compose.yml.\n"
+                "\n[ERROR] Configuración incompleta en DatabaseManager:\n"
+                "La contraseña de MariaDB no está definida.\n"
+                "Defina la variable de entorno DATABASE_PASSWORD o especifíquela en config.json / .env."
             )
         self.password = db_pass or ""
         
@@ -51,6 +62,7 @@ class DatabaseManager:
             self.worker_thread.start()
 
     def _get_connection(self, use_db=True):
+        """Genera una nueva conexión con MariaDB con timeout acotado"""
         return pymysql.connect(
             host=self.host,
             user=self.user,
@@ -62,7 +74,7 @@ class DatabaseManager:
         )
 
     def _init_db_schema(self):
-        """Crea la base de datos y las tablas relacionales si no existen"""
+        """Inicializa la base de datos relacional y las tablas requeridas"""
         try:
             conn = self._get_connection(use_db=False)
             with conn.cursor() as cur:
@@ -71,7 +83,7 @@ class DatabaseManager:
 
             conn = self._get_connection(use_db=True)
             with conn.cursor() as cur:
-                # Tabla de telemetría vial y de hardware periódica
+                # Registro periódico de aforo vehicular y métricas de hardware
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS traffic_telemetry (
                         id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -89,7 +101,7 @@ class DatabaseManager:
                     ) ENGINE=InnoDB;
                 """)
 
-                # Tabla de eventos del sistema (transiciones, alarmas, emergencias)
+                # Registro de eventos operacionales, cambios de fase y alarmas
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS system_events (
                         id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -100,7 +112,7 @@ class DatabaseManager:
                     ) ENGINE=InnoDB;
                 """)
 
-                # Tabla de infracciones por paso en luz roja
+                # Registro de infracciones vehiculares por invasión en luz roja
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS red_light_violations (
                         id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -115,13 +127,13 @@ class DatabaseManager:
             conn.commit()
             conn.close()
             self.connected = True
-            print("🗄️ Base de datos MariaDB inicializada exitosamente (Esquema 'fluxa_traffic').")
+            logging.info(f"Esquema MariaDB '{self.db_name}' verificado e inicializado correctamente.")
         except Exception as e:
             self.connected = False
-            print(f"⚠️ Advertencia MariaDB: No se pudo conectar al servidor: {e}. Operando con registro local.")
+            logging.warning(f"No fue posible conectar con el servidor MariaDB ({e}). Operando en modo local.")
 
     def _queue_worker(self):
-        """Hilo trabajador en segundo plano que procesa las inserciones en MariaDB"""
+        """Procesa las inserciones a base de datos en segundo plano sin impactar los FPS"""
         while self.running:
             try:
                 task = self.write_queue.get(timeout=2.0)
@@ -134,9 +146,10 @@ class DatabaseManager:
             except queue.Empty:
                 continue
             except Exception as e:
-                logging.warning(f"⚠️ Error en worker MariaDB: {e}")
+                logging.warning(f"Error procesando cola de base de datos: {e}")
 
     def _execute_insert(self, task_type, data):
+        """Ejecuta las consultas SQL correspondientes según el tipo de registro"""
         try:
             conn = self._get_connection(use_db=True)
             with conn.cursor() as cur:
@@ -172,6 +185,7 @@ class DatabaseManager:
             self.connected = False
 
     def log_telemetry_async(self, topology, active_phase, total_cars, lane_counts, weighted_demand=0.0, cpu_percent=0.0, cpu_temp_c=0.0, ram_percent=0.0, fps=0.0):
+        """Encola el registro de telemetría de tráfico y métricas del sistema"""
         if not self.enabled:
             return
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -193,6 +207,7 @@ class DatabaseManager:
             pass
 
     def log_event_async(self, event_type, message):
+        """Registra un evento operacional tanto en memoria como en la cola de persistencia"""
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with self._lock:
             self._local_events.appendleft({"timestamp": now_str, "event_type": event_type, "message": message})
@@ -204,6 +219,7 @@ class DatabaseManager:
             pass
 
     def log_violation_async(self, lane, track_id, phase_state, snapshot_path):
+        """Registra una infracción en el búfer local y encola su almacenamiento en MariaDB"""
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         clean_snapshot = os.path.basename(snapshot_path) if snapshot_path else ""
         record = {
@@ -232,14 +248,14 @@ class DatabaseManager:
             pass
 
     def get_peak_hour_summary(self, target_date=None):
-        """Calcula analítica de Hora Pico y volumen vehicular del día desde MariaDB con fallback local"""
+        """Calcula el análisis de aforo diario y determinación de hora pico"""
         if target_date is None:
             target_date = datetime.now().strftime("%Y-%m-%d")
             
         try:
             conn = self._get_connection(use_db=True)
             with conn.cursor() as cur:
-                # Distribución por hora del día
+                # Distribución horaria del volumen vehicular
                 sql_hourly = """
                     SELECT HOUR(timestamp) as hora, AVG(total_cars) as avg_cars, MAX(total_cars) as max_cars, COUNT(*) as muestras
                     FROM traffic_telemetry
@@ -250,12 +266,12 @@ class DatabaseManager:
                 cur.execute(sql_hourly, (target_date,))
                 hourly_data = cur.fetchall()
 
-                # Total de infracciones hoy
+                # Conteo total de infracciones en la fecha especificada
                 cur.execute("SELECT COUNT(*) as total_violations FROM red_light_violations WHERE DATE(timestamp) = %s;", (target_date,))
                 res_viol = cur.fetchone()
                 total_violations = res_viol["total_violations"] if res_viol else 0
 
-                # Promedios de hardware
+                # Promedios de telemetría de hardware
                 cur.execute("""
                     SELECT AVG(cpu_percent) as avg_cpu, AVG(cpu_temp_c) as avg_temp, AVG(ram_percent) as avg_ram, AVG(fps) as avg_fps
                     FROM traffic_telemetry
@@ -265,7 +281,7 @@ class DatabaseManager:
 
             conn.close()
 
-            # Determinar hora pico
+            # Cálculo de la hora con mayor congestión promedio
             peak_hour = None
             peak_volume = 0
             for row in hourly_data:
@@ -275,7 +291,7 @@ class DatabaseManager:
 
             return {
                 "date": target_date,
-                "peak_hour": peak_hour or "N/D (Insuficientes datos)",
+                "peak_hour": peak_hour or "N/D (Datos insuficientes)",
                 "peak_avg_volume": round(peak_volume, 1),
                 "hourly_distribution": hourly_data,
                 "total_violations_today": total_violations,
@@ -287,12 +303,12 @@ class DatabaseManager:
                 }
             }
         except Exception:
-            # Fallback local
+            # Mecanismo de respaldo con datos locales en memoria
             with self._lock:
                 local_count = sum(1 for v in self._local_violations if str(v.get("timestamp", "")).startswith(target_date))
             return {
                 "date": target_date,
-                "peak_hour": "N/D (Modo local)",
+                "peak_hour": "N/D (Operación Local)",
                 "peak_avg_volume": 0.0,
                 "hourly_distribution": [],
                 "total_violations_today": local_count,
@@ -302,7 +318,7 @@ class DatabaseManager:
             }
 
     def get_recent_violations(self, limit=50):
-        """Retorna las infracciones más recientes registradas en MariaDB o en el buffer local de respaldo"""
+        """Recupera el historial de infracciones desde MariaDB o desde los respaldos en RAM y disco"""
         if self.enabled:
             try:
                 conn = self._get_connection(use_db=True)
@@ -321,16 +337,16 @@ class DatabaseManager:
             except Exception:
                 pass
 
-        # 1. Fallback a buffer local en RAM
+        # Nivel 1: Búfer en memoria RAM
         with self._lock:
             if self._local_violations and len(self._local_violations) > 0:
                 return list(self._local_violations)[:limit]
 
-        # 2. Fallback escaneando archivos en logs/violations/
+        # Nivel 2: Inspección directa de archivos en disco
         return self._scan_disk_violations(limit=limit)
 
     def _scan_disk_violations(self, limit=50):
-        """Reconstruye infracciones a partir de las fotos guardadas en el disco"""
+        """Reconstruye el registro de infracciones analizando las capturas fotográficas en disco"""
         violations_dir = os.path.join(os.path.dirname(__file__), '..', 'logs', 'violations')
         if not os.path.exists(violations_dir):
             return []
@@ -338,7 +354,6 @@ class DatabaseManager:
         results = []
         try:
             files = [f for f in os.listdir(violations_dir) if f.endswith('.jpg') or f.endswith('.png')]
-            # Ordenar por fecha de modificación descendente
             files.sort(key=lambda x: os.path.getmtime(os.path.join(violations_dir, x)), reverse=True)
             
             for idx, f in enumerate(files[:limit], start=1):
@@ -346,7 +361,6 @@ class DatabaseManager:
                 mtime = os.path.getmtime(full_path)
                 ts_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
                 
-                # Extraer track_id si el nombre sigue el patrón violation_YYYYMMDD_HHMMSS_idX.jpg
                 track_id = "N/D"
                 if "_id" in f:
                     try:
@@ -370,7 +384,11 @@ class DatabaseManager:
         return results
 
     def close(self):
+        """Detiene de forma segura el trabajador en segundo plano"""
         self.running = False
         if self.worker_thread:
-            self.write_queue.put(None)
-            self.worker_thread.join(timeout=2)
+            try:
+                self.write_queue.put(None)
+                self.worker_thread.join(timeout=1.5)
+            except Exception:
+                pass
