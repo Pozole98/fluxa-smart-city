@@ -303,8 +303,8 @@ SERVICE_FILE="/etc/systemd/system/fluxa.service"
 cat << EOF > /tmp/fluxa.service
 [Unit]
 Description=FLUXA - Control Semaforico Inteligente y Telemetria Edge
-After=network.target mariadb.service
-Wants=mariadb.service
+After=network.target mariadb.service mysql.service
+Wants=mariadb.service mysql.service
 
 [Service]
 Type=simple
@@ -317,6 +317,8 @@ RestartSec=3
 StandardOutput=journal
 StandardError=journal
 Environment=PYTHONUNBUFFERED=1
+Environment=OPENCV_LOG_LEVEL=ERROR
+LimitNOFILE=65536
 
 [Install]
 WantedBy=multi-user.target

@@ -16,6 +16,8 @@ try:
     TKINTER_AVAILABLE = True
 except ImportError:
     tk = None
+    filedialog = None
+    TKINTER_AVAILABLE = False
 try:
     from PIL import Image, ImageTk
 except ImportError:
