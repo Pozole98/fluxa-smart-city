@@ -47,6 +47,11 @@ El sistema opera como una **capa de control superpuesta (*Overlay Controller*)**
 └─────────────────┴─────────────────────────────┴─────────────────────────────┘
 ```
 
+> [!IMPORTANT]
+> **Arquitectura de Inferencia y Aceleración por Plataforma:**
+> * **Aceleración NPU (Hardware Dedicado):** Disponible **única y exclusivamente en la computadora de placa reducida (SBC) Orange Pi 5 (SoC Rockchip RK3588 con 3 núcleos NPU de 6 TOPS)** bajo el sistema operativo **Armbian Linux**. En esta plataforma se ejecutan los modelos compilados y cuantizados en formato `.rknn` (`yolov8n.rknn`, `yolov8s.rknn`, `yolov8m.rknn`).
+> * **Inferencia por CPU (PyTorch Estándar):** En todos los demás sistemas operativos y entornos de desarrollo/servidor sobre arquitectura **x86_64** (openSUSE Tumbleweed/Leap, Fedora, RHEL, Ubuntu, Debian), la inferencia de visión por computadora se ejecuta íntegramente a través de la **CPU** utilizando el modelo PyTorch estándar **`yolov8n.pt`**. Esto garantiza portabilidad total y despliegue inmediato sin requerir aceleradores propietarios.
+
 ---
 
 ## 2. Diagrama de Arquitectura del Sistema
@@ -119,9 +124,16 @@ graph TD
 ## 3. Especificaciones de Ingeniería
 
 ### 3.1. Inferencia Dual con Tolerancia a Fallos (NPU / CPU)
-* **Aceleración NPU en Orange Pi 5:** Modelos cuantizados en INT8 (`yolov8n.rknn`, `yolov8s.rknn`, `yolov8m.rknn`) sobre el acelerador Rockchip RK3588 (3 núcleos, 6 TOPS) con latencias de inferencia de **~3.4 ms a 14 ms**.
-* **Fail-Safe Fallback Automático:** Si la librería `rknnlite`, el hardware de la NPU o el archivo `.rknn` presentan fallas en tiempo de ejecución, el sistema conmuta automáticamente y sin interrupción al motor PyTorch en CPU (`yolov8n.pt`).
-* **Multiplataforma Universal:** Operativo de forma nativa tanto en entornos embebidos ARM64 (Armbian, Debian) como en servidores, laptops y estaciones de trabajo x86_64 (openSUSE Tumbleweed/Leap/SLES, Fedora, RHEL, Ubuntu).
+
+| Plataforma / Entorno | Hardware & Sistema Operativo | Motor de Inferencia | Modelo / Formato | Latencia Promedio |
+| :--- | :--- | :--- | :--- | :--- |
+| **Producción Edge (Objetivo Principal)** | Orange Pi 5 (RK3588 ARM64) • **Armbian 24.04** | **NPU RKNN Hardware** (3 Núcleos / 6 TOPS) | `yolov8n.rknn` (INT8) | **~3.4 ms a 14 ms** |
+| **Desarrollo y Servidores x86_64** | openSUSE, Ubuntu, Fedora, Debian, RHEL (x86_64) | **CPU (PyTorch Engine)** | `yolov8n.pt` (FP32/INT8) | **~25 ms a 45 ms** |
+| **Fail-Safe Fallback Automático** | Orange Pi 5 (en caso de contingencia NPU) | **CPU Fallback Automático** | `yolov8n.pt` | **~50 ms a 70 ms** |
+
+* **Aceleración NPU Exclusiva para Orange Pi 5 (Armbian):** Los modelos cuantizados en formato INT8 (`yolov8n.rknn`, `yolov8s.rknn`, `yolov8m.rknn`) están diseñados específicamente para el chip Rockchip RK3588 bajo el sistema operativo **Armbian Linux**.
+* **Inferencia por CPU en Arquitecturas x86_64:** En estaciones de trabajo, laptops y servidores bajo openSUSE, Ubuntu, Fedora o Debian, la ejecución se realiza enteramente vía CPU utilizando el modelo PyTorch estándar **`yolov8n.pt`**.
+* **Fail-Safe Fallback Automático:** Si la librería `rknnlite`, el controlador del acelerador o el archivo `.rknn` presentan fallas en tiempo de ejecución en la Orange Pi 5, el sistema conmuta automáticamente y sin interrupción al motor PyTorch en CPU (`yolov8n.pt`).
 
 ### 3.2. Módulo Forense de Infracciones y Cuotas de Almacenamiento
 * **Detección Espaciotemporal:** Validación automática de cruces vehiculares durante fase roja en carriles conflictivos.
