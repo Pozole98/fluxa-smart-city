@@ -1,23 +1,20 @@
 [Unit]
-Description=FLUXA Smart Traffic Light Edge Controller & Telemetry Daemon
-After=network.target mariadb.service
-Wants=network-online.target
+Description=FLUXA - Control Semaforico Inteligente y Telemetria Edge
+After=network.target mariadb.service mysql.service
+Wants=mariadb.service mysql.service
 
 [Service]
 Type=simple
-User=root
-WorkingDirectory=/home/moisesmartinez/PycharmProjects/yolov8srknn/yolov8_semaforo_advanced
-ExecStart=/home/moisesmartinez/PycharmProjects/yolov8srknn/.venv/bin/python3 main.py --topology 4_way --backend cpu --headless --port 5000
+User=fluxa
+WorkingDirectory=/opt/fluxa
+EnvironmentFile=-/opt/fluxa/.env
+ExecStart=/opt/fluxa/.venv/bin/python3 /opt/fluxa/main.py --topology 4_way --backend cpu --headless --port 5000
 Restart=always
-RestartSec=5s
-KillMode=process
-TimeoutStopSec=10s
-
-# Entorno de ejecución optimizado para Edge
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
 Environment=PYTHONUNBUFFERED=1
 Environment=OPENCV_LOG_LEVEL=ERROR
-
-# Límites de recursos y seguridad
 LimitNOFILE=65536
 
 [Install]

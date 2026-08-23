@@ -17,7 +17,11 @@ from enum import Enum
 import numpy as np
 import threading
 import json
-from PIL import Image, ImageTk
+try:
+    from PIL import Image, ImageTk
+except ImportError:
+    from PIL import Image
+    ImageTk = None
 
 # Librerías específicas para RKNN (NPU)
 from rknnlite.api import RKNNLite

@@ -63,7 +63,11 @@ fi
 echo -e "\n${C_YELLOW}¿Deseas eliminar la base de datos 'fluxa_traffic' de MariaDB? (Se borrará el historial) [s/N]:${C_RESET} "
 read -r resp_db
 if [[ "$resp_db" =~ ^[sSyY]$ ]]; then
-    run_sudo mysql -e "DROP DATABASE IF EXISTS fluxa_traffic; DROP USER IF EXISTS 'fluxa'@'localhost'; FLUSH PRIVILEGES;" 2>/dev/null || true
+    MYSQL_EXEC="mysql"
+    if ! command -v mysql &>/dev/null && command -v mariadb &>/dev/null; then
+        MYSQL_EXEC="mariadb"
+    fi
+    run_sudo $MYSQL_EXEC -e "DROP DATABASE IF EXISTS fluxa_traffic; DROP USER IF EXISTS 'fluxa'@'localhost'; FLUSH PRIVILEGES;" 2>/dev/null || true
     echo -e "${C_GREEN}✅ Base de datos 'fluxa_traffic' y usuario 'fluxa' eliminados.${C_RESET}"
 fi
 

@@ -17,9 +17,11 @@ try:
     TKINTER_AVAILABLE = True
 except ImportError:
     tk = None
-    filedialog = None
-    TKINTER_AVAILABLE = False
-from PIL import Image, ImageTk
+try:
+    from PIL import Image, ImageTk
+except ImportError:
+    from PIL import Image
+    ImageTk = None
 import cv2
 from ultralytics import YOLO
 

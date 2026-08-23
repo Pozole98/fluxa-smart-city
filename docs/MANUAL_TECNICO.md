@@ -216,10 +216,10 @@ CREATE TABLE IF NOT EXISTS red_light_violations (
 ## 7. Despliegue en Producción e Infraestructura
 
 ### 7.1. Instalador Universal Nativo (`install.sh`)
-Diseñado para operar sobre **Orange Pi 5 (Armbian / Debian aarch64)** y **servidores / laptops (Fedora, RHEL, Ubuntu x86_64)**:
+Diseñado para operar sobre **Orange Pi 5 (Armbian / Debian aarch64)** y **estaciones de trabajo / servidores (openSUSE Tumbleweed/Leap/SLES, Fedora, RHEL, Ubuntu x86_64)**:
 
 ```bash
-cd yolov8_semaforo_advanced
+cd fluxa-smart-city
 bash install.sh
 ```
 
