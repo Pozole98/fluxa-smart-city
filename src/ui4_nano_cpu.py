@@ -17,8 +17,11 @@ from enum import Enum
 import numpy as np
 import torch
 import json
-from types import SimpleNamespace
-from PIL import Image, ImageTk
+try:
+    from PIL import Image, ImageTk
+except ImportError:
+    from PIL import Image
+    ImageTk = None
 import threading
 
 from ultralytics import YOLO

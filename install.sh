@@ -2,7 +2,7 @@
 # ==============================================================================
 #  FLUXA Smart Mobility • Script de Instalación Automatizada
 #  Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
-#  Compatible con: Armbian 24.04 (Orange Pi 5), Fedora, Ubuntu 24.04/22.04, Debian 12
+#  Compatible con: Armbian 24.04 (Orange Pi 5), openSUSE (Tumbleweed/Leap/SLES), Fedora, Ubuntu, Debian
 # ==============================================================================
 
 set -e
@@ -70,7 +70,32 @@ fi
 # 4. Instalación Automática de Python, MariaDB y Librerías de Sistema
 echo -e "\n${C_YELLOW}📦 [1/6] Verificando e instalando Python 3, MariaDB y dependencias del sistema...${C_RESET}"
 
-if command -v dnf &>/dev/null; then
+if command -v zypper &>/dev/null; then
+    echo -e "${C_CYAN}➡️  Instalando paquetes via ZYPPER (openSUSE Tumbleweed/Leap/MicroOS/SLES)...${C_RESET}"
+    run_sudo zypper --non-interactive refresh || true
+    
+    # Paquetes base del sistema
+    SUSE_PKGS="mariadb mariadb-client Mesa-libGL1 libglib-2_0-0 libgthread-2_0-0 v4l-utils curl git udev openssl gcc gcc-c++"
+    
+    # Detección dinámica de paquetes Python según la versión instalada o disponible
+    PY_CANDIDATES=""
+    if command -v python3 &>/dev/null; then
+        PY_VER_TAG=$(python3 -c "import sys; print(f'python3{sys.version_info.minor}')" 2>/dev/null || true)
+        if [ -n "$PY_VER_TAG" ]; then
+            PY_CANDIDATES="${PY_VER_TAG}-devel ${PY_VER_TAG}-pip ${PY_VER_TAG}-tk"
+        fi
+    fi
+    PY_CANDIDATES="$PY_CANDIDATES python3-devel python3-pip python3-tk python3-virtualenv python313-devel python313-pip python313-tk python312-devel python312-pip python312-tk python311-devel python311-pip python311-tk"
+    
+    PKGS_TO_INSTALL="$SUSE_PKGS"
+    for candidate in $PY_CANDIDATES; do
+        if zypper se -s --match-exact "$candidate" 2>/dev/null | grep -q " paquete "; then
+            PKGS_TO_INSTALL="$PKGS_TO_INSTALL $candidate"
+        fi
+    done
+    
+    run_sudo zypper --non-interactive install -y $PKGS_TO_INSTALL
+elif command -v dnf &>/dev/null; then
     echo -e "${C_CYAN}➡️  Instalando paquetes via DNF (Fedora/RHEL/CentOS)...${C_RESET}"
     run_sudo dnf install -y python3 python3-pip python3-devel python3-tkinter mesa-libGL glib2 mariadb-server mariadb v4l-utils curl git udev openssl
 elif command -v apt-get &>/dev/null; then
@@ -112,6 +137,7 @@ fi
 if grep -q "^dialout:" /etc/group; then run_sudo usermod -a -G dialout "$CURRENT_USER" || true; fi
 if grep -q "^uucp:" /etc/group; then run_sudo usermod -a -G uucp "$CURRENT_USER" || true; fi
 if grep -q "^video:" /etc/group; then run_sudo usermod -a -G video "$CURRENT_USER" || true; fi
+if grep -q "^render:" /etc/group; then run_sudo usermod -a -G render "$CURRENT_USER" || true; fi
 
 echo -e "${C_GREEN}✅ Hardware habilitado para uso inmediato sin necesidad de reiniciar la sesión.${C_RESET}"
 
@@ -165,8 +191,8 @@ if [ -z "$DB_PASS" ]; then
 fi
 
 if command -v systemctl &>/dev/null; then
-    run_sudo systemctl enable mariadb || true
-    run_sudo systemctl start mariadb || true
+    run_sudo systemctl enable mariadb 2>/dev/null || run_sudo systemctl enable mysql 2>/dev/null || true
+    run_sudo systemctl start mariadb 2>/dev/null || run_sudo systemctl start mysql 2>/dev/null || true
     
     MYSQL_EXEC="mysql"
     if ! command -v mysql &>/dev/null && command -v mariadb &>/dev/null; then

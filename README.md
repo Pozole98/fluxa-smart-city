@@ -121,7 +121,7 @@ graph TD
 ### 3.1. Inferencia Dual con Tolerancia a Fallos (NPU / CPU)
 * **Aceleración NPU en Orange Pi 5:** Modelos cuantizados en INT8 (`yolov8n.rknn`, `yolov8s.rknn`, `yolov8m.rknn`) sobre el acelerador Rockchip RK3588 (3 núcleos, 6 TOPS) con latencias de inferencia de **~3.4 ms a 14 ms**.
 * **Fail-Safe Fallback Automático:** Si la librería `rknnlite`, el hardware de la NPU o el archivo `.rknn` presentan fallas en tiempo de ejecución, el sistema conmuta automáticamente y sin interrupción al motor PyTorch en CPU (`yolov8n.pt`).
-* **Multiplataforma Universal:** Operativo de forma nativa tanto en entornos embebidos ARM64 (Armbian, Debian) como en servidores y laptops x86_64 (Fedora, RHEL, Ubuntu).
+* **Multiplataforma Universal:** Operativo de forma nativa tanto en entornos embebidos ARM64 (Armbian, Debian) como en servidores, laptops y estaciones de trabajo x86_64 (openSUSE Tumbleweed/Leap/SLES, Fedora, RHEL, Ubuntu).
 
 ### 3.2. Módulo Forense de Infracciones y Cuotas de Almacenamiento
 * **Detección Espaciotemporal:** Validación automática de cruces vehiculares durante fase roja en carriles conflictivos.
@@ -150,7 +150,7 @@ graph TD
 ## 5. Instalación y Despliegue
 
 ### Método 1: Instalador Universal Nativo (Recomendado para Producción & Edge)
-Compatible con **Armbian 24.04 (Orange Pi 5)**, **Fedora/RHEL**, **Ubuntu** y **Debian**:
+Compatible con **Armbian 24.04 (Orange Pi 5)**, **openSUSE (Tumbleweed, Leap 15+, SLES, MicroOS)**, **Fedora/RHEL**, **Ubuntu** y **Debian**:
 
 ```bash
 git clone https://github.com/Pozole98/fluxa-smart-city.git
@@ -158,7 +158,7 @@ cd fluxa-smart-city
 bash install.sh
 ```
 
-El script configura automáticamente dependencias de sistema, reglas udev para Arduino y cámaras, entorno virtual aislado `.venv`, base de datos MariaDB, acceso global `fluxa` y servicio `systemd`.
+El script detecta automáticamente el gestor de paquetes de tu distribución (`zypper`, `dnf`, `apt`), instala MariaDB, bibliotecas OpenGL/V4L2, dependencias de compilación, configura reglas `udev` de hardware, despliega el entorno virtual `.venv`, crea el acceso global `fluxa` y registra la unidad de servicio `systemd`.
 
 Para desinstalar limpiamente:
 ```bash
