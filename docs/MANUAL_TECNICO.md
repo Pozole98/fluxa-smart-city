@@ -16,16 +16,22 @@ El sistema sustituye los ciclos semafóricos tradicionales de tiempo fijo por un
 
 | Parámetro | Especificación / Valor |
 | :--- | :--- |
-| **Modelos de Detección** | YOLOv8 (Variantes: Nano `3.2M`, Small `11.2M`, Medium `25.9M`) |
+| **Modelos de Detección** | YOLOv8 (Variantes: Nano `yolov8n` [3.2M], Small `yolov8s` [11.2M], Medium `yolov8m` [25.9M]) |
+| **Aceleración Hardware NPU** | **Exclusiva en Orange Pi 5 (RK3588)** sobre **Armbian Linux** (3 núcleos NPU, 6 TOPS, modelos `.rknn` INT8) |
+| **Inferencia en Sistemas x86_64** | **CPU PyTorch Nativo** sobre **openSUSE, Ubuntu, Debian, Fedora** (modelo estándar `yolov8n.pt`) |
 | **Algoritmo de Rastreo** | BYTETracker con Filtro de Kalman y asociación espacial de centroides |
-| **Aceleración Hardware Edge** | Rockchip RK3588 NPU (3 núcleos, 6 TOPS, cuantización INT8 asimétrica) |
-| **Tolerancia a Fallos (Fail-Safe)** | Conmutación automática en caliente de NPU a CPU (PyTorch) ante fallas |
-| **Latencia de Inferencia** | **< 12 ms** (NPU RK3588) / **~35-45 ms** (CPU x86/ARM64) |
-| **Tasa de Procesamiento (FPS)** | 25 - 60 FPS continuos en Edge |
+| **Tolerancia a Fallos (Fail-Safe)** | Conmutación automática en caliente de NPU a CPU (PyTorch) ante cualquier contingencia |
+| **Latencia de Inferencia** | **< 12 ms** (NPU RK3588 en Armbian) / **~25-45 ms** (CPU x86_64 con `yolov8n.pt`) |
+| **Tasa de Procesamiento (FPS)** | 25 - 60 FPS continuos en Edge Appliance |
 | **Controlador de Potencia** | Arduino UNO R4 Minima / Microcontrolador Industrial / PLC con Watchdog Serial |
 | **Base de Datos** | MariaDB 10.11+ / MySQL 8.0+ con motor InnoDB, cola asíncrona y búfer local |
 | **Servidor Web y Streaming** | Flask 3.x con hilos nativos, streaming multipart MJPEG y control de acceso seguro |
 | **Protocolo V2X** | SPaT (*Signal Phase and Timing*) y GLOSA (*Green Light Optimal Speed Advisory*) |
+
+> [!NOTE]
+> **Segmentación de Motores de Inferencia:**
+> 1. **Entornos Edge Appliance (Orange Pi 5 • Armbian 24.04):** Diseñados para operar con el motor `core_semaforo_rknn.py` (`rknnlite`), consumiendo modelos `.rknn` pre-cuantizados a INT8 para mínima latencia térmica y energética.
+> 2. **Estaciones de Desarrollo y Servidores (x86_64 • openSUSE, Ubuntu, Fedora, Debian):** Operan mediante el motor `core_semaforo.py` y `ui*_cpu.py` (`ultralytics`), utilizando el modelo estándar `yolov8n.pt` procesado por la CPU sin requerir aceleradores de hardware dedicados.
 
 ---
 
