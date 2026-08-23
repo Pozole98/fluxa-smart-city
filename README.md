@@ -52,9 +52,9 @@ El sistema opera como una **capa de control superpuesta (*Overlay Controller*)**
 > * **Aceleración NPU (Hardware Dedicado):** Disponible **única y exclusivamente en la computadora de placa reducida (SBC) Orange Pi 5 (SoC Rockchip RK3588 con 3 núcleos NPU de 6 TOPS)** bajo el sistema operativo **Armbian Linux**. En esta plataforma se ejecutan los modelos compilados y cuantizados en formato `.rknn` (`yolov8n.rknn`, `yolov8s.rknn`, `yolov8m.rknn`).
 > * **Inferencia por CPU (PyTorch Estándar):** En todos los demás sistemas operativos y entornos de desarrollo/servidor sobre arquitectura **x86_64** (openSUSE Tumbleweed/Leap, Fedora, RHEL, Ubuntu, Debian), la inferencia de visión por computadora se ejecuta íntegramente a través de la **CPU** utilizando el modelo PyTorch estándar **`yolov8n.pt`**. Esto garantiza portabilidad total y despliegue inmediato sin requerir aceleradores propietarios.
 
----
+## 2. Arquitectura de Ingeniería del Sistema
 
-## 2. Diagrama de Arquitectura del Sistema
+### 2.1. Arquitectura de Procesamiento y Telemetría
 
 ```mermaid
 graph TD
@@ -117,6 +117,47 @@ graph TD
     FLASK_API --> SCADA
     FLASK_API --> PUBLIC_PORTAL
     VIOLATIONS --> MARIADB
+```
+
+### 2.2. Integración de Gabinete Industrial y Hardware Edge (*Overlay Controller*)
+
+```mermaid
+graph LR
+    subgraph CAMPO [Intersección Vial]
+        OPTIC[Cámara Vial HD Gran Angular]
+        SIG_NS[Cabezales Semafóricos Norte-Sur]
+        SIG_EO[Cabezales Semafóricos Este-Oeste]
+        PED_BTN[Botonera Peatonal]
+    end
+
+    subgraph GABINETE [Gabinete NEMA IP66 - FLUXA Edge Appliance]
+        direction TB
+        PSU[Fuente MeanWell 12V/5V DC + Supresor de Picos]
+        
+        subgraph SBC [Cómputo Edge Acelerado]
+            OPI5[Orange Pi 5 - SoC Rockchip RK3588]
+            NPU_CORE[Tri-Core NPU 6 TOPS INT8]
+            OS_ENGINE[Armbian Linux 24.04]
+            OPI5 --- NPU_CORE
+            OPI5 --- OS_ENGINE
+        end
+        
+        subgraph MCU [Potencia y Watchdog Fail-Safe]
+            ARD[Arduino UNO R4 / Microcontrolador]
+            WDOG[Watchdog Temporizado - 3s]
+            SSR[Banco Relevadores Estado Sólido Optoacoplados]
+            ARD --- WDOG
+            ARD --- SSR
+        end
+    end
+
+    OPTIC -->|USB / RTSP| OPI5
+    PED_BTN -->|GPIO| ARD
+    OPI5 -->|Enlace Serial USB CDC /dev/ttyACM0| ARD
+    SSR -->|120VAC / 24VDC| SIG_NS
+    SSR -->|120VAC / 24VDC| SIG_EO
+    PSU --> SBC
+    PSU --> MCU
 ```
 
 ---
