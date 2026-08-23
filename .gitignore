@@ -41,3 +41,9 @@ config.json
 # Cuadros temporales de calibración RKNN
 data/calibration_images/*.jpg
 
+# Documentos internos de concurso y entregas (No subir al repositorio público)
+guiaregional.pdf
+entregasanteriores/
+docs/ENTREGABLE_*.md
+docs/MODELO_NEGOCIO_*.md
+
