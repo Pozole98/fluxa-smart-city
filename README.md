@@ -186,6 +186,23 @@ graph LR
 * **Configuración Segregada:** Los archivos con credenciales locales (`config.json`, `.env`, `instance/`) se encuentran desindexados del repositorio. El proyecto distribuye la plantilla pública `config.example.json`.
 * **Instalador Interactivo:** `install.sh` solicita contraseñas de forma segura durante el despliegue o genera cadenas aleatorias de alta entropía.
 
+### 3.4. Resumen de Capacidades y Facilidades del Sistema
+
+| Dimensión Técnica | Capacidad / Facilidad Implementada | Especificación de Ingeniería |
+| :--- | :--- | :--- |
+| **Inferencia Edge AI** | NPU Rockchip RK3588 (6 TOPS INT8) | Latencia sub-12ms, 30-60 FPS, modelos cuantizados `.rknn` con fallback en CPU PyTorch |
+| **Rastreo Multiobjeto** | Algoritmo BYTETracker + Filtro de Kalman | Identificadores únicos persistentes (*Track IDs*) sin duplicación por oclusión |
+| **Aforo por Carril** | Algoritmo Point-in-Polygon (Ray Casting) | Medición de colas en tiempo real por polígono de carril configurable en navegador |
+| **Control Adaptativo** | FSM Dinámica con Prioridad TSP | Verde adaptativo (5s a 45s), autobuses ponderados $4.0\times$ y salto de fases vacías |
+| **Seguridad Vial** | Protocolo Normativo de Despeje | Transiciones forzadas con Ámbar ($3.0\text{s}$) y Todo-Rojo ($2.0\text{s}$) garantizadas |
+| **Resiliencia Fail-Safe** | Matriz de Contingencia Tri-Nivel | Conmutación NPU $\to$ CPU y Watchdog de hardware en MCU con ciclo de respaldo aislado |
+| **Fiscalización** | Módulo Forense de Infracciones | Detección de cruce en luz roja, fotos JPEG con metadatos y rotación circular FIFO |
+| **Centro de Mando C5** | Consola Web SCADA + MJPEG Stream | Mando de corredor de emergencia, telemetría de hardware, streaming y editor ROI Canvas |
+| **Sustentabilidad** | Motor de Ahorro y Huella Ecológica | Cálculo continuo de litros de gasolina ahorrados y kilogramos de $\text{CO}_2$ mitigados |
+| **Telemetría V2X** | Protocolos SPaT y GLOSA en JSON | Emisión de estado de fase y velocidad recomendada para vehículos conectados |
+| **Auditoría Oficial** | Generador de Informes PDF | Dictámenes ejecutivos de aforo e incidencias con sello de verificación criptográfica |
+| **Despliegue Universal**| Script Nativo `install.sh` + Docker | Soporte multiplataforma: Armbian 24.04, openSUSE, Fedora, RHEL, Ubuntu y Debian |
+
 ---
 
 ## 4. Catálogo de Topologías Viales Soportadas
