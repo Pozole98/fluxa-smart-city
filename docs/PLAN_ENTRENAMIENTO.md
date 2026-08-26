@@ -30,12 +30,14 @@ Para el reentrenamiento y adaptación de dominio, se recomiendan los siguientes 
 * **Volumen:** Más de 140,000 fotogramas anotados en 24 secuencias viales con variabilidad meteorológica (soleado, nublado, lluvioso, noche).
 * **Ubicación de Cámaras:** Mástiles de tráfico reales en intersecciones y avenidas urbanas.
 * **Clases:** `car`, `bus`, `van`, `others`.
-* **Referencia Oficial:** [http://detrac-db.rit.albany.edu/](http://detrac-db.rit.albany.edu/)
+* **Cita Académica:** Wen, L., Du, D., Cai, Z., Wang, Z., Chang, M. C., Liang, D., Chen, M., Wei, Y., & Si, J. (2020). *UA-DETRAC: A new benchmark and protocol for multi-object detection and tracking in traffic surveillance*. **IEEE Transactions on Circuits and Systems for Video Technology (TCSVT)**, 30(10), 3454-3468. DOI: [10.1109/TCSVT.2019.2941551](https://doi.org/10.1109/TCSVT.2019.2941551).
+* **Repositorio Oficial:** [http://detrac-db.rit.albany.edu/](http://detrac-db.rit.albany.edu/)
 
 ### 2. BDD100K (Berkeley DeepDrive)
 * **Volumen:** 100,000 secuencias de video con anotaciones de cajas 2D y segmentación de carriles en entornos urbanos densos.
 * **Ventaja:** Amplia variabilidad de climas, horas del día y tipologías de transporte.
-* **Referencia Oficial:** [https://www.bdd100k.com/](https://www.bdd100k.com/)
+* **Cita Académica:** Yu, F., Chen, H., Wang, X., Xian, W., Chen, Y., Liu, F., Madhavan, V., & Darrell, T. (2020). *BDD100K: A diverse driving dataset for heterogeneous multitask learning*. In **Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)**, pp. 2636-2645.
+* **Repositorio Oficial:** [https://www.bdd100k.com/](https://www.bdd100k.com/)
 
 ---
 

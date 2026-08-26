@@ -73,23 +73,26 @@ Suministro del kit de grado industrial listo para montaje en mástil o gabinete:
 ### 5.1. Caso de Estudio Modelado: Corredor Piloto de 10 Intersecciones Urbanas
 * **Inversión Inicial Estimada FLUXA (10 Cruces CapEx):** ~$250,000 a $285,000 MXN.
 * **Cadena de Supuestos y Modelo de Cálculo (Sujeto a Validación en Campo):**
-  1. **Consumo de combustible en ralentí (*idling*):** $0.70\,\text{litros/hora}$ por vehículo ligero (Fuente: *U.S. Department of Energy - AFDC / EPA Idling Reduction Reference Data* y CONUEE).
-  2. **Aforo promedio estimado por intersección:** $15,000\,\text{vehículos/día}$ en intersección de 4 accesos.
-  3. **Reducción de demora observada en pruebas de control adaptativo:** Promedio estimado de $15.0\,\text{segundos}$ de espera ahorrados por vehículo frente a ciclos de tiempo fijo no sincronizados.
-  4. **Precio de referencia del combustible:** $\$24.50\,\text{MXN/litro}$ (Referencia: Comisión Reguladora de Energía - CRE, promedio nacional gasolina regular).
+
+| Parámetro / Supuesto | Valor Utilizado | Fuente / Referencia Metodológica Verificable |
+| :--- | :---: | :--- |
+| **1. Consumo en ralentí (*idling*)** | **$0.70\,\text{L/hora}$** | **U.S. Department of Energy (DOE) - AFDC:** *Vehicle Idling Reduction Technology & Baseline Idle Fuel Consumption (0.6 - 0.8 L/h)* / CONUEE México (*Guía de Eficiencia Energética en Flotas Vehiculares*). |
+| **2. Aforo diario por cruce** | **$15,000\,\text{veh/día}$** | **SEDATU / SICT:** *Manual de Calles y Diseño Vial Urbano para Ciudades Mexicanas* (Aforo típico para intersección colectora de 4 accesos). |
+| **3. Reducción de demora** | **$15.0\,\text{s/vehículo}$** | **Federal Highway Administration (FHWA):** *Adaptive Signal Control Technologies (ASCT) Primer* (Reducción de tiempos de espera de 10% a 25% frente a ciclos de tiempo fijo desfasados). |
+| **4. Precio de combustible** | **$\$24.50\,\text{MXN/L}$** | **Comisión Reguladora de Energía (CRE):** *Sistema de Información de Precios de Combustibles en Estaciones de Servicio* (Promedio nacional mensual gasolina regular Magna). |
+| **5. Factor de emisión de $CO_2$** | **$2.31\,\text{kg } CO_2\text{/L}$** | **INECC / SEMARNAT / EPA:** *Factores de Emisión para el Inventario Nacional de Gases de Efecto Invernadero* (2.31 kg $CO_2$e emitidos por litro de gasolina combustionado). |
 
 * **Resultados Proyectados del Cálculo:**
   * **Ahorro Diario de Combustible por Cruce:**
-    $$\text{Ahorro Diario} = 15,000\,\text{veh/día} \times \left(\frac{15\,\text{s}}{3,600\,\text{s/h}}\right) \times 0.70\,\text{L/h} \approx 43.75\,\text{litros/día/cruce}$$
+    $$\text{Ahorro Diario} = 15,000\,\text{veh/día} \times \left(\frac{15\,\text{s}}{3,600\,\text{s/h}}\right) \times 0.70\,\text{L/h} = 43.75\,\text{litros/día/cruce}$$
   * **Ahorro Anual de Combustible por Cruce:**
-    $$\text{Ahorro Anual} = 43.75\,\text{L/día} \times 365\,\text{días} \approx 15,968\,\text{litros/año/cruce}$$
+    $$\text{Ahorro Anual} = 43.75\,\text{L/día} \times 365\,\text{días} = 15,968.75\,\text{litros/año/cruce}$$
   * **Beneficio Económico Ciudadano Anual Estimado:**
-    $$15,968\,\text{litros} \times \$24.50\,\text{MXN/L} \approx \$391,216\,\text{MXN anuales por cruce}$$
-    *(En un corredor de 10 intersecciones: $\approx \$3.91\,\text{MDP anuales en beneficio social acumulado}$)*.
+    $$15,968.75\,\text{litros} \times \$24.50\,\text{MXN/L} = \$391,234.37\,\text{MXN anuales por cruce}$$
+    *(En un corredor piloto de 10 intersecciones: $\approx \$3.91\,\text{MDP anuales en beneficio social acumulado}$)*.
   * **Mitigación Ambiental Anual:**
-    Utilizando el factor de emisión de $2.31\,\text{kg de CO}_2 / \text{litro}$ (Fuente: *EPA Emission Factors / SEMARNAT*):
-    $$15,968\,\text{L} \times 2.31\,\text{kg CO}_2/\text{L} \approx 36.88\,\text{toneladas de CO}_2\text{ evitadas al año por cruce}$$
-    *(En el corredor de 10 cruces: $\approx 368.8\,\text{toneladas de CO}_2/\text{año}$)*.
+    $$15,968.75\,\text{L} \times 2.31\,\text{kg CO}_2/\text{L} = 36,887.81\,\text{kg } (\approx 36.88\,\text{toneladas de CO}_2\text{ evitadas al año por cruce})$$
+    *(En el corredor piloto de 10 cruces: $\approx 368.8\,\text{toneladas de CO}_2/\text{año}$)*.
 * **Periodo de Retorno de Inversión Social (Payback Estimado):** **6 a 18 meses**.
   * *Justificación del rango:* Este periodo es técnica y financieramente creíble debido al reducido costo de adquisición del hardware Edge (*CapEx* de ~$25,000 a $28,500 MXN por cruce frente a los >$350,000 MXN de controladores tradicionales), amortizándose rápidamente a través del ahorro operativo municipal y el impacto socioeconómico directo en la reducción de horas-hombre y combustible en la comunidad.
 
