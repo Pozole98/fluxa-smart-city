@@ -223,7 +223,7 @@ if [ ! -f "$SCRIPT_DIR/instance/admin_credentials.json" ]; then
     if [ -t 0 ]; then
         $PYTHON_CMD "$SCRIPT_DIR/scripts/set_admin_password.py"
     else
-        AUTO_ADMIN_PASS=$(openssl rand -hex 8 2>/dev/null || echo "admin1234")
+        AUTO_ADMIN_PASS=$(openssl rand -hex 8 2>/dev/null || $PYTHON_CMD -c "import secrets; print(secrets.token_hex(8))" 2>/dev/null || date +%s%N | sha256sum | head -c 16)
         $PYTHON_CMD "$SCRIPT_DIR/scripts/set_admin_password.py" --username admin --password "$AUTO_ADMIN_PASS" --force 2>/dev/null || true
     fi
 fi
