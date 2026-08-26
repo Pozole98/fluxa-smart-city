@@ -269,20 +269,86 @@ journalctl -u fluxa -f          # Telemetría en tiempo real
 
 ---
 
-## 7. Especificación de Interfaces Web y APIs
+## 7. Plataforma WebUI y Centro de Mando en Tiempo Real (Acceso y Operación)
 
-Al iniciar el servicio, los siguientes puntos de acceso quedan habilitados en el puerto configurado (por defecto `5000`):
+El sistema **FLUXA** incorpora un servidor web de alto rendimiento (Flask 3.x multihilo) que expone dos interfaces gráficas completas, interactivas y responsivas, accesibles desde cualquier navegador moderno (**Google Chrome, Mozilla Firefox, Microsoft Edge, Safari**) en computadoras de escritorio, tablets, smartphones o videowalls de centros C5/C4, **sin requerir la instalación de ningún cliente o software adicional**:
 
-| Endpoint / Vista | Ruta | Nivel de Acceso | Descripción |
-| :--- | :--- | :--- | :--- |
-| **Portal Ciudadano** | `/` | Público | Visualización de tráfico, estado semafórico, métricas de sustentabilidad y recomendación V2X (GLOSA). |
-| **Autenticación C5** | `/login` | Público | Inicio de sesión para operadores de control con protección de tasa de intentos (*Rate Limiting*). |
-| **Centro de Mando SCADA C5** | `/admin` | Operador C5 | Mando de emergencias, conmutador de modelos YOLO, selector de video y visor de infracciones. |
-| **Calibrador Visual Canvas** | `/admin` (Modal) | Operador C5 | Edición gráfica interactiva de polígonos de carriles con recarga en caliente (*Hot-Reload*). |
-| **Informe Ejecutivo Oficial** | `/report/executive` | Operador C5 | Reporte de movilidad urbana y auditoría vial listo para exportar a PDF (`Ctrl + P`). |
-| **Streaming de Video MJPEG** | `/video_feed` | Público | Transmisión de video continua con HUD semafórico y cajas de seguimiento de IA. |
-| **API Telemetría Global** | `/api/status` | Público | Métricas de aforo vehicular, FPS, estado de FSM, hardware y watchdog de Arduino. |
-| **API Infracciones** | `/api/violations` | Operador C5 | Consulta de registros de cruces en luz roja con enlaces a evidencia fotográfica. |
+* **URL de Acceso Local / Desarrollo:** `http://localhost:5000`
+* **URL de Acceso en Red Local / Edge:** `http://<IP_DE_LA_ORANGE_PI_O_SERVIDOR>:5000`
+* **Puerto Predeterminado:** `5000` (configurable mediante el parámetro `--port <NUMERO>`).
+
+```
+                              ┌─────────────────────────────────────────────────────────┐
+                              │            SERVIDOR WEB FLUXA (PUERTO 5000)             │
+                              └────────────────────────────┬────────────────────────────┘
+                                                           │
+                      ┌────────────────────────────────────┴────────────────────────────────────┐
+                      ▼                                                                         ▼
+   ┌─────────────────────────────────────┐                                   ┌─────────────────────────────────────┐
+   │    PORTAL CIUDADANO ABIERTO ( / )   │                                   │     PORTAL DE ACCESO C5 ( /login )  │
+   ├─────────────────────────────────────┤                                   ├─────────────────────────────────────┤
+   │ • Estado del Semáforo en Tiempo Real│                                   │ • Autenticación Criptográfica       │
+   │ • Conteo de Aforo por Carril en Vivo│                                   │ • Cifrado PBKDF2-SHA256             │
+   │ • Calculadora de Ahorro de Gasolina │                                   │ • Control de Sesión HttpOnly        │
+   │ • Mitigación de CO2 en Vivo         │                                   └──────────────────┬──────────────────┘
+   │ • Telemetría V2X SPaT / GLOSA       │                                                      │ (Acceso Autorizado)
+   └─────────────────────────────────────┘                                                      ▼
+                                                                             ┌─────────────────────────────────────┐
+                                                                             │   CENTRO DE MANDO SCADA C5 (/admin) │
+                                                                             ├─────────────────────────────────────┤
+                                                                             │ [1] Streaming MJPEG con Bounding Box│
+                                                                             │ [2] Botón de Corredor de Emergencia │
+                                                                             │ [3] Calibrador Visual ROI Canvas    │
+                                                                             │ [4] Módulo Forense de Infracciones  │
+                                                                             │ [5] Diagnóstico de Hardware Edge    │
+                                                                             │ [6] Conmutador de Modelos y Cámaras │
+                                                                             │ [7] Generador de Auditoría en PDF   │
+                                                                             └─────────────────────────────────────┘
+```
+
+---
+
+### 7.1. Portal Ciudadano de Movilidad Abierta (`http://<IP>:5000/`)
+Interfaz pública de libre acceso diseñada para promover la transparencia vial y la movilidad inteligente:
+* **Semáforo Visual Sincronizado:** Réplica gráfica interactiva que cambia de color (Verde, Ámbar, Rojo) en tiempo real en perfecta sincronía con el gabinete físico de la calle.
+* **Temporizador Regresivo:** Muestra los segundos restantes de la fase activa calculados dinámicamente por la FSM según la demanda vehicular.
+* **Aforo Carril por Carril:** Contadores de vehículos en aproximación (Norte-Sur, Este-Oeste, vueltas a la izquierda y peatones).
+* **Métricas de Impacto Ambiental:** Indicadores en vivo de litros de combustible ahorrados y kilogramos de $\text{CO}_2$ mitigados acumulados en el día.
+* **Asesor de Velocidad Óptima V2X (GLOSA):** Recomendación de velocidad de avance para cruzar en verde sin detenerse.
+
+---
+
+### 7.2. Centro de Mando SCADA C5 para Operadores (`http://<IP>:5000/admin`)
+Panel de control operativo e industrial protegido mediante autenticación criptográfica PBKDF2-SHA256 (`/login`), que centraliza el monitoreo y control en tiempo real:
+
+1. **Streaming de Video en Vivo con Detecciones IA:** Transmisión continua multipart MJPEG (`/video_feed`) en alta definición con superposición de bounding boxes, clases detectadas (auto, bus, camión, moto, peatón), identificadores únicos de BYTETracker y líneas de aforo.
+2. **Mando de Corredor de Emergencia C5:** Botón prioritario para ambulancias, bomberos y patrullas. Al presionarlo, el sistema interrumpe el ciclo regular, ejecuta el protocolo normativo de despeje de seguridad (Ámbar $3\,\text{s}$ + Todo-Rojo $2\,\text{s}$) y otorga verde inmediato al eje de emergencia.
+3. **Calibrador Visual de Regiones de Interés (ROI Canvas Studio):** Herramienta gráfica integrada en el navegador que permite arrastrar y redimensionar los polígonos de detección sobre el fotograma en vivo, guardando la calibración en caliente (`POST /api/config/full`) sin detener el servicio ni reiniciar el hardware.
+4. **Módulo Forense de Infracciones en Luz Roja:** Pestaña con galería de capturas fotográficas en alta resolución de vehículos infractores, registrando fecha/hora exacta, carril, ID vehicular y enlace de visualización o descarga para auditoría legal.
+5. **HUD de Diagnóstico de Hardware en Vivo:** Telemetría en tiempo real del uso de CPU (8 núcleos), temperatura del SoC en grados Celsius ($^\circ\text{C}$), uso de memoria RAM, espacio en disco y estado de los 3 núcleos de la NPU Rockchip RK3588.
+6. **Conmutación en Caliente de Cámaras y Modelos:** Selectores interactivos para alternar al instante entre cámaras físicas (USB, MIPI CSI, RTSP) y videos demo, así como cambiar entre variantes de modelos YOLOv8 en memoria.
+7. **Generador Oficial de Dictámenes e Informes PDF:** Botón de exportación inmediata del informe formal de auditoría vial (`/report/executive`) listo para imprimir o archivar con sello de certificación criptográfico.
+
+---
+
+### 7.3. Catálogo de Endpoints REST API
+
+| Endpoint / Vista | Ruta | Nivel de Acceso | Método | Descripción |
+| :--- | :--- | :--- | :---: | :--- |
+| **Portal Ciudadano** | `/` | Público | `GET` | Visualización pública de tráfico, semáforo en vivo y métricas V2X/GLOSA. |
+| **Portal de Login C5** | `/login` | Público | `GET, POST` | Autenticación criptográfica de operadores con protección contra fuerza bruta. |
+| **Centro de Mando SCADA** | `/admin` | Operador C5 | `GET` | Consola central de monitoreo, control de emergencias y configuración. |
+| **Calibrador ROI Canvas** | `/admin` (Modal) | Operador C5 | `POST` | Editor visual de polígonos de carril con actualización en caliente. |
+| **Dictamen Oficial PDF** | `/report/executive` | Operador C5 | `GET` | Informe de auditoría vial y aforo listo para exportar a PDF (`Ctrl + P`). |
+| **Streaming MJPEG** | `/video_feed` | Público | `GET` | Transmisión de video continua con cajas delimitadoras de IA y HUD. |
+| **Snapshot de Fotograma** | `/api/frame/snapshot` | Público | `GET` | Captura JPEG congelada para el calibrador visual en navegador. |
+| **Telemetría Global** | `/api/status` | Público | `GET` | Métricas de aforo, FPS, estado FSM, latencias y telemetría de hardware. |
+| **Mando de Emergencias** | `/api/control` | Operador C5 | `POST` | Despacho de corredor verde prioritario para unidades de emergencia C5. |
+| **Configuración Maestra** | `/api/config/full` | Operador C5 | `GET, POST` | Consulta y guardado en caliente de parámetros y geometrías de carril. |
+| **Consulta Infracciones** | `/api/violations` | Operador C5 | `GET` | Listado de infracciones en luz roja con enlaces a fotografías de evidencia. |
+| **Foto de Infracción** | `/api/violations/snapshot/<f>` | Operador C5 | `GET` | Visualización o descarga de fotografía forense de infracción en luz roja. |
+| **Broadcast V2X SPaT** | `/api/v2x/spat` | Público | `GET` | Telemetría SPaT (*Signal Phase and Timing*) para vehículos conectados. |
+| **KPIs de Sustentabilidad**| `/api/kpis/sustainability` | Público | `GET` | Litros de combustible ahorrados y $\text{CO}_2$ mitigado en tiempo real. |
 
 ---
 

@@ -341,14 +341,68 @@ Para estimar el combustible y emisiones mitigadas en tiempo real frente a un cic
 
 ---
 
-## 6. Especificación de la API REST
+## 6. Plataforma WebUI, Centro de Mando SCADA C5 y API REST
 
-### Autenticación y Control de Acceso
-* `POST /api/auth/login`: `{ "username": "admin", "password": "..." }` $\to$ Validación con hash PBKDF2-SHA256 y cookie de sesión.
-* `POST /api/auth/logout`: Invalida la sesión activa.
+El subsistema de interfaces web de **FLUXA** está construido sobre un servidor ligero nativo en **Flask 3.x** con ejecución multihilo. El sistema no requiere la instalación de aplicaciones cliente propietarias: se opera íntegramente desde cualquier navegador moderno mediante estándares web abiertos (**HTML5, Vanilla CSS3, Canvas API y JavaScript ES6+**):
+
+* **Dirección de Acceso por Defecto:** `http://localhost:5000` o `http://<IP_ORANGE_PI>:5000`
+* **Puerto de Servicio:** `5000` (personalizable por CLI o archivo de configuración).
+
+```
+                              ┌─────────────────────────────────────────────────────────┐
+                              │            SERVIDOR WEB FLUXA (PUERTO 5000)             │
+                              └────────────────────────────┬────────────────────────────┘
+                                                           │
+                      ┌────────────────────────────────────┴────────────────────────────────────┐
+                      ▼                                                                         ▼
+   ┌─────────────────────────────────────┐                                   ┌─────────────────────────────────────┐
+   │    PORTAL CIUDADANO ABIERTO ( / )   │                                   │     PORTAL DE ACCESO C5 ( /login )  │
+   ├─────────────────────────────────────┤                                   ├─────────────────────────────────────┤
+   │ • Estado del Semáforo en Tiempo Real│                                   │ • Autenticación Criptográfica       │
+   │ • Conteo de Aforo por Carril en Vivo│                                   │ • Cifrado PBKDF2-SHA256             │
+   │ • Calculadora de Ahorro de Gasolina │                                   │ • Control de Sesión HttpOnly        │
+   │ • Mitigación de CO2 en Vivo         │                                   └──────────────────┬──────────────────┘
+   │ • Telemetría V2X SPaT / GLOSA       │                                                      │ (Acceso Autorizado)
+   └─────────────────────────────────────┘                                                      ▼
+                                                                             ┌─────────────────────────────────────┐
+                                                                             │   CENTRO DE MANDO SCADA C5 (/admin) │
+                                                                             ├─────────────────────────────────────┤
+                                                                             │ [1] Streaming MJPEG con Bounding Box│
+                                                                             │ [2] Botón de Corredor de Emergencia │
+                                                                             │ [3] Calibrador Visual ROI Canvas    │
+                                                                             │ [4] Módulo Forense de Infracciones  │
+                                                                             │ [5] Diagnóstico de Hardware Edge    │
+                                                                             │ [6] Conmutador de Modelos y Cámaras │
+                                                                             │ [7] Generador de Auditoría en PDF   │
+                                                                             └─────────────────────────────────────┘
+```
+
+### 6.1. Portal Ciudadano y Transparencia en Tiempo Real (`/`)
+Accesible de forma pública sin credenciales:
+* **Semáforo Sincronizado en Vivo:** Elementos SVG/CSS que reproducen visualmente la conmutación de las luces de la calle con cuenta regresiva en segundos.
+* **Aforo por Carril:** Contadores en tiempo real de automóviles, autobuses y peatones procesados por la NPU.
+* **Monitoreo de Sustentabilidad:** Panel dinámico que calcula los litros de gasolina no consumidos y los kilogramos de $\text{CO}_2$ evitados en la intersección.
+* **Asesor de Velocidad Óptima (GLOSA):** Indicador de velocidad sugerida para que los vehículos conectados alcancen la siguiente luz verde sin detenerse.
+
+### 6.2. Módulos Interactivos de la Consola SCADA C5 (`/admin`)
+Panel central protegido por autenticación PBKDF2-SHA256 con las siguientes herramientas operativas:
+
+1. **Streaming MJPEG de Inferencia en Directo:** Visualización del flujo de video procesado con las cajas delimitadoras de YOLOv8, etiquetas de clase, identificadores de seguimiento único (*Track IDs*) de BYTETracker y polígonos de carril superpuestos.
+2. **Despacho de Corredor de Emergencia C5:** Botón para habilitar la onda verde prioritaria ante el paso de ambulancias, bomberos o convoyes de seguridad, ejecutando los intervalos de despeje Ámbar y Todo-Rojo normados.
+3. **Calibrador Visual de Regiones de Interés (ROI Canvas Studio):** Editor interactivo en JavaScript que permite a los técnicos arrastrar y redimensionar los vértices de los polígonos de detección directamente sobre un fotograma congelado, aplicando los cambios en caliente (`POST /api/config/full`).
+4. **Módulo Forense de Infracciones:** Pestaña con historial de vehículos que cruzaron en luz roja, con visor de imágenes JPEG de evidencia, metadatos y opción de descarga.
+5. **HUD de Diagnóstico de Hardware:** Monitorización en tiempo real del uso de CPU, temperatura del chip RK3588 en $^\circ\text{C}$, memoria RAM y estado de los 3 núcleos de NPU.
+6. **Conmutación en Caliente de Cámaras y Modelos:** Selectores para alternar en tiempo de ejecución entre cámaras físicas (V4L2, MIPI CSI, RTSP) y videos demo, o cambiar modelos neuronales.
+7. **Emisión de Dictámenes Oficiales en PDF:** Generador del Informe Ejecutivo de Auditoría Vial (`/report/executive`) con código criptográfico de verificación, listo para imprimir (`Ctrl + P`).
+
+### 6.3. Catálogo de Endpoints de la API REST
+
+#### Autenticación y Control de Acceso
+* `POST /api/auth/login`: `{ "username": "admin", "password": "..." }` $\to$ Validación con hash PBKDF2-SHA256 y cookie de sesión `HttpOnly`.
+* `POST /api/auth/logout`: Invalida la sesión activa del operador.
 * `GET /api/auth/check`: Retorna el estado de autenticación `{ "authenticated": true, "user": "admin" }`.
 
-### Telemetría y Transmisión de Video
+#### Telemetría y Transmisión de Video
 * `GET /video_feed`: Flujo continuo de video multipart MJPEG (`Content-Type: multipart/x-mixed-replace`).
 * `GET /api/frame/snapshot`: Fotograma JPEG congelado para el editor gráfico en Canvas.
 * `GET /api/status`: Estado integral del sistema (fase activa, aforo por carril, métricas de hardware, latencias).
@@ -357,7 +411,7 @@ Para estimar el combustible y emisiones mitigadas en tiempo real frente a un cic
 * `GET /api/history`: Muestras temporales para gráficas de flujo vehicular en tiempo real.
 * `GET /api/reports/summary?date=YYYY-MM-DD`: Análisis de hora pico y volumen vehicular del día.
 
-### Control y Configuración (Operador C5)
+#### Control y Configuración (Operador C5)
 * `POST /api/control`: `{ "action": "emergency_corridor", "target": "NS" }` $\to$ Activa corredor verde C5.
 * `GET /api/config/full` / `POST /api/config/full`: Consulta y actualización en caliente de polígonos y tiempos.
 * `GET /api/models/list` / `POST /api/models/set`: Lista y conmuta el modelo YOLO en memoria.
