@@ -46,12 +46,12 @@ Para el reentrenamiento y adaptación de dominio, se recomiendan los siguientes 
 El ciclo de entrenamiento y despliegue a la NPU se divide en 4 fases estructuradas:
 
 ```mermaid
-graph LR
-    A[Dataset Vial: UA-DETRAC y BDD100K] --> B[Entrenamiento YOLOv8 en GPU]
-    B --> C[Exportacion a ONNX 640x640]
-    D[Extraccion Frames Calibracion demo.mp4] --> E[RKNN-Toolkit2 - Cuantizacion INT8]
+flowchart LR
+    A["Dataset Vial: UA-DETRAC y BDD100K"] --> B["Entrenamiento YOLOv8 en GPU"]
+    B --> C["Exportación a ONNX 640x640"]
+    D["Extracción Frames Calibración demo.mp4"] --> E["RKNN-Toolkit2 - Cuantización INT8"]
     C --> E
-    E --> F[Modelo Compilado: yolov8s.rknn]
+    E --> F["Modelo Compilado: yolov8s.rknn"]
 ```
 
 ### Fase 1: Fine-Tuning con Ultralytics (Python / PyTorch)

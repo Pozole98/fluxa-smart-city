@@ -1,37 +1,37 @@
-graph TD
-    subgraph SENSORICA [Capa de Captura y Sensores]
-        CAM[Camara Vial / RTSP / Video demo.mp4]
-        CALL_BTN[Boton Peatonal / Mando C5]
+flowchart TD
+    subgraph SENSORICA ["Capa de Captura y Sensores"]
+        CAM["Cámara Vial / RTSP / Video demo.mp4"]
+        CALL_BTN["Botonera Peatonal / Mando C5"]
     end
 
-    subgraph PROCESAMIENTO [Procesamiento e Inferencia Edge]
-        PRE[Normalizacion 640x640]
-        INFER[Inferencia Dual: NPU RKNN / CPU PyTorch]
-        POST[Postprocesamiento y NMS]
-        TRACKER[BYTETracker - IDs Unicos]
-        ROI[Filtro Espacial de ROIs]
-        TSP[Ponderacion Matematica TSP]
+    subgraph PROCESAMIENTO ["Procesamiento e Inferencia Edge"]
+        PRE["Normalización 640x640"]
+        INFER["Inferencia Dual: NPU RKNN / CPU PyTorch"]
+        POST["Postprocesamiento y NMS"]
+        TRACKER["BYTETracker - IDs Únicos"]
+        ROI["Filtro Espacial de ROIs"]
+        TSP["Ponderación Matemática TSP"]
     end
 
-    subgraph FSM_CORE [Maquina de Estados Finitos]
-        FSM[CoreSemaforo - FSM Adaptativa]
-        CLEARANCE[Protocolo Despeje: Ambar y Todo-Rojo]
-        EMERGENCY[Controlador de Emergencia C5]
-        SUSTAIN[Calculo de CO2 y Ahorro Energetico]
+    subgraph FSM_CORE ["Máquina de Estados Finitos"]
+        FSM["CoreSemaforo - FSM Adaptativa"]
+        CLEARANCE["Protocolo Despeje: Ámbar y Todo-Rojo"]
+        EMERGENCY["Controlador de Emergencia C5"]
+        SUSTAIN["Cálculo de CO2 y Ahorro Energético"]
     end
 
-    subgraph HARDWARE_OUTPUT [Controladores Fisicos]
-        ARDUINO[Arduino UNO R4 / PLC / Relevadores]
-        LIGHTS[Cabezales Semaforicos Fisicos]
-        CONTROLLER_EX[Controlador Existente NEMA / 170 / 2070]
+    subgraph HARDWARE_OUTPUT ["Controladores Físicos"]
+        ARDUINO["Arduino UNO R4 / PLC / Relevadores"]
+        LIGHTS["Cabezales Semafóricos Físicos"]
+        CONTROLLER_EX["Controlador Existente NEMA / 170 / 2070"]
     end
 
-    subgraph SERVICIOS [Servicios Web y Base de Datos]
-        MARIADB[(MariaDB - Persistencia Asincrona)]
-        FLASK_API[Servidor Flask y API REST]
-        SCADA[Consola SCADA C5 - /admin]
-        PUBLIC_PORTAL[Portal Ciudadano y V2X - /]
-        VIOLATIONS[Modulo Forense de Infracciones]
+    subgraph SERVICIOS ["Servicios Web y Base de Datos"]
+        MARIADB[("MariaDB - Persistencia Asíncrona")]
+        FLASK_API["Servidor Flask y API REST"]
+        SCADA["Consola SCADA C5 - /admin"]
+        PUBLIC_PORTAL["Portal Ciudadano y V2X - /"]
+        VIOLATIONS["Módulo Forense de Infracciones"]
     end
 
     CAM --> PRE
@@ -49,11 +49,11 @@ graph TD
 
     FSM -->|Comandos Seriales| ARDUINO
     ARDUINO --> LIGHTS
-    ARDUINO -.->|Integracion Gabinete| CONTROLLER_EX
+    ARDUINO -.->|Integración Gabinete| CONTROLLER_EX
 
-    FSM -->|Eventos y Telemetria| FLASK_API
-    FSM -->|Cola Asincrona| MARIADB
-    FSM -->|Deteccion Infracciones| VIOLATIONS
+    FSM -->|Eventos y Telemetría| FLASK_API
+    FSM -->|Cola Asíncrona| MARIADB
+    FSM -->|Detección Infracciones| VIOLATIONS
 
     FLASK_API --> SCADA
     FLASK_API --> PUBLIC_PORTAL
