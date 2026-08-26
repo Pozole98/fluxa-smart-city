@@ -202,9 +202,80 @@ graph TD
 
 ---
 
-## 3. Modelado Matemático y Algoritmos de Control
+## 3. Catálogo Integral de Capacidades, Funcionalidades y Facilidades del Sistema
 
-### 3.1. Prioridad de Transporte Público (TSP - Transit Signal Priority)
+FLUXA integra un conjunto de capacidades de ingeniería diseñadas para maximizar el rendimiento, la seguridad vial, la resiliencia operativa y la interoperabilidad en entornos urbanos inteligentes (*Smart Cities*):
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                     MATRIZ DE CAPACIDADES Y FACILIDADES DE FLUXA                       │
+├──────────────────────────┬──────────────────────────┬──────────────────────────────────┤
+│ ÁREA DE INGENIERÍA       │ CAPACIDAD TÉCNICA        │ IMPACTO / BENEFICIO OPERATIVO    │
+├──────────────────────────┼──────────────────────────┼──────────────────────────────────┤
+│ Visión Edge & NPU        │ YOLOv8 INT8 (Tri-Core)   │ Inferencia < 12ms a 30-60 FPS    │
+│ Rastreo Espaciotemporal  │ BYTETracker + Kalman     │ IDs únicos persistentes por auto │
+│ Control Adaptativo       │ FSM Dinámica + TSP       │ Verde 5s-45s según carga real    │
+│ Seguridad Vial           │ Despeje Ámbar/Todo-Rojo  │ Cero conflictos vehiculares      │
+│ Alta Disponibilidad      │ Fail-Safe Tri-Nivel      │ Conmutación NPU->CPU y Watchdog  │
+│ Fiscalización Forense    │ Detección en Luz Roja    │ Fotos con metadatos y cuota FIFO │
+│ Centro de Mando C5       │ Web SCADA + MJPEG Stream │ Control de Emergencia y Diagnóst.│
+│ Calibración Óptica       │ ROI Canvas Studio        │ Ajuste visual de carriles en web │
+│ Sustentabilidad Urbana   │ Motor de CO2 y Gasolina  │ Cálculo de huella en tiempo real │
+│ Telemetría V2X           │ Protocolos SPaT y GLOSA  │ Enlace a vehículos conectados    │
+│ Auditoría Oficial        │ Generador PDF Certificado│ Informes ejecutivos imprimibles  │
+│ Despliegue Universal     │ Script install.sh + DOCKER│ Armbian, openSUSE, Fedora, Ubuntu│
+└──────────────────────────┴──────────────────────────┴──────────────────────────────────┘
+```
+
+### 3.1. Capacidades de Visión por Computadora e Inteligencia Artificial en el Borde
+1. **Inferencia Acelerada en NPU Rockchip RK3588:** Ejecución nativa sobre 3 núcleos de NPU (6 TOPS) consumiendo modelos YOLOv8 cuantizados en formato asimétrico **INT8** (`.rknn`), alcanzando latencias de inferencia de **~3.4 a 10.8 ms** con un consumo energético menor a 15W.
+2. **Detección Multiclase Vehicular y Peatonal:** Reconocimiento simultáneo de 6 clases de interés vial: automóviles particulares, autobuses de transporte público, camiones de carga pesada, motocicletas, bicicletas y peatones.
+3. **Rastreo Multiobjeto con BYTETracker:** Seguimiento espaciotemporal continuo mediante Filtro de Kalman y asociación húngara de centroides, asignando identificadores numéricos únicos (*Track IDs*) que evitan el doble conteo de vehículos en oclusión o tráfico detenido.
+4. **Cuantificación de Colas por Regiones de Interés (ROIs):** Algoritmo de punto en polígono (*Ray Casting*) para delimitar carriles individuales de aproximación y calcular la longitud de cola en tiempo real.
+
+### 3.2. Capacidades de Control Semafórico Adaptativo y Priorización Vial
+1. **Asignación Dinámica del Tiempo de Verde:** Ajuste en tiempo real de la duración de la fase verde (entre un mínimo $T_{\text{min}} = 5\,\text{s}$ y un máximo $T_{\text{max}} = 45\,\text{s}$) proporcional a la demanda vehicular real de la intersección.
+2. **Priorización de Transporte Público (TSP - Transit Signal Priority):** Ponderación matemática que multiplica el peso de autobuses ($4.0\times$) y camiones ($2.5\times$) sobre vehículos particulares ($1.0\times$), acelerando el paso de pasajeros en corredores masivos.
+3. **Protocolo Normativo de Despeje Vial:** Transición obligatoria e ininterrumpible que inserta $3.0\,\text{s}$ de Ámbar seguidos de $2.0\,\text{s}$ de Todo-Rojo (*All-Red Clearance*) antes de conmutar a la fase verde contraria, eliminando riesgos de colisión por cruces intempestivos.
+4. **Salto Inteligente de Fases Vacías (*Phase-Skipping*):** En topologías con giros protegidos a la izquierda, si el carril de vuelta no registra vehículos en cola, la FSM omite la fase de flecha y pasa directamente al verde continuo, reduciendo demoras innecesarias.
+5. **Catálogo de 5 Topologías Urbanas Nativas:** Soporte nativo para 4 Vías Clásica (`4_way`), 2 Vías / Avenida (`2_way`), 3 Vías Tipo T (`3_way_t`), Giro Protegido (`4_way_protected`) y Cruce Peatonal Mid-Block (`pedestrian`).
+
+### 3.3. Facilidades de Alta Disponibilidad y Resiliencia Industrial (*Fail-Safe Matrix*)
+1. **Conmutación en Caliente NPU $\to$ CPU:** Si el runtime de la NPU (`rknnlite`) o el controlador del acelerador experimentan una contingencia, el sistema conmuta instantáneamente al motor PyTorch en CPU (`yolov8n.pt`) sin congelar el flujo ni apagar las luces.
+2. **Watchdog de Hardware Temporizado en Microcontrolador:** Circuito de vigilancia en Arduino UNO R4 que recibe un *heartbeat* serial cada ciclo. Si el procesador principal se congela o la cámara se desconecta por más de $3.0\,\text{s}$, el microcontrolador toma el control autónomo e inicia un ciclo de seguridad aislado de tiempo fijo ($20\,\text{s}$).
+3. **Aislamiento Galvánico por Relevadores de Estado Sólido (SSR):** Protección eléctrica de circuitos de baja tensión ($5\,\text{V} / 3.3\,\text{V}$) contra transitorios y sobretensiones de la red de potencia semafórica ($120\,\text{VAC} / 24\,\text{VDC}$).
+4. **Reconexión Serial en Caliente:** Hilo en segundo plano que reintenta la comunicación física en `/dev/ttyACM*` o `/dev/ttyUSB*` sin detener el servidor web ni la inferencia de IA.
+
+### 3.4. Facilidades del Módulo Forense de Infracciones en Luz Roja
+1. **Detección Automática de Infracciones:** Validación espaciotemporal en tiempo real cuando el centroide de un vehículo en movimiento cruza la línea de paro durante el estado de luz roja del carril conflictivo.
+2. **Captura Fotográfica de Evidencia:** Generación automática de archivo JPEG de alta resolución con marca de tiempo, ID del vehículo, carril de infracción y estado de la fase semafórica.
+3. **Gestión de Almacenamiento Circular FIFO:** Política automática de retención con límites configurables (por defecto 300 capturas y $150\,\text{MB}$ máximo) que purga las imágenes más antiguas para proteger la memoria flash eMMC/NVMe del dispositivo en campo.
+4. **Consulta y Descarga Forense en SCADA:** Interfaz dedicada en el panel administrativo para visualizar el registro de infracciones con enlaces directos a las imágenes de evidencia.
+
+### 3.5. Facilidades del Centro de Mando Web SCADA C5
+1. **Transmisión de Video en Vivo de Baja Latencia:** Streaming multipart MJPEG (`/video_feed`) optimizado para redes locales y VPNs con baja sobrecarga de procesamiento.
+2. **Mando de Corredor de Emergencia C5:** Botón prioritario en interfaz que permite al operador forzar la apertura de verde inmediato para ambulancias o convoyes policiales, ejecutando primero el despeje de seguridad normado.
+3. **Calibrador Visual de Regiones de Interés (ROI Canvas Studio):** Herramienta interactiva en JavaScript/Canvas HTML5 que permite a los técnicos arrastrar y redimensionar los polígonos de aforo directamente sobre el fotograma en vivo sin necesidad de editar archivos JSON manualmente.
+4. **HUD de Diagnóstico de Hardware:** Monitorización en tiempo real del porcentaje de uso de CPU, temperatura del SoC en grados Celsius ($^\circ\text{C}$), uso de memoria RAM, espacio libre en disco raíz y estado activo de los núcleos NPU.
+5. **Seguridad y Control de Sesiones:** Autenticación robusta basada en hashes PBKDF2-SHA256 con salt dinámico, cookies de sesión con directivas `HttpOnly` y `SameSite=Lax`, y protección contra fuerza bruta.
+
+### 3.6. Facilidades de Transparencia Ciudadana, Sustentabilidad y Telemetría V2X
+1. **Portal Ciudadano Abierto (`/`):** Vista pública responsive sin autenticación que democratiza el estado de la intersección, conteos de aforo y métricas de fluidez vial.
+2. **Calculadora de Impacto Ambiental en Tiempo Real:** Algoritmo que cuantifica segundo a segundo los litros de combustible ahorrados y los kilogramos de $\text{CO}_2$ mitigados al reducir los tiempos de ralentí (*idling*) de los vehículos en espera.
+3. **Telemetría Vehicular V2X (SPaT y GLOSA):** Emisión continua de mensajes en formato JSON estándar (`/api/v2x/spat`) que informan la fase semafórica actual, el tiempo exacto restante en segundos y la velocidad óptima de aproximación aconsejada (*Green Light Optimal Speed Advisory*).
+4. **Generador Oficial de Informes Ejecutivos en PDF:** Generación instantánea de dictámenes de auditoría vial imprimibles (`/report/executive`) con código criptográfico de verificación, análisis de hora pico y métricas de desempeño para dependencias de gobierno.
+
+### 3.7. Facilidades de Despliegue, Infraestructura y Portabilidad
+1. **Instalador Universal Automatizado (`install.sh`):** Detección automática de distribuciones Linux (**Armbian 24.04, openSUSE Tumbleweed/Leap/SLES, Fedora/RHEL, Ubuntu, Debian**) e instalación desatendida de dependencias, MariaDB, entorno virtual y reglas udev.
+2. **Servicio Systemd Autogestionado:** Creación dinámica del servicio `/etc/systemd/system/fluxa.service` con selección automática de backend según arquitectura (`--backend rknn` en ARM64, `--backend cpu` en x86_64), auto-reinicio ante fallas y control centralizado mediante `journalctl`.
+3. **Persistencia Híbrida Asíncrona:** Base de datos MariaDB desacoplada mediante cola en memoria (`queue.Queue`) con conmutación transparente a búfer local si se interrumpe la conexión al servidor de base de datos.
+4. **Contenedorización Oficial:** Archivos `Dockerfile` y `docker-compose.yml` listos para despliegue en infraestructuras Docker y Podman.
+
+---
+
+## 4. Modelado Matemático y Algoritmos de Control
+
+### 4.1. Prioridad de Transporte Público (TSP - Transit Signal Priority)
 En lugar de basarse en conteos simples de vehículos, FLUXA calcula la Demanda Ponderada ($D_j$) para cada carril $j$:
 
 $$D_j = \sum_{k} w_k \cdot N_{j,k}$$
@@ -219,7 +290,7 @@ Donde:
   * **Bicicleta (Clase COCO 1):** $w_1 = 0.8$
   * **Motocicleta (Clase COCO 3):** $w_3 = 0.6$
 
-### 3.2. Asignación Dinámica del Tiempo de Verde
+### 4.2. Asignación Dinámica del Tiempo de Verde
 El tiempo asignado a la fase verde activa ($T_{\text{verde}}$) se calcula dinámicamente mediante una función acotada:
 
 $$T_{\text{verde}} = \min\left(T_{\text{max}}, \max\left(T_{\text{min}}, T_{\text{min}} + f \cdot \max(D_j)\right)\right)$$
@@ -229,7 +300,7 @@ Donde:
 * $T_{\text{max}}$: Tiempo máximo límite de verde (por defecto: $45.0\,\text{s}$).
 * $f$: Factor de segundos por auto equivalente (por defecto: $2.5\,\text{s/auto}$).
 
-### 3.3. Modelo de Impacto Ecológico y Ahorro de Emisiones
+### 4.3. Modelo de Impacto Ecológico y Ahorro de Emisiones
 Para estimar el combustible y emisiones mitigadas en tiempo real frente a un ciclo de tiempo fijo de referencia ($T_{\text{fijo}} = 45\,\text{s}$):
 
 1. **Segundos de Espera Ahorrados en el Ciclo ($\Delta t_{\text{espera}}$):**
@@ -243,7 +314,7 @@ Para estimar el combustible y emisiones mitigadas en tiempo real frente a un cic
    Utilizando el factor de emisión estándar de $2.31\,\text{kg de CO}_2$ por litro de gasolina no quemado:
    $$M_{\text{CO2}} = V_{\text{combustible}} \cdot 2.31$$
 
-### 3.4. Detección Espaciotemporal de Infracciones en Luz Roja
+### 4.4. Detección Espaciotemporal de Infracciones en Luz Roja
 1. Se obtiene el estado semafórico activo (por ejemplo: `VERDE_NS`, `AMARILLO_NS`, `VERDE_EO`, `ROJO_TODOS`).
 2. Para cada vehículo rastreado con identificador $ID_i$ y centroide $(c_x, c_y)$:
    $$\text{Infraccion} \iff (c_x, c_y) \in \text{ROI}(\text{Carril}_j) \land \text{Fase}(\text{Carril}_j) = \text{ROJO}$$
@@ -251,14 +322,14 @@ Para estimar el combustible y emisiones mitigadas en tiempo real frente a un cic
 
 ---
 
-## 4. Integración con Hardware y Microcontrolador
+## 5. Integración con Hardware y Microcontrolador
 
-### 4.1. Conexión Serial con Arduino UNO R4 Minima
+### 5.1. Conexión Serial con Arduino UNO R4 Minima
 * **Puerto Predeterminado:** `/dev/ttyACM0` (con escaneo automático en `/dev/ttyACM*` y `/dev/ttyUSB*`).
 * **Parámetros Seriales:** `9600 baudios, 8 bits de datos, sin paridad, 1 bit de parada (8N1)`.
 * **Watchdog de Reconexión:** El hilo `_init_arduino` ejecuta reintentos periódicos en caso de desconexión accidental del cable USB sin detener la operación de la IA.
 
-### 4.2. Mapa de Comandos y Pines Físicos
+### 5.2. Mapa de Comandos y Pines Físicos
 
 | Comando ASCII | Estado Activado | Salida Arduino | Semáforo Eje NS | Semáforo Eje EO |
 | :---: | :--- | :---: | :---: | :---: |
@@ -270,7 +341,7 @@ Para estimar el combustible y emisiones mitigadas en tiempo real frente a un cic
 
 ---
 
-## 5. Especificación de la API REST
+## 6. Especificación de la API REST
 
 ### Autenticación y Control de Acceso
 * `POST /api/auth/login`: `{ "username": "admin", "password": "..." }` $\to$ Validación con hash PBKDF2-SHA256 y cookie de sesión.
@@ -296,7 +367,7 @@ Para estimar el combustible y emisiones mitigadas en tiempo real frente a un cic
 
 ---
 
-## 6. Esquema de Base de Datos MariaDB (`fluxa_traffic`)
+## 7. Esquema de Base de Datos MariaDB (`fluxa_traffic`)
 
 ```sql
 CREATE DATABASE IF NOT EXISTS fluxa_traffic CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -341,9 +412,9 @@ CREATE TABLE IF NOT EXISTS red_light_violations (
 
 ---
 
-## 7. Despliegue en Producción e Infraestructura
+## 8. Despliegue en Producción e Infraestructura
 
-### 7.1. Instalador Universal Nativo (`install.sh`)
+### 8.1. Instalador Universal Nativo (`install.sh`)
 Diseñado para operar sobre **Orange Pi 5 (Armbian / Debian aarch64)** y **estaciones de trabajo / servidores (openSUSE Tumbleweed/Leap/SLES, Fedora, RHEL, Ubuntu x86_64)**:
 
 ```bash
@@ -360,13 +431,13 @@ El instalador:
 6. Solicita y almacena las credenciales de operador C5 mediante hash seguro en `instance/admin_credentials.json`.
 7. Instala el comando global `/usr/local/bin/fluxa` y registra la unidad de servicio `systemd`.
 
-### 7.2. Desinstalación Limpia (`uninstall.sh`)
+### 8.2. Desinstalación Limpia (`uninstall.sh`)
 ```bash
 bash uninstall.sh
 ```
 Detiene y remueve el servicio `systemd`, borra el acceso global `/usr/local/bin/fluxa` y permite purgar opcionalmente el entorno virtual, las credenciales locales y la base de datos MariaDB.
 
-### 7.3. Despliegue en Contenedores (Docker / Podman)
+### 8.3. Despliegue en Contenedores (Docker / Podman)
 ```bash
 docker compose up -d
 docker compose logs -f
@@ -374,14 +445,14 @@ docker compose logs -f
 
 ---
 
-## 8. Seguridad Perimetral, Protección de Modelos y Licenciamiento Comercial
+## 9. Seguridad Perimetral, Protección de Modelos y Licenciamiento Comercial
 
-### 8.1. Protección del Runtime en Hardware Edge
+### 9.1. Protección del Runtime en Hardware Edge
 1. **Modelos Compilados en Formato Binario:** Las redes neuronales se distribuyen en formato cuantizado INT8 binario (`.rknn`), evitando la exposición de hiperparámetros y pesos en texto plano o estructuras desprotegidas.
 2. **Cifrado de Credenciales C5:** Almacenamiento local mediante hashes criptográficos PBKDF2-SHA256 con salt dinámico y endurecimiento de cookies HTTPOnly / SameSite.
 3. **Persistencia Híbrida y Blindaje de Red:** Cola asíncrona no bloqueante en MariaDB con aislamiento en red local y conmutación transparente a búfer en memoria ante pérdidas de enlace.
 
-### 8.2. Régimen de Propiedad Intelectual
+### 9.2. Régimen de Propiedad Intelectual
 * **Titularidad:** Moisés Emilio Martínez Arias © 2026. Todos los derechos reservados.
 * **Respaldo Institucional:** Tecnológico de Estudios Superiores de Coacalco (TESCo) • Tecnológico Nacional de México (TecNM).
 * **Marco Legal:** Consulte el contrato de licenciamiento en [LICENSE.md](../LICENSE.md) y la justificación económica en [Modelo de Negocio B2G y ROI](MODELO_NEGOCIO_B2G.md).
