@@ -57,40 +57,40 @@ El sistema opera como una **capa de control superpuesta (*Overlay Controller*)**
 ### 2.1. Arquitectura de Procesamiento y Telemetría
 
 ```mermaid
-graph TD
-    subgraph SENSORICA [Capa de Captura y Sensores]
-        CAM[Camara Vial / RTSP / Video demo.mp4]
-        CALL_BTN[Boton Peatonal / Mando C5]
+flowchart TD
+    subgraph SENSORICA ["Capa de Captura y Sensores"]
+        CAM["Cámara Vial / RTSP / Video demo.mp4"]
+        CALL_BTN["Botonera Peatonal / Mando C5"]
     end
 
-    subgraph PROCESAMIENTO [Procesamiento e Inferencia Edge]
-        PRE[Normalizacion 640x640]
-        INFER[Inferencia Dual: NPU RKNN / CPU PyTorch]
-        POST[Postprocesamiento y NMS]
-        TRACKER[BYTETracker - IDs Unicos]
-        ROI[Filtro Espacial de ROIs]
-        TSP[Ponderacion Matematica TSP]
+    subgraph PROCESAMIENTO ["Procesamiento e Inferencia Edge"]
+        PRE["Normalización 640x640"]
+        INFER["Inferencia Dual: NPU RKNN / CPU PyTorch"]
+        POST["Postprocesamiento y NMS"]
+        TRACKER["BYTETracker - IDs Únicos"]
+        ROI["Filtro Espacial de ROIs"]
+        TSP["Ponderación Matemática TSP"]
     end
 
-    subgraph FSM_CORE [Maquina de Estados Finitos]
-        FSM[CoreSemaforo - FSM Adaptativa]
-        CLEARANCE[Protocolo Despeje: Ambar y Todo-Rojo]
-        EMERGENCY[Controlador de Emergencia C5]
-        SUSTAIN[Calculo de CO2 y Ahorro Energetico]
+    subgraph FSM_CORE ["Máquina de Estados Finitos"]
+        FSM["CoreSemaforo - FSM Adaptativa"]
+        CLEARANCE["Protocolo Despeje: Ámbar y Todo-Rojo"]
+        EMERGENCY["Controlador de Emergencia C5"]
+        SUSTAIN["Cálculo de CO2 y Ahorro Energético"]
     end
 
-    subgraph HARDWARE_OUTPUT [Controladores Fisicos]
-        ARDUINO[Arduino UNO R4 / PLC / Relevadores]
-        LIGHTS[Cabezales Semaforicos Fisicos]
-        CONTROLLER_EX[Controlador Existente NEMA / 170 / 2070]
+    subgraph HARDWARE_OUTPUT ["Controladores Físicos"]
+        ARDUINO["Arduino UNO R4 / PLC / Relevadores"]
+        LIGHTS["Cabezales Semafóricos Físicos"]
+        CONTROLLER_EX["Controlador Existente NEMA / 170 / 2070"]
     end
 
-    subgraph SERVICIOS [Servicios Web y Base de Datos]
-        MARIADB[(MariaDB - Persistencia Asincrona)]
-        FLASK_API[Servidor Flask y API REST]
-        SCADA[Consola SCADA C5 - /admin]
-        PUBLIC_PORTAL[Portal Ciudadano y V2X - /]
-        VIOLATIONS[Modulo Forense de Infracciones]
+    subgraph SERVICIOS ["Servicios Web y Base de Datos"]
+        MARIADB[("MariaDB - Persistencia Asíncrona")]
+        FLASK_API["Servidor Flask y API REST"]
+        SCADA["Consola SCADA C5 - /admin"]
+        PUBLIC_PORTAL["Portal Ciudadano y V2X - /"]
+        VIOLATIONS["Módulo Forense de Infracciones"]
     end
 
     CAM --> PRE
@@ -108,11 +108,11 @@ graph TD
 
     FSM -->|Comandos Seriales| ARDUINO
     ARDUINO --> LIGHTS
-    ARDUINO -.->|Integracion Gabinete| CONTROLLER_EX
+    ARDUINO -.->|Integración Gabinete| CONTROLLER_EX
 
-    FSM -->|Eventos y Telemetria| FLASK_API
-    FSM -->|Cola Asincrona| MARIADB
-    FSM -->|Deteccion Infracciones| VIOLATIONS
+    FSM -->|Eventos y Telemetría| FLASK_API
+    FSM -->|Cola Asíncrona| MARIADB
+    FSM -->|Detección Infracciones| VIOLATIONS
 
     FLASK_API --> SCADA
     FLASK_API --> PUBLIC_PORTAL
@@ -122,33 +122,22 @@ graph TD
 ### 2.2. Integración de Gabinete Industrial y Hardware Edge (*Overlay Controller*)
 
 ```mermaid
-graph LR
-    subgraph CAMPO [Intersección Vial]
-        OPTIC[Cámara Vial HD Gran Angular]
-        SIG_NS[Cabezales Semafóricos Norte-Sur]
-        SIG_EO[Cabezales Semafóricos Este-Oeste]
-        PED_BTN[Botonera Peatonal]
+flowchart LR
+    subgraph CAMPO ["Infraestructura en Intersección"]
+        OPTIC["Cámara Vial HD Gran Angular"]
+        SIG_NS["Cabezales Semafóricos Norte-Sur"]
+        SIG_EO["Cabezales Semafóricos Este-Oeste"]
+        PED_BTN["Botonera Peatonal"]
     end
 
-    subgraph GABINETE [Gabinete NEMA IP66 - FLUXA Edge Appliance]
-        direction TB
-        PSU[Fuente MeanWell 12V/5V DC + Supresor de Picos]
-        
-        subgraph SBC [Cómputo Edge Acelerado]
-            OPI5[Orange Pi 5 - SoC Rockchip RK3588]
-            NPU_CORE[Tri-Core NPU 6 TOPS INT8]
-            OS_ENGINE[Armbian Linux 24.04]
-            OPI5 --- NPU_CORE
-            OPI5 --- OS_ENGINE
-        end
-        
-        subgraph MCU [Potencia y Watchdog Fail-Safe]
-            ARD[Arduino UNO R4 / Microcontrolador]
-            WDOG[Watchdog Temporizado - 3s]
-            SSR[Banco Relevadores Estado Sólido Optoacoplados]
-            ARD --- WDOG
-            ARD --- SSR
-        end
+    subgraph GABINETE ["Gabinete NEMA IP66 - FLUXA Edge Box"]
+        PSU["Fuente MeanWell 12V/5V DC + Supresor"]
+        OPI5["Orange Pi 5 - SoC Rockchip RK3588"]
+        NPU_CORE["Tri-Core NPU 6 TOPS INT8"]
+        OS_ENGINE["Armbian Linux 24.04"]
+        ARD["Arduino UNO R4 / Microcontrolador"]
+        WDOG["Watchdog Temporizado - 3s"]
+        SSR["Banco Relevadores Estado Sólido"]
     end
 
     OPTIC -->|USB / RTSP| OPI5
@@ -156,8 +145,12 @@ graph LR
     OPI5 -->|Enlace Serial USB CDC /dev/ttyACM0| ARD
     SSR -->|120VAC / 24VDC| SIG_NS
     SSR -->|120VAC / 24VDC| SIG_EO
-    PSU --> SBC
-    PSU --> MCU
+    PSU --> OPI5
+    PSU --> ARD
+    OPI5 --- NPU_CORE
+    OPI5 --- OS_ENGINE
+    ARD --- WDOG
+    ARD --- SSR
 ```
 
 ---

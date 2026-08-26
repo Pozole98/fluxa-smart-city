@@ -40,40 +40,40 @@ El sistema sustituye los ciclos semafóricos tradicionales de tiempo fijo por un
 ### 2.1. Diagrama de Flujo de Software y Pipeline de Inferencia
 
 ```mermaid
-graph TD
-    subgraph SENSORICA [Capa de Captura y Sensores]
-        CAM[Camara Vial / RTSP / Video demo.mp4]
-        CALL_BTN[Boton Peatonal / Mando C5]
+flowchart TD
+    subgraph SENSORICA ["Capa de Captura y Sensores"]
+        CAM["Cámara Vial / RTSP / Video demo.mp4"]
+        CALL_BTN["Botonera Peatonal / Mando C5"]
     end
 
-    subgraph PROCESAMIENTO [Procesamiento e Inferencia Edge]
-        PRE[Normalizacion 640x640]
-        INFER[Inferencia Dual: NPU RKNN / CPU PyTorch]
-        POST[Postprocesamiento y NMS]
-        TRACKER[BYTETracker - IDs Unicos]
-        ROI[Filtro Espacial de ROIs]
-        TSP[Ponderacion Matematica TSP]
+    subgraph PROCESAMIENTO ["Procesamiento e Inferencia Edge"]
+        PRE["Normalización 640x640"]
+        INFER["Inferencia Dual: NPU RKNN / CPU PyTorch"]
+        POST["Postprocesamiento y NMS"]
+        TRACKER["BYTETracker - IDs Únicos"]
+        ROI["Filtro Espacial de ROIs"]
+        TSP["Ponderación Matemática TSP"]
     end
 
-    subgraph FSM_CORE [Maquina de Estados Finitos]
-        FSM[CoreSemaforo - FSM Adaptativa]
-        CLEARANCE[Protocolo Despeje: Ambar y Todo-Rojo]
-        EMERGENCY[Controlador de Emergencia C5]
-        SUSTAIN[Calculo de CO2 y Ahorro Energetico]
+    subgraph FSM_CORE ["Máquina de Estados Finitos"]
+        FSM["CoreSemaforo - FSM Adaptativa"]
+        CLEARANCE["Protocolo Despeje: Ámbar y Todo-Rojo"]
+        EMERGENCY["Controlador de Emergencia C5"]
+        SUSTAIN["Cálculo de CO2 y Ahorro Energético"]
     end
 
-    subgraph HARDWARE_OUTPUT [Controladores Fisicos]
-        ARDUINO[Arduino UNO R4 / PLC / Relevadores]
-        LIGHTS[Cabezales Semaforicos Fisicos]
-        CONTROLLER_EX[Controlador Existente NEMA / 170 / 2070]
+    subgraph HARDWARE_OUTPUT ["Controladores Físicos"]
+        ARDUINO["Arduino UNO R4 / PLC / Relevadores"]
+        LIGHTS["Cabezales Semafóricos Físicos"]
+        CONTROLLER_EX["Controlador Existente NEMA / 170 / 2070"]
     end
 
-    subgraph SERVICIOS [Servicios Web y Base de Datos]
-        MARIADB[(MariaDB - Persistencia Asincrona)]
-        FLASK_API[Servidor Flask y API REST]
-        SCADA[Consola SCADA C5 - /admin]
-        PUBLIC_PORTAL[Portal Ciudadano y V2X - /]
-        VIOLATIONS[Modulo Forense de Infracciones]
+    subgraph SERVICIOS ["Servicios Web y Base de Datos"]
+        MARIADB[("MariaDB - Persistencia Asíncrona")]
+        FLASK_API["Servidor Flask y API REST"]
+        SCADA["Consola SCADA C5 - /admin"]
+        PUBLIC_PORTAL["Portal Ciudadano y V2X - /"]
+        VIOLATIONS["Módulo Forense de Infracciones"]
     end
 
     CAM --> PRE
@@ -91,11 +91,11 @@ graph TD
 
     FSM -->|Comandos Seriales| ARDUINO
     ARDUINO --> LIGHTS
-    ARDUINO -.->|Integracion Gabinete| CONTROLLER_EX
+    ARDUINO -.->|Integración Gabinete| CONTROLLER_EX
 
-    FSM -->|Eventos y Telemetria| FLASK_API
-    FSM -->|Cola Asincrona| MARIADB
-    FSM -->|Deteccion Infracciones| VIOLATIONS
+    FSM -->|Eventos y Telemetría| FLASK_API
+    FSM -->|Cola Asíncrona| MARIADB
+    FSM -->|Detección Infracciones| VIOLATIONS
 
     FLASK_API --> SCADA
     FLASK_API --> PUBLIC_PORTAL
@@ -105,33 +105,22 @@ graph TD
 ### 2.2. Arquitectura de Hardware e Integración en Gabinete Vial (*Edge Appliance*)
 
 ```mermaid
-graph LR
-    subgraph CAMPO [Infraestructura de Campo e Intersección]
-        OPTIC[Cámara Vial Gran Angular HD]
-        SIG_NS[Cabezales Semafóricos Norte-Sur]
-        SIG_EO[Cabezales Semafóricos Este-Oeste]
-        PED_BTN[Botonera de Cruce Peatonal]
+flowchart LR
+    subgraph CAMPO ["Infraestructura de Campo e Intersección"]
+        OPTIC["Cámara Vial Gran Angular HD"]
+        SIG_NS["Cabezales Semafóricos Norte-Sur"]
+        SIG_EO["Cabezales Semafóricos Este-Oeste"]
+        PED_BTN["Botonera de Cruce Peatonal"]
     end
 
-    subgraph GABINETE [Gabinete Industrial NEMA IP66 - FLUXA Edge Box]
-        direction TB
-        PSU[Fuente Industrial MeanWell 12V/5V DC + Supresor de Picos]
-        
-        subgraph SBC [Unidad Central de Cómputo]
-            OPI5[Orange Pi 5 - SoC Rockchip RK3588]
-            NPU_CORE[Tri-Core NPU 6 TOPS INT8]
-            OS_ENGINE[Armbian Linux 24.04 / Python Runtime]
-            OPI5 --- NPU_CORE
-            OPI5 --- OS_ENGINE
-        end
-        
-        subgraph MCU [Capa de Potencia y Watchdog]
-            ARD[Microcontrolador Arduino UNO R4 Minima]
-            WDOG[Watchdog de Hardware Temporizado - 3s]
-            SSR[Banco de Relevadores de Estado Sólido Optoacoplados]
-            ARD --- WDOG
-            ARD --- SSR
-        end
+    subgraph GABINETE ["Gabinete Industrial NEMA IP66 - FLUXA Edge Box"]
+        PSU["Fuente MeanWell 12V/5V DC + Supresor"]
+        OPI5["Orange Pi 5 - SoC Rockchip RK3588"]
+        NPU_CORE["Tri-Core NPU 6 TOPS INT8"]
+        OS_ENGINE["Armbian Linux 24.04"]
+        ARD["Arduino UNO R4 Minima / Microcontrolador"]
+        WDOG["Watchdog de Hardware Temporizado - 3s"]
+        SSR["Banco Relevadores Estado Sólido"]
     end
 
     OPTIC -->|USB / RTSP Ethernet| OPI5
@@ -139,52 +128,56 @@ graph LR
     OPI5 -->|Enlace Serial USB CDC /dev/ttyACM0| ARD
     SSR -->|Líneas de Potencia 120VAC / 24VDC| SIG_NS
     SSR -->|Líneas de Potencia 120VAC / 24VDC| SIG_EO
-    PSU --> SBC
-    PSU --> MCU
+    PSU --> OPI5
+    PSU --> ARD
+    OPI5 --- NPU_CORE
+    OPI5 --- OS_ENGINE
+    ARD --- WDOG
+    ARD --- SSR
 ```
 
 ### 2.3. Diagrama de Tolerancia a Fallos y Conmutación en Caliente (*Fail-Safe Matrix*)
 
 ```mermaid
-graph TD
-    A[Inicio de Ciclo Semafórico] --> B[Captura de Fotograma en Stream]
-    B --> C{¿Fotograma Válido?}
+flowchart TD
+    A["Inicio de Ciclo Semafórico"] --> B["Captura de Fotograma en Stream"]
+    B --> C{"¿Fotograma Válido?"}
     
-    C -->|Sí| D[Inferencia Acelerada en NPU Rockchip RK3588]
-    C -->|No / Pérdida de Cámara| E[MODO FAIL-SAFE 1: Ciclo de Tiempo Fijo de Seguridad]
+    C -->|Sí| D["Inferencia Acelerada en NPU Rockchip RK3588"]
+    C -->|No / Pérdida de Cámara| E["MODO FAIL-SAFE 1: Ciclo de Tiempo Fijo de Seguridad"]
     
-    D --> F{¿Éxito en Inferencia INT8?}
-    F -->|Sí: Latencia < 12ms| G[Rastreo BYTETracker y Control Dinámico FSM]
-    F -->|Excepción / Fallo NPU| H[MODO FAIL-SAFE 2: Conmutación en Caliente a CPU PyTorch]
+    D --> F{"¿Éxito en Inferencia INT8?"}
+    F -->|Sí: Latencia < 12ms| G["Rastreo BYTETracker y Control Dinámico FSM"]
+    F -->|Excepción / Fallo NPU| H["MODO FAIL-SAFE 2: Conmutación en Caliente a CPU PyTorch"]
     
     H --> G
-    G --> I[Envío de Heartbeat Serial a Arduino]
+    G --> I["Envío de Heartbeat Serial a Arduino"]
     
-    I --> J{¿Arduino recibe Heartbeat en < 3s?}
-    J -->|Sí| K[Conmutación Normal de Luces según FSM]
-    J -->|No / Bloqueo de SBC| L[MODO FAIL-SAFE 3: Watchdog Hardware Activa Destello Amarillo]
+    I --> J{"¿Arduino recibe Heartbeat en < 3s?"}
+    J -->|Sí| K["Conmutación Normal de Luces según FSM"]
+    J -->|No / Bloqueo de SBC| L["MODO FAIL-SAFE 3: Watchdog Hardware Activa Destello Amarillo"]
 ```
 
 ### 2.4. Topología de Red y Centro de Mando Centralizado C5 / V2X
 
 ```mermaid
-graph TD
-    subgraph INTERSECCIONES [Nodos Viales Inteligentes - Edge Nodes]
-        NODE1[Nodo Vial 1: Cruce 4 Vías - Av. Principal]
-        NODE2[Nodo Vial 2: Cruce 3 Vías T - Entrada C5]
-        NODE3[Nodo Vial 3: Cruce Peatonal - Zona Escolar]
+flowchart TD
+    subgraph INTERSECCIONES ["Nodos Viales Inteligentes - Edge Nodes"]
+        NODE1["Nodo Vial 1: Cruce 4 Vías - Av. Principal"]
+        NODE2["Nodo Vial 2: Cruce 3 Vías T - Entrada C5"]
+        NODE3["Nodo Vial 3: Cruce Peatonal - Zona Escolar"]
     end
 
-    subgraph RED_TRANSPORTE [Red de Comunicaciones Segura]
-        VPN[Túnel VPN Cifrado / Red Óptica Municipal]
+    subgraph RED_TRANSPORTE ["Red de Comunicaciones Segura"]
+        VPN["Túnel VPN Cifrado / Red Óptica Municipal"]
     end
 
-    subgraph CENTRO_MANDO_C5 [Centro de Comando, Control y Cómputo C5]
-        SCADA_SERVER[Servidor Central SCADA y Base de Datos MariaDB]
-        OPERATOR_CONSOLE[Consola de Monitoreo de Operador C5]
-        EMERGENCY_DISPATCH[Módulo de Despacho de Corredores de Emergencia]
-        V2X_BROADCAST[Servicio de Difusión V2X SPaT / GLOSA para Vehículos Conectados]
-        REPORT_GEN[Generador Oficial de Auditorías e Infracciones PDF]
+    subgraph CENTRO_MANDO_C5 ["Centro de Comando, Control y Cómputo C5"]
+        SCADA_SERVER["Servidor Central SCADA y Base de Datos MariaDB"]
+        OPERATOR_CONSOLE["Consola de Monitoreo de Operador C5"]
+        EMERGENCY_DISPATCH["Módulo de Despacho de Corredores de Emergencia"]
+        V2X_BROADCAST["Servicio de Difusión V2X SPaT / GLOSA"]
+        REPORT_GEN["Generador Oficial de Auditorías e Infracciones PDF"]
     end
 
     NODE1 -->|Telemetría HTTPS/WSS| VPN
@@ -197,7 +190,7 @@ graph TD
     SCADA_SERVER --> V2X_BROADCAST
     SCADA_SERVER --> REPORT_GEN
     
-    EMERGENCY_DISPATCH -.->|Comando de Prioridad Prioritaria Inmediata| VPN
+    EMERGENCY_DISPATCH -.->|Comando de Prioridad Inmediata| VPN
 ```
 
 ---

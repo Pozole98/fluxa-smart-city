@@ -40,14 +40,14 @@ A diferencia de las soluciones extranjeras tradicionales que exigen desechar y r
 El modelo de comercialización se estructura en tres líneas complementarias de ingresos:
 
 ```mermaid
-graph TD
-    A[FLUXA Smart Mobility] --> B[1. Venta de Edge Appliance - CapEx]
-    A --> C[2. Licencia de Software SCADA C5 - OpEx / SaaS]
-    A --> D[3. Póliza de Servicio y Mantenimiento - SLA]
+flowchart TD
+    A["FLUXA Smart Mobility"] --> B["1. Venta de Edge Appliance (CapEx)"]
+    A --> C["2. Licencia de Software SCADA C5 (OpEx / SaaS)"]
+    A --> D["3. Póliza de Servicio y Mantenimiento (SLA)"]
 
-    B --> B1[Gabinete NEMA IP66 + Orange Pi 5 RK3588 + Camara + Modulo Control]
-    C --> C1[Licencia por Interseccion Conectada a Centro de Mando]
-    D --> D1[Calibracion Optica, Reentrenamiento de IA y Soporte 24/7]
+    B --> B1["Gabinete NEMA IP66 + Orange Pi 5 RK3588 + Cámara + Módulo Control"]
+    C --> C1["Licencia por Intersección Conectada a Centro de Mando"]
+    D --> D1["Calibración Óptica, Reentrenamiento de IA y Soporte 24/7"]
 ```
 
 ### 4.1. Venta de Hardware (*Edge Box Appliance* - Pago Único)
