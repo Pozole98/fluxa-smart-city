@@ -18,7 +18,7 @@ Los modelos base (`yolov8n.pt`, `yolov8s.pt`) se encuentran pre-entrenados sobre
 | **Condiciones Ambientales** | Iluminación diurna balanceada | Destellos nocturnos de faros, sombras proyectadas, lluvia sobre asfalto, neblina |
 
 > [!IMPORTANT]
-> El *fine-tuning* con conjuntos de datos de infraestructura vial eleva el mAP@0.5 en cámaras de poste del **~68% al ~94%**, reduciendo falsos positivos causados por sombras y mejorando la discriminación de transporte público para prioridad TSP.
+> La literatura científica sobre adaptación de dominio en videovigilancia de tráfico (*Domain Adaptation in Traffic Surveillance*, e.g., benchmarks sobre **UA-DETRAC** [Wen et al., *IEEE TCSVT*] y **BDD100K** [Yu et al., *CVPR*]) reporta que los modelos pre-entrenados exclusivamente en MS-COCO genérico sufren reducciones de precisión debido al ángulo cenital/semi-cenital, sombras proyectadas y oclusiones en fila. El *fine-tuning* con conjuntos de datos viales especializados permite mitigar estos efectos y alcanzar niveles de desempeño robustos (típicamente en rangos de 82% a 92% mAP@0.5 según condiciones meteorológicas). El valor exacto de precisión y ganancia de FLUXA se determinará empíricamente tras el entrenamiento y validación cruzada con el dataset recolectado en el corredor piloto.
 
 ---
 
