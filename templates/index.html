@@ -633,6 +633,7 @@
         <button class="tab-btn" onclick="openModal('modal-zones')">Calibrador ROIs</button>
         <button class="tab-btn" onclick="openModal('modal-peak')">Diagnóstico Hora Pico</button>
         <button class="tab-btn" onclick="openModal('modal-violations')">Infracciones (<span id="viol-badge">0</span>)</button>
+        <button class="tab-btn" onclick="openModal('modal-corridor')" style="border-color: #38bdf8; color: #38bdf8;">🌊 Olas Verdes (<span id="corridor-wave-badge">Normal</span>)</button>
         <button class="tab-btn" onclick="window.open('/report/executive', '_blank')">Informe Oficial (PDF)</button>
     </div>
 
@@ -1128,14 +1129,14 @@
         </div>
     </div>
 
-    <!-- Modal 3: Infracciones en Luz Roja -->
+    <!-- Modal 3: Infracciones en Luz Roja Forense -->
     <div class="modal" id="modal-violations">
-        <div class="modal-content" style="max-width: 850px;">
+        <div class="modal-content" style="max-width: 900px;">
             <div class="panel-header">
-                <div class="panel-title">Registro de Infracciones (Paso en Luz Roja)</div>
+                <div class="panel-title">Registro Forense de Infracciones en Luz Roja</div>
                 <button class="btn btn-outline" style="padding: 0.25rem 0.5rem;" onclick="closeModal('modal-violations')">✕</button>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.78rem;">Captura fotográfica y registro con cuota de almacenamiento rotativo.</p>
+            <p style="color: var(--text-muted); font-size: 0.78rem;">Captura fotográfica automática y auditoría forense con persistencia asíncrona tolerante a fallos.</p>
             <table class="viol-table">
                 <thead>
                     <tr>
@@ -1148,6 +1149,51 @@
                 </thead>
                 <tbody id="violations-table-body">
                     <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding: 1rem;">No hay infracciones registradas el día de hoy.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal 4: Sincronización de Corredor Vial y Olas Verdes -->
+    <div class="modal" id="modal-corridor">
+        <div class="modal-content" style="max-width: 850px;">
+            <div class="panel-header">
+                <div class="panel-title">Coordinación de Corredor Vial y Olas Verdes (Mesh Sync)</div>
+                <button class="btn btn-outline" style="padding: 0.25rem 0.5rem;" onclick="closeModal('modal-corridor')">✕</button>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.78rem;">Sincronización inter-intersecciones para paso continuo de pelotones vehiculares sin detenciones.</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+                <div style="background: rgba(15, 23, 42, 0.6); padding: 1rem; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.2);">
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">ESTADO DE OLA VERDE:</span>
+                    <h3 id="corridor-wave-state" style="color: var(--tesco-green); font-size: 1.1rem; font-family: 'JetBrains Mono'; margin-top: 0.25rem;">INACTIVA</h3>
+                    <span id="corridor-wave-timer" style="font-size: 0.75rem; color: var(--text-muted);">En espera de pelotón vehicular</span>
+                </div>
+                <div style="background: rgba(15, 23, 42, 0.6); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">VELOCIDAD DE PROGRESIÓN:</span>
+                    <h3 style="color: #38bdf8; font-size: 1.1rem; font-family: 'JetBrains Mono'; margin-top: 0.25rem;">45.0 km/h (12.5 m/s)</h3>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Velocidad de diseño recomendada</span>
+                </div>
+                <div style="background: rgba(15, 23, 42, 0.6); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">CONTROL MANUAL C5:</span>
+                    <button class="btn btn-primary" style="margin-top: 0.35rem; width: 100%; font-size: 0.8rem; padding: 0.4rem;" onclick="triggerManualGreenWave()">🌊 Emitir Ola Verde</button>
+                </div>
+            </div>
+
+            <div class="panel-title" style="font-size: 0.9rem; margin-bottom: 0.5rem;">Intersecciones en el Corredor Vial</div>
+            <table class="viol-table" style="margin-bottom: 1rem;">
+                <thead>
+                    <tr>
+                        <th>Identificador</th>
+                        <th>Nombre de Intersección</th>
+                        <th>Distancia Relativa</th>
+                        <th>Estado de Sincronización</th>
+                    </tr>
+                </thead>
+                <tbody id="corridor-nodes-body">
+                    <tr><td>CRUCE_01</td><td>Intersección Norte (Av. Central)</td><td>0 m</td><td><span style="color:var(--tesco-green);">● Nodo Local</span></td></tr>
+                    <tr><td>CRUCE_02</td><td>Intersección Centro (Av. Hidalgo)</td><td>320 m</td><td><span style="color:#38bdf8;">● Sincronizado</span></td></tr>
+                    <tr><td>CRUCE_03</td><td>Intersección Sur (Av. del Parque)</td><td>650 m</td><td><span style="color:#38bdf8;">● Sincronizado</span></td></tr>
                 </tbody>
             </table>
         </div>
@@ -1594,6 +1640,58 @@
                 }
             } catch(e) {
                 console.error("Error al obtener infracciones:", e);
+            }
+        }
+
+        async function fetchCorridorStatus() {
+            try {
+                const res = await fetch('/api/corridor/status');
+                const data = await res.json();
+                
+                const badge = document.getElementById('corridor-wave-badge');
+                const stateText = document.getElementById('corridor-wave-state');
+                const timerText = document.getElementById('corridor-wave-timer');
+                
+                if (data.green_wave_active) {
+                    if (badge) {
+                        badge.innerText = 'OLA VERDE ACTIVA';
+                        badge.style.color = '#10b981';
+                    }
+                    if (stateText) {
+                        stateText.innerText = `🟢 OLA VERDE ACTIVA (Desde ${data.green_wave_origin || 'Cruce'})`;
+                        stateText.style.color = '#10b981';
+                    }
+                    if (timerText) {
+                        timerText.innerText = `Ventana de paso abierta: ${data.green_wave_remaining_sec}s restantes`;
+                    }
+                } else {
+                    if (badge) {
+                        badge.innerText = 'Normal';
+                        badge.style.color = 'var(--text-muted)';
+                    }
+                    if (stateText) {
+                        stateText.innerText = 'INACTIVA';
+                        stateText.style.color = 'var(--text-muted)';
+                    }
+                    if (timerText) {
+                        timerText.innerText = 'En espera de pelotón vehicular';
+                    }
+                }
+            } catch(e) {}
+        }
+
+        async function triggerManualGreenWave() {
+            try {
+                const res = await fetch('/api/corridor/trigger_wave', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ vehicle_count: 6, direction: 'SUR' })
+                });
+                const data = await res.json();
+                alert("🌊 Ola Verde emitida exitosamente a lo largo del corredor.");
+                fetchCorridorStatus();
+            } catch(e) {
+                alert("Error emitiendo ola verde: " + e);
             }
         }
 
@@ -2069,6 +2167,7 @@
             if (id === 'modal-zones') loadStudioConfig();
             if (id === 'modal-peak') fetchPeakHour();
             if (id === 'modal-violations') fetchViolations();
+            if (id === 'modal-corridor') fetchCorridorStatus();
         }
 
         function closeModal(id) {
@@ -2084,11 +2183,13 @@
         setInterval(fetchEvents, 2000);
         setInterval(updateTrafficChart, 5000);
         setInterval(fetchViolations, 10000);
+        setInterval(fetchCorridorStatus, 3000);
 
         fetchStatus();
         fetchEvents();
         updateTrafficChart();
         fetchViolations();
+        fetchCorridorStatus();
     </script>
 </body>
 </html>

@@ -11,8 +11,14 @@ Desarrollador Principal: Moisés Emilio Martínez Arias
 import os
 import time
 import socket
-import psutil
 from datetime import timedelta
+
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    psutil = None
+    PSUTIL_AVAILABLE = False
 
 
 class HardwareMonitor:
@@ -27,12 +33,19 @@ class HardwareMonitor:
         self._last_ip_check = time.time()
         
         # Pre-calentar medición de CPU para evitar lecturas de 0.0% iniciales
-        psutil.cpu_percent(interval=None)
-        psutil.cpu_percent(interval=None, percpu=True)
+        if PSUTIL_AVAILABLE and psutil:
+            try:
+                psutil.cpu_percent(interval=None)
+                psutil.cpu_percent(interval=None, percpu=True)
+            except Exception:
+                pass
         
-        try:
-            self._last_net_io = psutil.net_io_counters()
-        except Exception:
+        if PSUTIL_AVAILABLE and psutil:
+            try:
+                self._last_net_io = psutil.net_io_counters()
+            except Exception:
+                self._last_net_io = None
+        else:
             self._last_net_io = None
         self._last_net_time = time.time()
         self.net_speed_kbps = {"rx": 0.0, "tx": 0.0}
@@ -182,20 +195,36 @@ class HardwareMonitor:
             self._last_ip_check = now
 
         # CPU y RAM
-        cpu_total = psutil.cpu_percent(interval=None)
-        cpu_cores = psutil.cpu_percent(interval=None, percpu=True)
-        mem = psutil.virtual_memory()
+        if PSUTIL_AVAILABLE and psutil:
+            try:
+                cpu_total = psutil.cpu_percent(interval=None)
+                cpu_cores = psutil.cpu_percent(interval=None, percpu=True)
+                mem = psutil.virtual_memory()
+                ram_used_mb = round(mem.used / (1024**2), 1)
+                ram_total_mb = round(mem.total / (1024**2), 1)
+                ram_percent = mem.percent
+            except Exception:
+                cpu_total = 0.0
+                cpu_cores = [0.0]
+                ram_used_mb, ram_total_mb, ram_percent = 0.0, 0.0, 0.0
+        else:
+            cpu_total = 0.0
+            cpu_cores = [0.0]
+            ram_used_mb, ram_total_mb, ram_percent = 0.0, 0.0, 0.0
         
         # Almacenamiento (Raíz)
-        try:
-            disk = psutil.disk_usage('/')
-            disk_info = {
-                "total_gb": round(disk.total / (1024**3), 1),
-                "used_gb": round(disk.used / (1024**3), 1),
-                "free_gb": round(disk.free / (1024**3), 1),
-                "percent": disk.percent
-            }
-        except Exception:
+        if PSUTIL_AVAILABLE and psutil:
+            try:
+                disk = psutil.disk_usage('/')
+                disk_info = {
+                    "total_gb": round(disk.total / (1024**3), 1),
+                    "used_gb": round(disk.used / (1024**3), 1),
+                    "free_gb": round(disk.free / (1024**3), 1),
+                    "percent": disk.percent
+                }
+            except Exception:
+                disk_info = {"total_gb": 0, "used_gb": 0, "free_gb": 0, "percent": 0}
+        else:
             disk_info = {"total_gb": 0, "used_gb": 0, "free_gb": 0, "percent": 0}
 
         temp_c = self.get_temperature()
@@ -211,9 +240,9 @@ class HardwareMonitor:
             "cpu_cores": cpu_cores,
             "cpu_count": len(cpu_cores),
             "cpu_temp_c": temp_c,
-            "ram_used_mb": round(mem.used / (1024**2), 1),
-            "ram_total_mb": round(mem.total / (1024**2), 1),
-            "ram_percent": mem.percent,
+            "ram_used_mb": ram_used_mb,
+            "ram_total_mb": ram_total_mb,
+            "ram_percent": ram_percent,
             "disk": disk_info,
             "net_speed_kbps": net_speed,
             "npu": npu_metrics

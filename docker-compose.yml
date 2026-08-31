@@ -15,10 +15,10 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_HOST=fluxa-db
-      - DATABASE_USER=root
-      - DATABASE_PASSWORD=theelderfallout99
+      - DATABASE_USER=fluxa
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-fluxa_db_secure_2026}
       - DATABASE_NAME=fluxa_traffic
-      - FLUXA_SECRET_KEY=fluxa_enterprise_secure_token_2026
+      - FLUXA_SECRET_KEY=${FLUXA_SECRET_KEY:-fluxa_enterprise_secure_token_2026}
     volumes:
       - ./logs:/app/logs
       - ./videos:/app/videos
@@ -41,7 +41,9 @@ services:
     container_name: fluxa_mariadb
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: theelderfallout99
+      MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD:-fluxa_root_secure_2026}
+      MYSQL_USER: fluxa
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD:-fluxa_db_secure_2026}
       MYSQL_DATABASE: fluxa_traffic
     ports:
       - "3306:3306"

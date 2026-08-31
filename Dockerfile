@@ -9,13 +9,16 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Instalar dependencias de sistema (OpenGL, Glib, librerías V4L2 y utilidades)
+# Instalar dependencias de sistema (OpenGL, Glib, librerías V4L2, Tesseract OCR y utilidades)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
     libgomp1 \
     v4l-utils \
     curl \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    tesseract-ocr-spa \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

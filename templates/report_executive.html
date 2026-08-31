@@ -328,7 +328,8 @@
                 <div class="info">
                     <div><strong>HORA:</strong> {{ v.timestamp }}</div>
                     <div><strong>VEHÍCULO ID:</strong> #{{ v.track_id }}</div>
-                    <div><strong>ZONA:</strong> {{ v.lane_name | upper }}</div>
+                    <div><strong>ZONA / CARRIL:</strong> {{ (v.lane_name or v.lane or 'CARRIL') | upper }}</div>
+                    <div><strong>ESTADO FSM:</strong> {{ (v.phase_state or 'ROJO') | upper }}</div>
                 </div>
             </div>
             {% endfor %}

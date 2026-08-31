@@ -114,3 +114,5 @@ Suministro del kit de grado industrial listo para montaje en mástil o gabinete:
 * **Desarrollador Principal y Titular de Derechos:** Moisés Emilio Martínez Arias
 * **Institución:** Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
 * **División:** Ingeniería en Sistemas Computacionales
+* **Repositorio Oficial:** [https://github.com/Pozole98/fluxa-smart-city/](https://github.com/Pozole98/fluxa-smart-city/)
+* **Proyecto Registrado:** Certamen de Innovación Tecnológica y Emprendimiento InnovaTecNM 2026

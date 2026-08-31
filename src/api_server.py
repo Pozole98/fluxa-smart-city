@@ -128,7 +128,15 @@ estado_global = {
         "tipo": "Auto-Detect",
         "source_raw": "0"
     },
-    "hardware": {}
+    "hardware": {},
+    "corridor": {
+        "corridor_name": "Corredor Principal",
+        "current_node_id": "CRUCE_01",
+        "green_wave_active": False,
+        "green_wave_origin": None,
+        "green_wave_remaining_sec": 0.0,
+        "nodes": []
+    }
 }
 
 eventos_sistema = []
@@ -139,6 +147,7 @@ frame_getter_callback = None
 hot_reload_callback_global = None
 change_source_callback_global = None
 db_manager_instance = None
+corridor_manager_instance = None
 
 def registrar_evento(tipo, mensaje):
     with eventos_lock:
@@ -484,6 +493,41 @@ def get_violation_snapshot(filename):
     """Descarga o visualiza la foto de evidencia de una infracción"""
     clean_name = os.path.basename(filename)
     return send_from_directory(violations_directory, clean_name)
+
+@app.route('/api/corridor/status', methods=['GET'])
+def get_corridor_status():
+    """Retorna el estado de sincronización del corredor vial y olas verdes activas"""
+    if corridor_manager_instance is not None:
+        return jsonify(corridor_manager_instance.get_status())
+    return jsonify(estado_global.get("corridor", {}))
+
+@app.route('/api/corridor/incoming_platoon', methods=['POST'])
+def receive_incoming_platoon_api():
+    """Endpoint REST para recibir notificación de pelotón de vehículos desde un nodo adyacente"""
+    if not corridor_manager_instance:
+        return jsonify({"error": "Gestor de corredor no inicializado"}), 400
+    try:
+        data = request.get_json(force=True)
+        corridor_manager_instance.receive_incoming_platoon(data)
+        registrar_evento('INFO', f"Pelotón entrante recibido desde {data.get('origin_node', 'NODO_EXTERNO')} (ETA: {data.get('eta_seconds')}s)")
+        return jsonify({"status": "acknowledged", "green_wave_triggered": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/api/corridor/trigger_wave', methods=['POST'])
+def trigger_corridor_wave_api():
+    """Permite al operador SCADA C5 forzar o simular una ola verde a lo largo del corredor"""
+    if not corridor_manager_instance:
+        return jsonify({"error": "Gestor de corredor no inicializado"}), 400
+    try:
+        data = request.get_json(force=True) if request.is_json else {}
+        vehicles = int(data.get("vehicle_count", 5))
+        direction = str(data.get("direction", "SUR"))
+        corridor_manager_instance.notify_departure_platoon(vehicle_count=vehicles, direction=direction)
+        registrar_evento('EMERG', f"🌊 Ola Verde Manual iniciada en corredor hacia {direction} (Pelotón: {vehicles} veh)")
+        return jsonify({"status": "wave_emitted", "vehicles": vehicles, "direction": direction})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @app.route('/api/frame/snapshot')
 def get_frame_snapshot():
@@ -903,13 +947,14 @@ class TelemetryAPI:
         self.enabled = enabled
         self.thread = None
 
-    def start(self, controller_callback=None, frame_getter=None, db_instance=None, hot_reload_callback=None, change_source_callback=None):
-        global control_callback, frame_getter_callback, db_manager_instance, hot_reload_callback_global, change_source_callback_global
+    def start(self, controller_callback=None, frame_getter=None, db_instance=None, hot_reload_callback=None, change_source_callback=None, corridor_instance=None):
+        global control_callback, frame_getter_callback, db_manager_instance, hot_reload_callback_global, change_source_callback_global, corridor_manager_instance
         control_callback = controller_callback
         frame_getter_callback = frame_getter
         db_manager_instance = db_instance
         hot_reload_callback_global = hot_reload_callback
         change_source_callback_global = change_source_callback
+        corridor_manager_instance = corridor_instance
         
         if not self.enabled:
             return
@@ -932,7 +977,7 @@ class TelemetryAPI:
     def update_state(self, topologia, backend, status_msg, autos_dict, autos_acumulados, fps, modo, 
                      arduino_info, camara_info, latencias, f_transcurrido=0, f_asignado=0,
                      emergencia_activa=False, eje_emergencia=None, demanda_ponderada=None,
-                     sostenibilidad=None, v2x=None, ai_engine=None):
+                     sostenibilidad=None, v2x=None, ai_engine=None, corridor=None):
         if not self.enabled:
             return
             
@@ -950,6 +995,8 @@ class TelemetryAPI:
             estado_global["v2x"] = v2x.copy()
         if ai_engine is not None:
             estado_global["ai_engine"] = ai_engine.copy()
+        if corridor is not None:
+            estado_global["corridor"] = corridor.copy()
         estado_global["fps"] = round(fps, 1)
         estado_global["modo"] = modo
         estado_global["emergencia_activa"] = emergencia_activa

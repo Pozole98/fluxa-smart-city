@@ -330,15 +330,18 @@ Panel de control operativo e industrial protegido mediante autenticación cripto
 | :--- | :--- | :--- | :---: | :--- |
 | **Portal Ciudadano** | `/` | Público | `GET` | Visualización pública de tráfico, semáforo en vivo y métricas V2X/GLOSA. |
 | **Portal de Login C5** | `/login` | Público | `GET, POST` | Autenticación criptográfica de operadores con protección contra fuerza bruta. |
-| **Centro de Mando SCADA** | `/admin` | Operador C5 | `GET` | Consola central de monitoreo, control de emergencias y configuración. |
+| **Centro de Mando SCADA** | `/admin` | Operador C5 | `GET` | Consola central de monitoreo, control de emergencias, olas verdes y configuración. |
 | **Calibrador ROI Canvas** | `/admin` (Modal) | Operador C5 | `POST` | Editor visual de polígonos de carril con actualización en caliente. |
 | **Dictamen Oficial PDF** | `/report/executive` | Operador C5 | `GET` | Informe de auditoría vial y aforo listo para exportar a PDF (`Ctrl + P`). |
 | **Streaming MJPEG** | `/video_feed` | Público | `GET` | Transmisión de video continua con cajas delimitadoras de IA y HUD. |
 | **Snapshot de Fotograma** | `/api/frame/snapshot` | Público | `GET` | Captura JPEG congelada para el calibrador visual en navegador. |
 | **Telemetría Global** | `/api/status` | Público | `GET` | Métricas de aforo, FPS, estado FSM, latencias y telemetría de hardware. |
 | **Mando de Emergencias** | `/api/control` | Operador C5 | `POST` | Despacho de corredor verde prioritario para unidades de emergencia C5. |
+| **Estado de Corredor Vial** | `/api/corridor/status` | Público | `GET` | Estado de sincronización del corredor, olas verdes activas y tiempos ETA. |
+| **Pelotón Entrante (Mesh)** | `/api/corridor/incoming_platoon` | Nodos / Mesh | `POST` | Recepción de notificación de flujo vehicular desde intersección adyacente. |
+| **Emisión de Ola Verde** | `/api/corridor/trigger_wave` | Operador C5 | `POST` | Forzado o simulación de ola verde a lo largo de las intersecciones del corredor. |
 | **Configuración Maestra** | `/api/config/full` | Operador C5 | `GET, POST` | Consulta y guardado en caliente de parámetros y geometrías de carril. |
-| **Consulta Infracciones** | `/api/violations` | Operador C5 | `GET` | Listado de infracciones en luz roja con enlaces a fotografías de evidencia. |
+| **Consulta Infracciones** | `/api/violations` | Operador C5 | `GET` | Listado de infracciones en luz roja con enlaces a evidencia fotográfica. |
 | **Foto de Infracción** | `/api/violations/snapshot/<f>` | Operador C5 | `GET` | Visualización o descarga de fotografía forense de infracción en luz roja. |
 | **Broadcast V2X SPaT** | `/api/v2x/spat` | Público | `GET` | Telemetría SPaT (*Signal Phase and Timing*) para vehículos conectados. |
 | **KPIs de Sustentabilidad**| `/api/kpis/sustainability` | Público | `GET` | Litros de combustible ahorrados y $\text{CO}_2$ mitigado en tiempo real. |
@@ -348,28 +351,39 @@ Panel de control operativo e industrial protegido mediante autenticación cripto
 ## 8. Estructura del Repositorio
 
 ```text
-yolov8_semaforo_advanced/
+fluxa-smart-city/
 ├── config.example.json       # Plantilla maestra de configuración (sanitizada)
+├── install.sh                # Script de despliegue industrial automatizado sin fricción
+├── uninstall.sh              # Script de desinstalación limpia y purga opcional
+├── Dockerfile                # Imagen Docker multi-arquitectura
+├── docker-compose.yml        # Orquestación de contenedores (FLUXA Core + MariaDB)
 ├── main.py                   # Punto de entrada universal por CLI
-├── requirements.txt          # Dependencias de Python
+├── requirements.txt          # Dependencias de Python (YOLOv8, OpenCV, Flask, PyMySQL)
 ├── yolov8n.pt                # Pesos neuronales YOLOv8 Nano para CPU
 ├── models/                   # Modelos cuantizados (.rknn) para Orange Pi 5 NPU
 ├── docs/
 │   ├── MANUAL_TECNICO.md     # Manual técnico detallado para ingeniería y desarrollo
+│   ├── MODELO_NEGOCIO_B2G.md # Plan de negocio municipal B2G, BOM y retorno social (ROI)
 │   ├── PLAN_ENTRENAMIENTO.md # Guía de entrenamiento, fine-tuning y cuantización RKNN
 │   └── arquitectura.mmd      # Diagrama de arquitectura del sistema en Mermaid
 ├── logs/
-│   └── violations/           # Fotografías de evidencia de infracciones en luz roja
+│   └── violations/           # Fotografías de evidencia forense de infracciones en luz roja
 ├── videos/
 │   └── demo.mp4              # Clip de video estándar para demostración y pruebas
+├── tests/                    # Batería de pruebas unitarias y auditoría end-to-end
+│   ├── run_all_unit_tests.py # Suite de verificación integral de producción
+│   ├── test_corridor.py      # Pruebas de propagación de olas verdes y cálculo ETA
+│   └── test_audit_full.py    # Auditoría FSM, tolerancia a fallos y resiliencia MariaDB
 ├── src/                      # Módulos del núcleo del sistema
-│   ├── cli.py                # Analizador CLI y presentación de consola
+│   ├── cli.py                # Analizador CLI y asignación multi-núcleo (--npu-core)
+│   ├── corridor_sync.py      # Sincronización mesh de corredores y olas verdes adaptativas
 │   ├── core_semaforo.py      # Clase base de control semafórico, FSM, ROIs, TSP y fotomultas
-│   ├── core_semaforo_rknn.py # Controlador para aceleración NPU RKNN con fallback a CPU
+│   ├── core_semaforo_rknn.py # Controlador para aceleración NPU RKNN (Tri-Core 0, 1, 2, all)
 │   ├── db_manager.py         # Gestor asíncrono MariaDB con búfer local tolerante a fallos
-│   ├── hardware_monitor.py   # Telemetría de hardware (CPU, temperatura, RAM, disco)
+│   ├── hardware_monitor.py   # Telemetría de hardware (CPU, temperatura SoC RK3588, RAM, disco)
 │   ├── api_server.py         # Servidor Web Flask, APIs REST, autenticación y streaming
 │   ├── videostream.py        # Ingestión de video en hilo secundario con reconexión
+│   ├── analytics.py          # Registro de telemetría y aforo con rotación diaria 24/7
 │   ├── ui4_way_cpu.py / ui4_way.py
 │   ├── ui2_way_cpu.py / ui2_way.py
 │   ├── ui3_tee_cpu.py / ui3_tee.py
@@ -379,10 +393,9 @@ yolov8_semaforo_advanced/
 │   ├── fluxa.service         # Unidad de servicio systemd
 │   └── install_service.sh    # Script de despliegue de servicio
 └── templates/                # Plantillas Web (HTML5 / Vanilla CSS / JS)
-    ├── index.html            # Consola SCADA C5 y Calibrador Visual Canvas
+    ├── index.html            # Consola SCADA C5, Olas Verdes y Calibrador Visual Canvas
     ├── public.html           # Portal Ciudadano de Movilidad
     ├── login.html            # Portal de Autenticación C5
-    └── report_executive.html # Reporte Oficial de Auditoría Vial en PDF
 ```
 
 ---

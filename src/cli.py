@@ -148,6 +148,13 @@ Ejemplos de Uso:
     )
 
     parser.add_argument(
+        "--npu-core",
+        choices=["0", "1", "2", "all"],
+        default=None,
+        help="Núcleo NPU RK3588 asignado para Orange Pi 5: '0', '1', '2' o 'all' (por defecto: all)"
+    )
+
+    parser.add_argument(
         "--list-topologies",
         action="store_true",
         help="Listar todas las topologías viales soportadas y salir"
@@ -169,6 +176,8 @@ Ejemplos de Uso:
     print_banner(args.topology, args.backend, is_headless, args.port)
     if args.video:
         print(f"🎬 Fuente de video especificada por CLI: {args.video}\n")
+    if args.npu_core and args.backend == "rknn":
+        print(f"⚡ Núcleo NPU RK3588 asignado: Core {args.npu_core}\n")
 
     # Instanciar el controlador según backend
     if args.backend == "cpu":
@@ -194,7 +203,7 @@ Ejemplos de Uso:
         mod = __import__(topology_info["rknn_module"])
         if is_headless:
             controller_cls = getattr(mod, topology_info["rknn_controller"])
-            controller = controller_cls(port=args.port, video_source=args.video)
+            controller = controller_cls(port=args.port, video_source=args.video, npu_core_id=args.npu_core)
             controller.run_headless()
         else:
             tk = getattr(mod, "tk", None)

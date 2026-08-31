@@ -25,28 +25,28 @@ class TrafficAnalyticsLogger:
             
         self.log_dir = log_dir
         if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
-            
-        date_str = datetime.now().strftime("%Y-%m-%d")
-        self.filename = os.path.join(self.log_dir, f"traffic_log_{date_str}.csv")
-        self.headers_written = os.path.isfile(self.filename)
+            os.makedirs(self.log_dir, exist_ok=True)
 
     def log_state(self, estado_nombre, autos):
         if not self.enabled or not autos:
             return
             
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.now()
+        timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
+        date_str = now.strftime("%Y-%m-%d")
+        current_file = os.path.join(self.log_dir, f"traffic_log_{date_str}.csv")
+        
         keys = list(autos.keys())
         values = list(autos.values())
         
-        if not self.headers_written:
-            with open(self.filename, mode='w', newline='') as file:
+        file_exists = os.path.isfile(current_file)
+        if not file_exists:
+            with open(current_file, mode='w', newline='', encoding='utf-8') as file:
                 writer = csv.writer(file)
                 headers = ["Timestamp", "Estado_Semaforo"] + keys + ["Total"]
                 writer.writerow(headers)
-            self.headers_written = True
             
-        with open(self.filename, mode='a', newline='') as file:
+        with open(current_file, mode='a', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
             total = sum(values)
             row = [timestamp, estado_nombre] + values + [total]
