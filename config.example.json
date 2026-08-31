@@ -47,8 +47,14 @@
         "tiempo_reposo": 20.0,
         "factor_tiempo_por_auto": 2.5
     },
+    "corridor": {
+        "node_id": "CRUCE_01",
+        "name": "Avenida Principal Coacalco",
+        "avg_speed_kmh": 45.0
+    },
     "ai_model": {
         "model_file": "yolov8n.pt",
+        "npu_core_id": "all",
         "confidence_threshold": 0.3,
         "iou_threshold": 0.45,
         "classes_to_detect": [

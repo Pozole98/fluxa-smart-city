@@ -74,8 +74,8 @@ if command -v zypper &>/dev/null; then
     echo -e "${C_CYAN}➡️  Instalando paquetes via ZYPPER (openSUSE Tumbleweed/Leap/MicroOS/SLES)...${C_RESET}"
     run_sudo zypper --non-interactive refresh || true
     
-    # Paquetes base del sistema
-    SUSE_PKGS="mariadb mariadb-client Mesa-libGL1 libglib-2_0-0 libgthread-2_0-0 v4l-utils curl git udev openssl gcc gcc-c++"
+    # Paquetes base del sistema y OCR ANPR
+    SUSE_PKGS="mariadb mariadb-client Mesa-libGL1 libglib-2_0-0 libgthread-2_0-0 v4l-utils curl git udev openssl gcc gcc-c++ tesseract-ocr tesseract-ocr-traineddata-eng tesseract-ocr-traineddata-spa"
     
     # Detección dinámica de paquetes Python según la versión instalada o disponible
     PY_CANDIDATES=""
@@ -97,13 +97,13 @@ if command -v zypper &>/dev/null; then
     run_sudo zypper --non-interactive install -y $PKGS_TO_INSTALL
 elif command -v dnf &>/dev/null; then
     echo -e "${C_CYAN}➡️  Instalando paquetes via DNF (Fedora/RHEL/CentOS)...${C_RESET}"
-    run_sudo dnf install -y python3 python3-pip python3-devel python3-tkinter mesa-libGL glib2 mariadb-server mariadb v4l-utils curl git udev openssl
+    run_sudo dnf install -y python3 python3-pip python3-devel python3-tkinter mesa-libGL glib2 mariadb-server mariadb v4l-utils curl git udev openssl tesseract tesseract-langpack-eng tesseract-langpack-spa
 elif command -v apt-get &>/dev/null; then
     echo -e "${C_CYAN}➡️  Instalando paquetes via APT (Ubuntu/Debian/Armbian)...${C_RESET}"
     run_sudo apt-get update -y
-    run_sudo apt-get install -y python3 python3-pip python3-venv python3-dev python3-tk libgl1 libglib2.0-0 mariadb-server mariadb-client v4l-utils curl git udev openssl
+    run_sudo apt-get install -y python3 python3-pip python3-venv python3-dev python3-tk libgl1 libglib2.0-0 mariadb-server mariadb-client v4l-utils curl git udev openssl tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa
 else
-    echo -e "${C_YELLOW}⚠️ Gestor de paquetes no estándar. Asegúrate de contar con Python 3.9+, MariaDB y OpenGL.${C_RESET}"
+    echo -e "${C_YELLOW}⚠️ Gestor de paquetes no estándar. Asegúrate de contar con Python 3.9+, MariaDB, Tesseract OCR y OpenGL.${C_RESET}"
 fi
 
 # 5. Configuración de Reglas Udev para Hardware Inmediato (Sin Reiniciar)
@@ -347,7 +347,11 @@ echo -e "1. ${C_BOLD}Ejecución manual por CLI:${C_RESET}"
 echo -e "   ${C_CYAN}fluxa --topology 4_way --backend cpu --headless --port 5000${C_RESET}"
 echo -e "   ${C_CYAN}fluxa --topology 4_way --backend cpu --gui${C_RESET}"
 if [ "$ARCH" = "aarch64" ]; then
-    echo -e "   ${C_CYAN}fluxa --topology 4_way --backend rknn --headless --port 5000${C_RESET}"
+    echo -e "   ${C_CYAN}fluxa --topology 4_way --backend rknn --npu-core all --headless --port 5000${C_RESET}"
+    echo -e "   ${C_CYAN}# Despliegue Multi-Nodo en 1 sola Orange Pi 5 (3 Cruces en paralelo):${C_RESET}"
+    echo -e "   ${C_CYAN}fluxa --topology 4_way --backend rknn --npu-core 0 --port 5000 &${C_RESET}"
+    echo -e "   ${C_CYAN}fluxa --topology 4_way --backend rknn --npu-core 1 --port 5001 &${C_RESET}"
+    echo -e "   ${C_CYAN}fluxa --topology 4_way --backend rknn --npu-core 2 --port 5002 &${C_RESET}"
 fi
 
 echo -e "\n2. ${C_BOLD}Control del Servicio de Gabinete (Systemd):${C_RESET}"

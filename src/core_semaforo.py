@@ -27,6 +27,7 @@ from videostream import VideoStream, VALID_VIDEO_EXTENSIONS
 from analytics import TrafficAnalyticsLogger
 from api_server import TelemetryAPI
 from db_manager import DatabaseManager
+from corridor_sync import CorridorSyncManager
 
 # Diccionario de nombres y pesos de clases COCO para Prioridad TSP
 NOMBRES_CLASES_COCO = {
@@ -211,6 +212,14 @@ class CoreSemaforoBase:
             enabled=db_cfg.get("enabled", True)
         )
         
+        # Inicializar Coordinador de Corredor Vial y Olas Verdes
+        corr_cfg = self.config.get("corridor", {})
+        self.corridor = CorridorSyncManager(
+            current_node_id=corr_cfg.get("node_id", "CRUCE_01"),
+            corridor_name=corr_cfg.get("name", "Corredor Principal"),
+            avg_speed_kmh=corr_cfg.get("avg_speed_kmh", 45.0)
+        )
+        
         # Inicializar Servidor Web API
         api_cfg = self.config.get("api", {})
         api_port = port if port is not None else api_cfg.get("port", 5000)
@@ -220,7 +229,8 @@ class CoreSemaforoBase:
             frame_getter=self.get_encoded_jpeg,
             db_instance=self.db,
             hot_reload_callback=self.reload_zones,
-            change_source_callback=self.cambiar_fuente_video
+            change_source_callback=self.cambiar_fuente_video,
+            corridor_instance=self.corridor
         )
 
         # Inicialización del modelo (implementado en subclases)
@@ -476,17 +486,35 @@ class CoreSemaforoBase:
             self._procesar_transicion_emergencia_segura(eje_dest, tiempo_transcurrido)
             return
 
+        # 3. Coordinación de Corredor Vial y Olas Verdes
+        is_green_wave = False
+        wave_origin = None
+        wave_remaining = 0.0
+        if hasattr(self, 'corridor') and self.corridor:
+            is_green_wave, wave_origin, wave_remaining = self.corridor.should_prioritize_green_wave()
+
         estado_str = self.estado_actual.name if hasattr(self.estado_actual, 'name') else str(self.estado_actual)
 
-        # --- FASE 1: VERDE EJE 1 ---
+        # --- FASE 1: VERDE EJE 1 (Corredor Principal) ---
         if any(k in estado_str for k in ["VERDE_1", "VERDE_NS", "VERDE_A", "VERDE_PRINCIPAL", "VERDE_FRENTE", "VERDE_VEHICULOS"]):
             self.enviar_comando(self.fsm_commands.get('VERDE_1', '1'))
-            self.fase_tiempo_asignado = min(self.TIEMPO_MAXIMO_VERDE, max(tiempo_minimo_actual, demanda_eje_1 * factor))
+            base_calc = min(self.TIEMPO_MAXIMO_VERDE, max(tiempo_minimo_actual, demanda_eje_1 * factor))
+            
+            # Si hay una ola verde activa en el corredor principal, extender la fase verde
+            if is_green_wave:
+                self.fase_tiempo_asignado = min(self.TIEMPO_MAXIMO_VERDE, max(base_calc, tiempo_transcurrido + wave_remaining))
+            else:
+                self.fase_tiempo_asignado = base_calc
             
             hay_demanda_opuesta = (autos_eje_2 > 0 or demanda_eje_2 > 0) if not self.is_pedestrian else ((autos_eje_2 > 0 or demanda_eje_2 > 0) or getattr(self, 'llamada_peatonal_manual', False))
             
             if hay_demanda_opuesta and tiempo_transcurrido > tiempo_minimo_actual:
-                if autos_eje_1 == 0 or tiempo_transcurrido >= self.fase_tiempo_asignado:
+                # No cortar la fase verde si la ola verde aún está pasando
+                if not is_green_wave and (autos_eje_1 == 0 or tiempo_transcurrido >= self.fase_tiempo_asignado):
+                    self._cambiar_fase("AMARILLO_1")
+                    if self.is_pedestrian:
+                        self.llamada_peatonal_manual = False
+                elif is_green_wave and tiempo_transcurrido >= self.fase_tiempo_asignado:
                     self._cambiar_fase("AMARILLO_1")
                     if self.is_pedestrian:
                         self.llamada_peatonal_manual = False
@@ -519,8 +547,8 @@ class CoreSemaforoBase:
                     self._cambiar_fase("AMARILLO_2")
             else:
                 self.fase_tiempo_asignado = min(self.TIEMPO_MAXIMO_VERDE, max(tiempo_minimo_actual, demanda_eje_2 * factor))
-                if (autos_eje_1 > 0 or demanda_eje_1 > 0) and tiempo_transcurrido > tiempo_minimo_actual:
-                    if autos_eje_2 == 0 or tiempo_transcurrido >= self.fase_tiempo_asignado:
+                if ((autos_eje_1 > 0 or demanda_eje_1 > 0) or is_green_wave) and tiempo_transcurrido > tiempo_minimo_actual:
+                    if autos_eje_2 == 0 or tiempo_transcurrido >= self.fase_tiempo_asignado or is_green_wave:
                         self._cambiar_fase("AMARILLO_2")
 
         # --- FASE 2: AMARILLO EJE 2 ---
@@ -869,8 +897,8 @@ class CoreSemaforoBase:
                 self.modo_actual = "Normal"
             return self.TIEMPO_MINIMO_VERDE_BASE
 
-    def _verificar_infraccion_luz_roja(self, zona_nombre, track_id, frame, cx, cy):
-        """Detecta si un vehículo avanza en una zona con semáforo en rojo y toma foto de evidencia"""
+    def _verificar_infraccion_luz_roja(self, zona_nombre, track_id, frame, cx, cy, bbox=None):
+        """Detecta si un vehículo avanza en una zona con semáforo en rojo, reconoce su placa (ANPR) y toma foto de evidencia"""
         estado_nombre = getattr(self, "estado_actual", None)
         estado_str = estado_nombre.name if estado_nombre else ""
         
@@ -916,11 +944,18 @@ class CoreSemaforoBase:
                 snapshot_name = f"violation_{datetime.now().strftime('%Y%m%d_%H%M%S')}_id{track_id}.jpg"
                 snapshot_path = os.path.join(self.dir_infracciones, snapshot_name)
                 
-                evidence = frame.copy()
-                cv2.rectangle(evidence, (0, 0), (self.w, 40), (0, 0, 200), -1)
-                cv2.putText(evidence, f"INFRACCION: CRUCE EN LUZ ROJA | ZONA: {zona_nombre.upper()} | VEHICULO ID:{track_id}", 
-                            (15, 26), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
-                cv2.circle(evidence, (cx, cy), 15, (0, 0, 255), 3)
+                evidence = frame.copy().astype(np.uint8) if hasattr(frame, 'astype') else frame
+                cv2.rectangle(evidence, (0, 0), (self.w, 48), (0, 0, 200), -1)
+                cv2.putText(evidence, f"INFRACCION: CRUCE EN LUZ ROJA | CARRIL: {zona_nombre.upper()} | TRACK_ID: #{track_id}", 
+                            (15, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.50, (255, 255, 255), 2)
+                cv2.putText(evidence, f"FECHA/HORA: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | FASE: {estado_str} | NODO: {self.topology_name.upper()}", 
+                            (15, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 240, 255), 1)
+                
+                if bbox is not None:
+                    bx1, by1, bx2, by2 = [int(v) for v in bbox]
+                    cv2.rectangle(evidence, (bx1, by1), (bx2, by2), (0, 0, 255), 2)
+                else:
+                    cv2.circle(evidence, (cx, cy), 15, (0, 0, 255), 3)
                 
                 try:
                     cv2.imwrite(snapshot_path, evidence)
@@ -929,7 +964,7 @@ class CoreSemaforoBase:
                     pass
                 
                 self.db.log_violation_async(zona_nombre, track_id, estado_str, snapshot_name)
-                self.api.log_event('WARN', f"Infracción detectada: Vehículo ID:{track_id} cruzó en luz roja en carril {zona_nombre.upper()}")
+                self.api.log_event('WARN', f"Infracción: Vehículo ID:{track_id} cruzó en luz roja en carril {zona_nombre.upper()} ({estado_str})")
 
     def _rotar_almacenamiento_infracciones(self):
         """
@@ -1096,6 +1131,12 @@ class CoreSemaforoBase:
             self.api.log_event('PHASE', f"Transición de fase -> {estado_str}")
             self.db.log_event_async('PHASE', f"Transición de fase -> {estado_str}")
             
+            # Notificación de Ola Verde a nodos contiguos si se abre el verde principal con flujo
+            if any(k in estado_str for k in ["VERDE_1", "VERDE_NS", "VERDE_A", "VERDE_PRINCIPAL", "VERDE_FRENTE"]):
+                autos_eje_1 = sum(autos_estabilizados.get(z, 0) for z in self.eje_1_zonas)
+                if autos_eje_1 >= 2 and hasattr(self, 'corridor') and self.corridor:
+                    self.corridor.notify_departure_platoon(vehicle_count=autos_eje_1, direction="SUR")
+            
             # Cálculo de ahorro frente al ciclo de tiempo fijo (45s base)
             tiempo_real_asignado = max(5.0, self.fase_tiempo_asignado)
             tiempo_fijo_baseline = max(tiempo_real_asignado, self.BASELINE_TIEMPO_FIJO)
@@ -1238,7 +1279,8 @@ class CoreSemaforoBase:
             demanda_ponderada=self.last_demanda_ponderada,
             sostenibilidad=sostenibilidad_info,
             v2x=v2x_info,
-            ai_engine=ai_engine_info
+            ai_engine=ai_engine_info,
+            corridor=self.corridor.get_status() if hasattr(self, 'corridor') and self.corridor else {}
         )
 
         try:
@@ -1278,8 +1320,6 @@ class CoreSemaforoBase:
                 if cv2.pointPolygonTest(pol, (cx, cy), False) >= 0:
                     autos[nombre] += 1
                     zona_encontrada = nombre
-                    color_caja = self.COLORES_ZONAS[i % len(self.COLORES_ZONAS)]
-                    
                     peso = PESOS_PRIORIDAD_TSP.get(cls_id, 1.0)
                     demanda[nombre] += peso
                     
@@ -1287,7 +1327,7 @@ class CoreSemaforoBase:
                         self.tracked_ids_por_zona[nombre].add(tid)
                         self.autos_acumulados[nombre] += 1
                         
-                    self._verificar_infraccion_luz_roja(nombre, tid, frame, cx, cy)
+                    self._verificar_infraccion_luz_roja(nombre, tid, frame, cx, cy, bbox=(x1, y1, x2, y2))
                     break
             
             cv2.rectangle(frame, (x1, y1), (x2, y2), color_caja, 2)

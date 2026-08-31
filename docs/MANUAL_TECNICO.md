@@ -445,7 +445,7 @@ CREATE TABLE IF NOT EXISTS system_events (
     INDEX idx_time (timestamp)
 ) ENGINE=InnoDB;
 
--- 3. Registro de infracciones por cruce en luz roja
+-- 3. Registro de infracciones por cruce en luz roja con evidencia forense
 CREATE TABLE IF NOT EXISTS red_light_violations (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     timestamp DATETIME NOT NULL,
@@ -456,6 +456,26 @@ CREATE TABLE IF NOT EXISTS red_light_violations (
     INDEX idx_time (timestamp)
 ) ENGINE=InnoDB;
 ```
+
+---
+
+## 7. Módulos Avanzados de Movilidad y Orquestación Edge
+
+### 7.1. Sincronización de Corredor Vial y Olas Verdes (`src/corridor_sync.py`)
+* **Propagación de Pelotones:** Cuando un nodo abre el verde principal con volumen ($\ge 2$ vehículos), notifica a los nodos adyacentes aguas abajo calculando el tiempo estimado de arribo:
+  $$\text{ETA} = \frac{\Delta d}{v_{\text{diseño}}}$$
+* **Apertura Dinámica de Fase Verde:** El nodo receptor extiende su fase verde o anticipa la transición en calles transversales para permitir el paso continuo del pelotón sin detenciones (*Green Wave Progression*).
+
+### 7.2. Asignación Granular Multi-Núcleo de NPU (RK3588 Tri-Core)
+* **Arquitectura de Cores:** El SoC Rockchip RK3588 dispone de 3 núcleos independientes de 2 TOPS cada uno (Total: 6 TOPS).
+* **Despliegue Multi-Nodo:** Mediante `--npu-core {0, 1, 2, all}`, se pueden ejecutar **3 instancias completas de FLUXA** en una sola Orange Pi 5, asignando cada núcleo a una cámara/cruce independiente:
+  * `Core 0` ($\text{mask}=1$): Cruce Norte (Puerto 5000)
+  * `Core 1` ($\text{mask}=2$): Cruce Centro (Puerto 5001)
+  * `Core 2` ($\text{mask}=4$): Cruce Sur (Puerto 5002)
+
+### 7.3. Registro Forense de Infracciones en Luz Roja y Rotación FIFO
+* **Captura Fotográfica Automática:** Detección espacial de vehículos invadiendo zonas en luz roja, estampando carril, fecha/hora, fase semafórica e ID de seguimiento en la imagen de evidencia.
+* **Rotación FIFO de Almacenamiento:** Mantenimiento automático de cuotas en disco para evitar saturación en gabinete (límite de 300 capturas / 150 MB).
 
 ---
 

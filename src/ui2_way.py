@@ -36,8 +36,8 @@ class EstadoSemaforo2V(Enum):
     ROJO_TODOS_2 = 6
 
 class SemaforoController2V_RKNN(CoreSemaforoRKNN):
-    def __init__(self, port=None, video_source=None):
-        super().__init__(topology_name="2_way", port=port, video_source=video_source)
+    def __init__(self, port=None, video_source=None, npu_core_id=None):
+        super().__init__(topology_name="2_way", port=port, video_source=video_source, npu_core_id=npu_core_id)
         self.estado_actual = EstadoSemaforo2V.VERDE_A
 
     def _dibujar_interfaz_topologia(self, frame, autos):

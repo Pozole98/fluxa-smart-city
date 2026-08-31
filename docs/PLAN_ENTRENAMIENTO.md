@@ -130,3 +130,13 @@ rknn.export_rknn('models/yolov8s.rknn')
    ```
 2. En la consola WebUI SCADA C5 (`/admin` -> Calibrador Canvas), seleccionar la variante `yolov8s.rknn` y presionar **"Guardar y Aplicar en Caliente"**.
 3. El controlador actualizará los punteros de memoria de la NPU en tiempo real con latencias de inferencia de **~10-15 ms** en los 3 núcleos del RK3588.
+
+---
+
+## 5. Autoría y Licenciamiento
+
+* **Desarrollador Principal y Titular de Derechos:** Moisés Emilio Martínez Arias
+* **Institución:** Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+* **División:** División de Ingeniería en Sistemas Computacionales
+* **Repositorio Oficial:** [https://github.com/Pozole98/fluxa-smart-city/](https://github.com/Pozole98/fluxa-smart-city/)
+* **Proyecto Registrado:** InnovaTecNM 2026

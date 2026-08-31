@@ -17,7 +17,13 @@ import threading
 import collections
 import logging
 from datetime import datetime
-import pymysql
+
+try:
+    import pymysql
+    PYMYSQL_AVAILABLE = True
+except ImportError:
+    pymysql = None
+    PYMYSQL_AVAILABLE = False
 
 
 class DatabaseManager:
@@ -40,8 +46,18 @@ class DatabaseManager:
         self._local_violations = collections.deque(maxlen=200)
         self._local_events = collections.deque(maxlen=200)
         self._lock = threading.Lock()
+        self.password = ""
+        self.connected = False
+        self.write_queue = queue.Queue(maxsize=1000)
+        self.worker_thread = None
+        self.running = False
         
         # Validación de credenciales de base de datos
+        if not PYMYSQL_AVAILABLE:
+            self.enabled = False
+            logging.info("Librería pymysql no disponible. DatabaseManager operando en modo local/RAM.")
+            return
+
         db_pass = os.environ.get("DATABASE_PASSWORD", password)
         if self.enabled and (db_pass is None or db_pass == ""):
             raise ValueError(
@@ -51,11 +67,6 @@ class DatabaseManager:
             )
         self.password = db_pass or ""
         
-        self.connected = False
-        self.write_queue = queue.Queue(maxsize=1000)
-        self.worker_thread = None
-        self.running = False
-        
         if self.enabled:
             self._init_db_schema()
             self.running = True
@@ -64,6 +75,8 @@ class DatabaseManager:
 
     def _get_connection(self, use_db=True):
         """Genera una nueva conexión con MariaDB con timeout acotado"""
+        if not PYMYSQL_AVAILABLE:
+            raise RuntimeError("Librería pymysql no disponible.")
         return pymysql.connect(
             host=self.host,
             user=self.user,
@@ -122,9 +135,16 @@ class DatabaseManager:
                         track_id INT NOT NULL,
                         phase_state VARCHAR(50) NOT NULL,
                         snapshot_path VARCHAR(255),
+                        license_plate VARCHAR(50) DEFAULT 'NO_DETECTADA',
+                        plate_confidence FLOAT DEFAULT 0.0,
                         INDEX idx_time (timestamp)
                     ) ENGINE=InnoDB;
                 """)
+                try:
+                    cur.execute("ALTER TABLE red_light_violations ADD COLUMN license_plate VARCHAR(50) DEFAULT 'NO_DETECTADA';")
+                    cur.execute("ALTER TABLE red_light_violations ADD COLUMN plate_confidence FLOAT DEFAULT 0.0;")
+                except Exception:
+                    pass
             conn.commit()
             conn.close()
             self.connected = True
@@ -172,12 +192,14 @@ class DatabaseManager:
                 elif task_type == "VIOLATION":
                     sql = """
                         INSERT INTO red_light_violations 
-                        (timestamp, lane, track_id, phase_state, snapshot_path)
-                        VALUES (%s, %s, %s, %s, %s)
+                        (timestamp, lane, track_id, phase_state, snapshot_path, license_plate, plate_confidence)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """
                     cur.execute(sql, (
                         data["timestamp"], data["lane"], data["track_id"],
-                        data["phase_state"], data.get("snapshot_path", "")
+                        data["phase_state"], data.get("snapshot_path", ""),
+                        data.get("license_plate", "NO_DETECTADA"),
+                        data.get("plate_confidence", 0.0)
                     ))
             conn.commit()
             conn.close()
@@ -219,8 +241,8 @@ class DatabaseManager:
         except queue.Full:
             pass
 
-    def log_violation_async(self, lane, track_id, phase_state, snapshot_path):
-        """Registra una infracción en el búfer local y encola su almacenamiento en MariaDB"""
+    def log_violation_async(self, lane, track_id, phase_state, snapshot_path, license_plate="NO_DETECTADA", plate_confidence=0.0):
+        """Registra una infracción con matrícula en el búfer local y encola su almacenamiento en MariaDB"""
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         clean_snapshot = os.path.basename(snapshot_path) if snapshot_path else ""
         record = {
@@ -230,7 +252,9 @@ class DatabaseManager:
             "lane_name": lane,
             "track_id": track_id,
             "phase_state": phase_state,
-            "snapshot_path": clean_snapshot
+            "snapshot_path": clean_snapshot,
+            "license_plate": license_plate,
+            "plate_confidence": round(float(plate_confidence), 2)
         }
         with self._lock:
             self._local_violations.appendleft(record)
@@ -243,7 +267,9 @@ class DatabaseManager:
                 "lane": lane,
                 "track_id": track_id,
                 "phase_state": phase_state,
-                "snapshot_path": clean_snapshot
+                "snapshot_path": clean_snapshot,
+                "license_plate": license_plate,
+                "plate_confidence": round(float(plate_confidence), 2)
             }))
         except queue.Full:
             pass
@@ -326,7 +352,8 @@ class DatabaseManager:
                 with conn.cursor() as cur:
                     cur.execute("""
                         SELECT id, DATE_FORMAT(timestamp, '%%Y-%%m-%%d %%H:%%i:%%s') as timestamp, 
-                               lane, lane as lane_name, track_id, phase_state, snapshot_path
+                               lane, lane as lane_name, track_id, phase_state, snapshot_path,
+                               license_plate, plate_confidence
                         FROM red_light_violations
                         ORDER BY id DESC
                         LIMIT %s;
@@ -377,7 +404,9 @@ class DatabaseManager:
                     "lane_name": "CARRIL",
                     "track_id": track_id,
                     "phase_state": "ROJO",
-                    "snapshot_path": f
+                    "snapshot_path": f,
+                    "license_plate": "REGISTRADA_EN_DISCO",
+                    "plate_confidence": 0.70
                 })
         except Exception:
             pass

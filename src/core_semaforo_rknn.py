@@ -48,10 +48,10 @@ except ImportError:
 class CoreSemaforoRKNN(CoreSemaforoBase):
     """
     Controlador de inferencia acelerada sobre la NPU de la Orange Pi 5 (Rockchip RK3588)
-    con arquitectura de respaldo automático en CPU (PyTorch) para alta disponibilidad.
+    con arquitectura de respaldo automático en CPU (PyTorch) y asignación multi-núcleo (Tri-Core).
     """
 
-    def __init__(self, topology_name="4_way", port=None, video_source=None):
+    def __init__(self, topology_name="4_way", port=None, video_source=None, npu_core_id=None):
         self._rknn_lock = threading.RLock()
         self.rknn = None
         self.cpu_model = None
@@ -59,6 +59,7 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
         self.npu_error_count = 0
         self._frame_count = 0
         self._cached_dets_m = None
+        self.npu_core_id = npu_core_id
         super().__init__(topology_name=topology_name, backend_name="NPU (RKNN)", port=port, video_source=video_source)
 
     def _init_cpu_fallback(self, reason="Falla en NPU"):
@@ -98,8 +99,23 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
             logging.error(f"Error al inicializar motor de respaldo en CPU: {e}")
             return False
 
+    def _get_npu_core_mask(self):
+        """Resuelve la máscara de bits para el acelerador tri-núcleo RK3588"""
+        cfg_core = self.npu_core_id if self.npu_core_id is not None else self.config.get("ai_model", {}).get("npu_core_id", "all")
+        cfg_str = str(cfg_core).strip().lower()
+
+        if cfg_str in ("0", "core_0", "core0"):
+            return getattr(RKNNLite, 'NPU_CORE_0', 1), "Core 0"
+        elif cfg_str in ("1", "core_1", "core1"):
+            return getattr(RKNNLite, 'NPU_CORE_1', 2), "Core 1"
+        elif cfg_str in ("2", "core_2", "core2"):
+            return getattr(RKNNLite, 'NPU_CORE_2', 4), "Core 2"
+        else:
+            # Por defecto usar los 3 núcleos combinados (Core 0 + Core 1 + Core 2 = máscara 7)
+            return getattr(RKNNLite, 'NPU_CORE_0_1_2', 7), "Tri-Core (0, 1, 2)"
+
     def _init_model(self):
-        """Carga y configura el modelo de red neuronal en los 3 núcleos de la NPU"""
+        """Carga y configura el modelo de red neuronal en los núcleos designados de la NPU"""
         with self._rknn_lock:
             self.IOU_THRESH = self.config.get("ai_model", {}).get("iou_threshold", 0.45)
             self._cached_dets_m = None
@@ -141,8 +157,8 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
                     self._init_cpu_fallback(f"Error cargando archivo RKNN (código {ret})")
                     return
                     
-                # Activar los 3 núcleos del acelerador NPU (Core 0 + Core 1 + Core 2 = 6 TOPS)
-                core_mask = getattr(RKNNLite, 'NPU_CORE_0_1_2', 1)
+                # Activar los núcleos seleccionados del acelerador NPU (RK3588)
+                core_mask, core_label = self._get_npu_core_mask()
                 try:
                     ret = new_rknn.init_runtime(core_mask=core_mask)
                 except Exception:
@@ -160,14 +176,14 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
 
                 old_rknn = self.rknn
                 self.rknn = new_rknn
-                self.backend_name = "NPU (RKNN)"
+                self.backend_name = f"NPU ({core_label})"
                 
                 if old_rknn is not None:
                     try:
                         old_rknn.release()
                     except Exception:
                         pass
-                logging.info(f"Modelo RKNN {os.path.basename(model_path)} cargado y activo en los 3 núcleos de la NPU.")
+                logging.info(f"Modelo RKNN {os.path.basename(model_path)} cargado y activo en NPU ({core_label}).")
             except Exception as e:
                 self._init_cpu_fallback(f"Excepción al inicializar NPU: {e}")
 
