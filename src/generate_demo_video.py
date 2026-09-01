@@ -1,3 +1,10 @@
+# ============================================================================
+# FLUXA Smart City - Sistema de Control de Tráfico Adaptativo
+# ============================================================================
+# Desarrollador Principal y Propietario de Derechos: Moisés Emilio Martínez Arias
+# Institución: Tecnológico de Estudios Superiores de Coacalco (TESCo) - TecNM
+# Licencia: Propietaria / Comercial (Certamen InnovaTecNM 2026)
+# ============================================================================
 import os
 import cv2
 import numpy as np
@@ -14,7 +21,7 @@ def generar_video_demostracion(output_path="videos/demo.mp4", duration_sec=25, f
     out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
 
     total_frames = duration_sec * fps
-    print(f"🎬 Generando clip de video demostrativo de tráfico ({duration_sec}s a {fps} FPS)...")
+    print(f" Generando clip de video demostrativo de tráfico ({duration_sec}s a {fps} FPS)...")
 
     # Definir vehículos simulados: [x, y, vx, vy, tipo, color, w_box, h_box]
     # tipo: 0=auto, 1=bus, 2=moto
@@ -139,7 +146,7 @@ def generar_video_demostracion(output_path="videos/demo.mp4", duration_sec=25, f
         out.write(frame)
 
     out.release()
-    print(f"✅ Video demostrativo generado exitosamente en: {output_path}")
+    print(f"Video demostrativo generado exitosamente en: {output_path}")
 
 if __name__ == "__main__":
     generar_video_demostracion()

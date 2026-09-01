@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+
+# ============================================================================
+# FLUXA Smart City - Sistema de Control de Tráfico Adaptativo
+# ============================================================================
+# Desarrollador Principal y Propietario de Derechos: Moisés Emilio Martínez Arias
+# Institución: Tecnológico de Estudios Superiores de Coacalco (TESCo) - TecNM
+# Licencia: Propietaria / Comercial (Certamen InnovaTecNM 2026)
+# ============================================================================
 # -*- coding: utf-8 -*-
 """
 Generador de Imágenes Oficiales para Plataforma InnovaTecNM 2026 (Etapa Regional)
@@ -53,7 +61,7 @@ def save_optimized_jpg(fig_or_img, filepath, max_kb=290, quality=90):
         if size_kb <= max_kb:
             with open(filepath, 'wb') as f:
                 f.write(buf.getvalue())
-            print(f"✅ Guardado: {os.path.relpath(filepath, BASE_DIR)} ({size_kb:.1f} KB, Q={q})")
+            print(f"Guardado: {os.path.relpath(filepath, BASE_DIR)} ({size_kb:.1f} KB, Q={q})")
             return
         q -= 5
     
@@ -62,7 +70,7 @@ def save_optimized_jpg(fig_or_img, filepath, max_kb=290, quality=90):
     buf = io.BytesIO()
     img.save(filepath, format='JPEG', quality=80, optimize=True)
     size_kb = os.path.getsize(filepath) / 1024
-    print(f"✅ Guardado con resize: {os.path.relpath(filepath, BASE_DIR)} ({size_kb:.1f} KB)")
+    print(f"Guardado con resize: {os.path.relpath(filepath, BASE_DIR)} ({size_kb:.1f} KB)")
 
 # ==============================================================================
 # SECCIÓN 1: VALIDACIÓN DEL MERCADO Y DEL CLIENTE
@@ -402,7 +410,7 @@ def gen_sec5():
     save_optimized_jpg(fig, os.path.join(sec_dir, "5_6_curva_maduracion_trl6_trl7.jpg"))
 
 if __name__ == "__main__":
-    print("🎨 Generando imágenes oficiales para plataforma InnovaTecNM...")
+    print(" Generando imágenes oficiales para plataforma InnovaTecNM...")
     gen_sec1()
     gen_sec2()
     gen_sec3()

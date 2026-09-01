@@ -71,9 +71,9 @@ class CorridorSyncManager:
 
     def _init_default_corridor(self):
         """Inicializa una topología típica de corredor de 3 intersecciones"""
-        self.add_or_update_node("CRUCE_01", "Intersección Norte (Av. Central)", distance_meters=0)
-        self.add_or_update_node("CRUCE_02", "Intersección Centro (Av. Hidalgo)", distance_meters=320)
-        self.add_or_update_node("CRUCE_03", "Intersección Sur (Av. del Parque)", distance_meters=650)
+        self.add_or_update_node("CRUCE_01", "Intersección Norte (Av. Central)", distance_meters=0, target_url="http://127.0.0.1:5000")
+        self.add_or_update_node("CRUCE_02", "Intersección Centro (Av. Hidalgo)", distance_meters=320, target_url="http://127.0.0.1:5001")
+        self.add_or_update_node("CRUCE_03", "Intersección Sur (Av. del Parque)", distance_meters=650, target_url="http://127.0.0.1:5002")
 
     def add_or_update_node(self, node_id, name, distance_meters=300, target_url=None):
         with self.lock:
@@ -122,7 +122,7 @@ class CorridorSyncManager:
                     # Registro interno para simulación local multi-nodo
                     node.incoming_platoons.append(platoon_payload)
 
-                logging.info(f"🌊 OLA VERDE EMITIDA: Desde {self.current_node_id} hacia {n_id} | Pelotón: {vehicle_count} veh | ETA: {eta_seconds}s")
+                logging.info(f" OLA VERDE EMITIDA: Desde {self.current_node_id} hacia {n_id} | Pelotón: {vehicle_count} veh | ETA: {eta_seconds}s")
 
     def _send_remote_platoon(self, target_url, payload):
         """Transmite la alerta de pelotón vía HTTP REST a otro nodo FLUXA en la red"""
@@ -161,7 +161,7 @@ class CorridorSyncManager:
             if len(self.wave_history) > 20:
                 self.wave_history.pop(0)
 
-        logging.info(f"🟢 OLA VERDE RECIBIDA: Pelotón de {v_count} veh llegando desde {origin} en {eta}s. Adaptando ciclo.")
+        logging.info(f" OLA VERDE RECIBIDA: Pelotón de {v_count} veh llegando desde {origin} en {eta}s. Adaptando ciclo.")
 
     def should_prioritize_green_wave(self):
         """

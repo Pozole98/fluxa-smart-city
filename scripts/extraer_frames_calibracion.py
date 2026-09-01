@@ -42,9 +42,9 @@ def extraer_cuadros(video_path, num_frames=60, output_dir=None, dataset_txt_path
     print("=" * 65)
     print(f"Video origen:        {video_path}")
     print(f"Duración:           {duracion_seg:.1f}s ({total_frames} cuadros totales)")
-    print(f"🎯 Cuadros a extraer:   {num_frames}")
-    print(f"📁 Directorio destino:  {output_dir}")
-    print(f"📄 Archivo de dataset:  {dataset_txt_path}")
+    print(f" Cuadros a extraer:   {num_frames}")
+    print(f" Directorio destino:  {output_dir}")
+    print(f" Archivo de dataset:  {dataset_txt_path}")
     print("=" * 65)
     
     if total_frames <= 0:
@@ -84,9 +84,9 @@ def extraer_cuadros(video_path, num_frames=60, output_dir=None, dataset_txt_path
             f.write(f"{rel_path}\n")
             
     print("-" * 65)
-    print(f"✅ Extracción completada exitosamente: {extracted_count} imágenes listas.")
-    print(f"📝 Archivo de calibración generado: {dataset_txt_path}")
-    print("💡 Ahora puedes ejecutar rknn.build(do_quantization=True, dataset='data/dataset.txt')")
+    print(f"Extracción completada exitosamente: {extracted_count} imágenes listas.")
+    print(f" Archivo de calibración generado: {dataset_txt_path}")
+    print(" Ahora puedes ejecutar rknn.build(do_quantization=True, dataset='data/dataset.txt')")
     print("=" * 65)
     return True
 

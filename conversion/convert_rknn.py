@@ -1,3 +1,10 @@
+# ============================================================================
+# FLUXA Smart City - Sistema de Control de Tráfico Adaptativo
+# ============================================================================
+# Desarrollador Principal y Propietario de Derechos: Moisés Emilio Martínez Arias
+# Institución: Tecnológico de Estudios Superiores de Coacalco (TESCo) - TecNM
+# Licencia: Propietaria / Comercial (Certamen InnovaTecNM 2026)
+# ============================================================================
 import os
 import sys
 from rknn.api import RKNN
@@ -141,7 +148,7 @@ def convert_onnx_to_rknn():
             sys.exit(1)
 
         print("\n" + "=" * 60)
-        print("¡CONVERSIÓN A RKNN COMPLETADA CON ÉXITO!")
+        print("CONVERSIÓN A RKNN COMPLETADA CON ÉXITO!")
         print(f"Modelo RKNN guardado en: '{os.path.abspath(rknn_model)}'")
         print("=" * 60)
 

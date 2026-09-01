@@ -1,3 +1,10 @@
+# ============================================================================
+# FLUXA Smart City - Sistema de Control de Tráfico Adaptativo
+# ============================================================================
+# Desarrollador Principal y Propietario de Derechos: Moisés Emilio Martínez Arias
+# Institución: Tecnológico de Estudios Superiores de Coacalco (TESCo) - TecNM
+# Licencia: Propietaria / Comercial (Certamen InnovaTecNM 2026)
+# ============================================================================
 import os
 import sys
 try:
@@ -57,7 +64,7 @@ class SemaforoController:
         if os.path.exists(posible):
             model_path = posible
 
-        print(f"📦 Cargando modelo YOLO nativo en CPU desde: {model_path}")
+        print(f" Cargando modelo YOLO nativo en CPU desde: {model_path}")
         self.model = YOLO(model_path)
             
         args = SimpleNamespace(
@@ -139,7 +146,7 @@ class SemaforoController:
             with open(config_path, 'r') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"⚠️ Error cargando config.json, usando defaults: {e}")
+            print(f"Error cargando config.json, usando defaults: {e}")
             return {}
 
     def start(self):
@@ -165,9 +172,9 @@ class SemaforoController:
             self.arduino = serial.Serial(port=port, baudrate=baud, timeout=0.1)
             time.sleep(2)
             self.arduino.reset_input_buffer()
-            print("✅ Conexión con Arduino establecida.")
+            print("Conexión con Arduino establecida.")
         except Exception as e:
-            print(f"⚠️ No se pudo conectar al Arduino (Modo Simulación CPU): {e}")
+            print(f"No se pudo conectar al Arduino (Modo Simulación CPU): {e}")
             self.arduino = None
 
     def stop(self):
@@ -505,17 +512,17 @@ class App:
 
     def on_key_n(self, event):
         if self.controller.running:
-            print("🚨 EMERGENCIA NORTE-SUR ACTIVADA")
+            print(" EMERGENCIA NORTE-SUR ACTIVADA")
             self.controller.forzar_emergencia('NS')
             
     def on_key_e(self, event):
         if self.controller.running:
-            print("🚨 EMERGENCIA ESTE-OESTE ACTIVADA")
+            print(" EMERGENCIA ESTE-OESTE ACTIVADA")
             self.controller.forzar_emergencia('EO')
             
     def on_key_r(self, event):
         if self.controller.running:
-            print("🟢 VOLVIENDO A MODO NORMAL")
+            print(" VOLVIENDO A MODO NORMAL")
             self.controller.emergencia_activa = False
 
     def _crear_header(self):
@@ -546,7 +553,7 @@ class App:
         controls_frame = tk.Frame(self.pantalla_monitoreo, bg="#0f172a")
         controls_frame.pack(fill="x", padx=40, pady=10)
         
-        lbl_titulo_monitoreo = tk.Label(controls_frame, text="📺 MONITOREO EN VIVO", fg="#ffffff", bg="#0f172a", font=("Segoe UI", 16, "bold"))
+        lbl_titulo_monitoreo = tk.Label(controls_frame, text=" MONITOREO EN VIVO", fg="#ffffff", bg="#0f172a", font=("Segoe UI", 16, "bold"))
         lbl_titulo_monitoreo.pack(side="left")
         
         lbl_hints = tk.Label(controls_frame, text="Presiona [N] Emergencia N-S | [E] Emergencia E-O | [R] Normalizar", fg="#ef4444", bg="#0f172a", font=("Segoe UI", 10, "bold"))

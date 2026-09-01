@@ -39,12 +39,12 @@ def set_password(username=None, password=None):
 
     if not password:
         while True:
-            pwd1 = getpass.getpass("🔑 Ingrese la nueva contraseña para el operador C5: ")
+            pwd1 = getpass.getpass(" Ingrese la nueva contraseña para el operador C5: ")
             if len(pwd1) < 4:
-                print("⚠️ La contraseña debe contener al menos 4 caracteres. Intente de nuevo.")
+                print("La contraseña debe contener al menos 4 caracteres. Intente de nuevo.")
                 continue
                 
-            pwd2 = getpass.getpass("🔁 Confirme la nueva contraseña: ")
+            pwd2 = getpass.getpass(" Confirme la nueva contraseña: ")
             if pwd1 != pwd2:
                 print("❌ Las contraseñas no coinciden. Intente de nuevo.\n")
                 continue
@@ -66,9 +66,9 @@ def set_password(username=None, password=None):
             json.dump(data, f, indent=4)
         os.chmod(creds_file, 0o600)
         print("\n" + "=" * 65)
-        print(f"✅ ¡Contraseña configurada exitosamente para el usuario '{username}'!")
-        print(f"📁 Credencial hasheada guardada en: {creds_file}")
-        print("🔒 Permisos restringidos a 600 (Solo lectura/escritura del propietario).")
+        print(f"Contraseña configurada exitosamente para el usuario '{username}'!")
+        print(f" Credencial hasheada guardada en: {creds_file}")
+        print(" Permisos restringidos a 600 (Solo lectura/escritura del propietario).")
         print("=" * 65 + "\n")
     except Exception as e:
         print(f"❌ Error al guardar las credenciales: {e}")

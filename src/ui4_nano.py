@@ -1,3 +1,10 @@
+# ============================================================================
+# FLUXA Smart City - Sistema de Control de Tráfico Adaptativo
+# ============================================================================
+# Desarrollador Principal y Propietario de Derechos: Moisés Emilio Martínez Arias
+# Institución: Tecnológico de Estudios Superiores de Coacalco (TESCo) - TecNM
+# Licencia: Propietaria / Comercial (Certamen InnovaTecNM 2026)
+# ============================================================================
 import os
 import sys
 try:
@@ -63,7 +70,7 @@ class SemaforoController:
                 model_path = p
                 break
 
-        print(f"📦 Cargando modelo RKNN desde: {model_path}")
+        print(f" Cargando modelo RKNN desde: {model_path}")
         self.rknn = RKNNLite(verbose=False)
         ret = self.rknn.load_rknn(model_path)
         if ret != 0:
@@ -467,7 +474,7 @@ class App:
         self.pantalla_monitoreo = tk.Frame(self.ventana, bg="#0f172a")
         controls_frame = tk.Frame(self.pantalla_monitoreo, bg="#0f172a")
         controls_frame.pack(fill="x", padx=40, pady=10)
-        tk.Label(controls_frame, text="📺 MONITOREO NPU", fg="#ffffff", bg="#0f172a", font=("Segoe UI", 16, "bold")).pack(side="left")
+        tk.Label(controls_frame, text=" MONITOREO NPU", fg="#ffffff", bg="#0f172a", font=("Segoe UI", 16, "bold")).pack(side="left")
         tk.Label(controls_frame, text="[N] Emergencia N-S | [E] Emergencia E-O | [R] Normalizar", fg="#ef4444", bg="#0f172a", font=("Segoe UI", 10, "bold")).pack(side="right")
 
         self.video_label = tk.Label(self.pantalla_monitoreo, bg="#020617")

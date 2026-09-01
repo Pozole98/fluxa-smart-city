@@ -405,10 +405,10 @@ def api_control():
 if __name__ == '__main__':
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 5000
     print("\n" + "=" * 70)
-    print("🚦 FLUXA SCADA • Servidor de Previsualización UI Institucional Activo")
-    print(f"🌐 Portal Ciudadano:    http://localhost:{port}/")
-    print(f"🔐 Acceso Operadores:   http://localhost:{port}/login")
-    print(f"📊 Tablero SCADA C5:    http://localhost:{port}/admin")
-    print(f"📄 Reporte Ejecutivo:   http://localhost:{port}/report/executive")
+    print(" FLUXA SCADA • Servidor de Previsualización UI Institucional Activo")
+    print(f" Portal Ciudadano:    http://localhost:{port}/")
+    print(f" Acceso Operadores:   http://localhost:{port}/login")
+    print(f" Tablero SCADA C5:    http://localhost:{port}/admin")
+    print(f" Reporte Ejecutivo:   http://localhost:{port}/report/executive")
     print("=" * 70 + "\n")
     app.run(host='0.0.0.0', port=port, debug=False)

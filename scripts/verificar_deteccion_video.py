@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+
+# ============================================================================
+# FLUXA Smart City - Sistema de Control de Tráfico Adaptativo
+# ============================================================================
+# Desarrollador Principal y Propietario de Derechos: Moisés Emilio Martínez Arias
+# Institución: Tecnológico de Estudios Superiores de Coacalco (TESCo) - TecNM
+# Licencia: Propietaria / Comercial (Certamen InnovaTecNM 2026)
+# ============================================================================
 # -*- coding: utf-8 -*-
 """
 Script de Verificación de Calidad de Detección y Rastreo en Video Real
@@ -25,7 +33,7 @@ def main():
         return
 
     print("=" * 65)
-    print("🚦 VALIDACIÓN DE CALIDAD DE DETECCIÓN Y RASTREO EN VIDEO REAL")
+    print(" VALIDACIÓN DE CALIDAD DE DETECCIÓN Y RASTREO EN VIDEO REAL")
     print("=" * 65)
     
     model_path = os.path.join(BASE_DIR, "yolov8n.pt")
@@ -77,7 +85,7 @@ def main():
     
     avg_latency = np.mean(latencies) if latencies else 0
     print("-" * 65)
-    print(f"✅ Validación de detección completada exitosamente:")
+    print(f"Validación de detección completada exitosamente:")
     print(f"   • Total de cuadros analizados: {frame_count}")
     print(f"   • Latencia media por cuadro:   {avg_latency:.2f} ms (~{1000/avg_latency:.1f} FPS en CPU)")
     print(f"   • Total de detecciones:        {total_detections} objetos")

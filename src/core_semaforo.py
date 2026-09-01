@@ -144,9 +144,10 @@ class CoreSemaforoBase:
         self.dir_infracciones = os.path.join(os.path.dirname(__file__), '..', 'logs', 'violations')
         os.makedirs(self.dir_infracciones, exist_ok=True)
 
-        # FPS y Latencias
-        self.fps_frames = 0
-        self.fps_start_time = time.time()
+        # FPS Real con Media Móvil Exponencial (EMA) — mide throughput instantáneo del pipeline
+        self._fps_ema = 0.0
+        self._fps_alpha = 0.12  # Factor de suavizado EMA (0.12 = suave pero reactivo)
+        self._last_frame_time = time.time()
         self.current_fps = 0.0
         self.latencias = {
             "inferencia": 0.0,
@@ -171,7 +172,9 @@ class CoreSemaforoBase:
         # Buffer para transmisión de video Web (MJPEG)
         self._jpeg_frame_buffer = None
         self._jpeg_lock = threading.Lock()
+        self._jpeg_clients_active = False
         self._video_switch_lock = threading.Lock()
+        self._jpeg_params = [cv2.IMWRITE_JPEG_QUALITY, 78]
 
         # Constantes de tiempo
         cfg_tl = self.config.get("traffic_light", {})
@@ -184,14 +187,14 @@ class CoreSemaforoBase:
         self.CLASES_VEHICULOS = self.config.get("ai_model", {}).get("classes_to_detect", [0, 1, 2, 3, 5, 7])
         self.CONF_THRESH = self.config.get("ai_model", {}).get("confidence_threshold", 0.35)
         
-        # Paleta de colores para ROIs y cajas
+        # Paleta de colores para ROIs y cajas (formato BGR para OpenCV)
         self.COLORES_ZONAS = [
-            (239, 68, 68),   # Rojo
-            (59, 130, 246),  # Azul
-            (16, 185, 129),  # Verde
-            (245, 158, 11),  # Ámbar/Naranja
-            (139, 92, 246),  # Púrpura
-            (236, 72, 153)   # Rosa
+            (68, 68, 239),   # Rojo
+            (246, 130, 59),  # Azul
+            (129, 185, 16),  # Verde
+            (11, 158, 245),  # Ámbar/Naranja
+            (246, 92, 139),  # Púrpura
+            (153, 72, 236)   # Rosa
         ]
         
         # Configuración unificada de la Máquina de Estados (FSM)
@@ -212,17 +215,24 @@ class CoreSemaforoBase:
             enabled=db_cfg.get("enabled", True)
         )
         
-        # Inicializar Coordinador de Corredor Vial y Olas Verdes
-        corr_cfg = self.config.get("corridor", {})
-        self.corridor = CorridorSyncManager(
-            current_node_id=corr_cfg.get("node_id", "CRUCE_01"),
-            corridor_name=corr_cfg.get("name", "Corredor Principal"),
-            avg_speed_kmh=corr_cfg.get("avg_speed_kmh", 45.0)
-        )
-        
         # Inicializar Servidor Web API
         api_cfg = self.config.get("api", {})
         api_port = port if port is not None else api_cfg.get("port", 5000)
+
+        # Inicializar Coordinador de Corredor Vial y Olas Verdes
+        corr_cfg = self.config.get("corridor", {})
+        default_node = "CRUCE_01"
+        if api_port == 5001:
+            default_node = "CRUCE_02"
+        elif api_port == 5002:
+            default_node = "CRUCE_03"
+        node_id = corr_cfg.get("node_id", default_node) if (api_port == 5000 or port is None) else default_node
+
+        self.corridor = CorridorSyncManager(
+            current_node_id=node_id,
+            corridor_name=corr_cfg.get("name", "Corredor Principal"),
+            avg_speed_kmh=corr_cfg.get("avg_speed_kmh", 45.0)
+        )
         self.api = TelemetryAPI(host=api_cfg.get("host", "0.0.0.0"), port=api_port, enabled=api_cfg.get("enabled", True))
         self.api.start(
             controller_callback=self.forzar_emergencia,
@@ -582,7 +592,7 @@ class CoreSemaforoBase:
                 with open(config_path, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
-                print(f"⚠️ Error cargando config.json: {e}")
+                print(f"Error cargando config.json: {e}")
         if os.path.exists(example_path):
             try:
                 with open(example_path, 'r', encoding='utf-8') as f:
@@ -618,7 +628,7 @@ class CoreSemaforoBase:
         
         new_model = cfg_ai.get("model_file", "yolov8n.pt")
         if new_model != old_model:
-            print(f"🔄 Recargando nuevo modelo YOLO en memoria: {new_model}...")
+            print(f" Recargando nuevo modelo YOLO en memoria: {new_model}...")
             try:
                 self._init_model()
                 self.api.log_event('INFO', f"Modelo YOLO cambiado exitosamente a: {new_model}")
@@ -650,7 +660,7 @@ class CoreSemaforoBase:
         Detiene el hilo anterior limpiamente para evitar colisiones en libavcodec (Double-Free).
         """
         with self._video_switch_lock:
-            print(f"🔄 Solicitud de cambio de fuente de video a: {nueva_fuente}...")
+            print(f" Solicitud de cambio de fuente de video a: {nueva_fuente}...")
             
             # Validación previa si es archivo local
             if isinstance(nueva_fuente, str) and not str(nueva_fuente).isdigit() and not nueva_fuente.startswith("rtsp://") and not nueva_fuente.startswith("http://"):
@@ -713,7 +723,7 @@ class CoreSemaforoBase:
                 
                 fuente_desc = "Cámara en Vivo" if isinstance(nueva_fuente, int) or str(nueva_fuente).isdigit() else f"Clip: {os.path.basename(str(nueva_fuente))}"
                 msg = f"Fuente de video conmutada exitosamente a: {fuente_desc}"
-                print(f"✅ {msg}")
+                print(f"{msg}")
                 self.api.log_event('INFO', msg)
                 self.db.log_event_async('INFO', msg)
                 return True, msg
@@ -751,6 +761,13 @@ class CoreSemaforoBase:
             for px, py in puntos:
                 pts.append([int(px * self.w), int(py * self.h)])
             self.poligonos[nombre] = np.array(pts, np.int32)
+        
+        # Pre-calcular mapa zona→color y centroides (constantes que no cambian por frame)
+        self._zona_color_map = {}
+        self._zona_centroids = {}
+        for i, (nombre, pts) in enumerate(self.poligonos.items()):
+            self._zona_color_map[nombre] = self.COLORES_ZONAS[i % len(self.COLORES_ZONAS)]
+            self._zona_centroids[nombre] = (int(np.mean(pts[:, 0])), int(np.mean(pts[:, 1])))
 
     def _init_arduino(self):
         ports_to_try = [
@@ -786,7 +803,7 @@ class CoreSemaforoBase:
                         pass
                 
                 if connected:
-                    logging.info(f"✅ Enlace serial con Arduino UNO R4 activo en {self.arduino_port_actual}.")
+                    logging.info(f"Enlace serial con Arduino UNO R4 activo en {self.arduino_port_actual}.")
                     self.api.log_event('INFO', f"Controlador físico (Arduino UNO R4) reconectado en {self.arduino_port_actual}")
                     self.db.log_event_async('INFO', f"Controlador físico (Arduino UNO R4) reconectado en {self.arduino_port_actual}")
                     self.alerta_desconexion_prolongada = False
@@ -871,14 +888,14 @@ class CoreSemaforoBase:
             self.emergencia_activa = True
             self.eje_emergencia = accion
             self.tiempo_inicio_emergencia = time.time()
-            self.modo_actual = f"🚨 CORREDOR EMERGENCIA ({accion})"
-            self.api.log_event('EMERG', f"🚨 PRIORIDAD C5 ACTIVADA: Corredor de Emergencia para {accion}")
-            self.db.log_event_async('EMERG', f"🚨 PRIORIDAD C5 ACTIVADA: Corredor de Emergencia para {accion}")
+            self.modo_actual = f" CORREDOR EMERGENCIA ({accion})"
+            self.api.log_event('EMERG', f" PRIORIDAD C5 ACTIVADA: Corredor de Emergencia para {accion}")
+            self.db.log_event_async('EMERG', f" PRIORIDAD C5 ACTIVADA: Corredor de Emergencia para {accion}")
 
     def _check_modo_noche(self):
         night_cfg = self.config.get("night_mode", {})
         if not night_cfg.get("enabled", False):
-            if not self.emergencia_activa and not self.modo_actual.startswith("🚨"):
+            if not self.emergencia_activa and not self.modo_actual.startswith(""):
                 self.modo_actual = "Normal"
             return self.TIEMPO_MINIMO_VERDE_BASE
             
@@ -1008,7 +1025,7 @@ class CoreSemaforoBase:
     def _generar_frame_failsafe(self, estado_str):
         """Genera un cuadro de respaldo si la fuente de video se interrumpe temporalmente"""
         placeholder = np.ones((self.h, self.w, 3), dtype=np.uint8) * 18
-        cv2.putText(placeholder, "⚠️ SENAL DE VIDEO EN RECONEXION", (int(self.w*0.18), int(self.h*0.45)), 
+        cv2.putText(placeholder, "SENAL DE VIDEO EN RECONEXION", (int(self.w*0.18), int(self.h*0.45)), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 200, 255), 2)
         cv2.putText(placeholder, f"FUENTE: {self.fuente_actual}", (int(self.w*0.22), int(self.h*0.55)), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (180, 180, 180), 1)
@@ -1040,7 +1057,7 @@ class CoreSemaforoBase:
                             fallback_demo = os.path.join(videos_dir, fn)
                             break
                 if os.path.exists(fallback_demo) and self.fuente_actual != fallback_demo:
-                    print("⚠️ Fallo prolongado de video. Conmutando a clip de respaldo...")
+                    print("Fallo prolongado de video. Conmutando a clip de respaldo...")
                     self.cambiar_fuente_video(fallback_demo)
                 self.consecutive_failed_frames = 0
                 
@@ -1070,13 +1087,14 @@ class CoreSemaforoBase:
             self.tiempo_fluxa_seg_acum = 0.0
             self.api.log_event('INFO', "Reinicio diario de conteos acumulativos y métricas de impacto")
 
-        # Calcular FPS
-        self.fps_frames += 1
-        elapsed_fps = time.time() - self.fps_start_time
-        if elapsed_fps >= 1.0:
-            self.current_fps = self.fps_frames / elapsed_fps
-            self.fps_frames = 0
-            self.fps_start_time = time.time()
+        # Calcular FPS Real (EMA — se actualiza en cada frame procesado)
+        now_fps = time.time()
+        dt_fps = now_fps - self._last_frame_time
+        self._last_frame_time = now_fps
+        if dt_fps > 0.001:
+            instant_fps = 1.0 / dt_fps
+            self._fps_ema = self._fps_alpha * instant_fps + (1.0 - self._fps_alpha) * self._fps_ema
+        self.current_fps = round(self._fps_ema, 1)
 
         # Inferencia
         t_infer_start = time.time()
@@ -1176,14 +1194,13 @@ class CoreSemaforoBase:
             )
             self.ultimo_log_time = time.time()
 
-        # Renderizar ROIs
-        for i, (nombre, pts) in enumerate(self.poligonos.items()):
-            color = self.COLORES_ZONAS[i % len(self.COLORES_ZONAS)]
+        # Renderizar ROIs con colores pre-calculados y centroides cacheados
+        for nombre, pts in self.poligonos.items():
+            color = self._zona_color_map.get(nombre, (200, 200, 200))
             cv2.fillPoly(overlay, [pts], color=color)
             cv2.polylines(frame, [pts], isClosed=True, color=color, thickness=2)
             
-            cx = int(np.mean(pts[:, 0]))
-            cy = int(np.mean(pts[:, 1]))
+            cx, cy = self._zona_centroids.get(nombre, (self.w // 2, self.h // 2))
             count_zona = autos_estabilizados.get(nombre, 0)
             tag_text = f"{nombre.upper()}: {count_zona}"
             
@@ -1241,7 +1258,7 @@ class CoreSemaforoBase:
 
         # Paquete de Conectividad V2X (SPaT Broadcast)
         v2x_speed = 45 if "VERDE" in estado_str else (30 if "AMARILLO" in estado_str else 0)
-        v2x_advice = "🟢 Mantenga 40-50 km/h (Ola Verde Activa)" if "VERDE" in estado_str else ("🟡 Precaución: Reduzca a 25 km/h" if "AMARILLO" in estado_str else "🔴 Deténgase con seguridad")
+        v2x_advice = " Mantenga 40-50 km/h (Ola Verde Activa)" if "VERDE" in estado_str else (" Precaución: Reduzca a 25 km/h" if "AMARILLO" in estado_str else " Deténgase con seguridad")
         v2x_info = {
             "fase_activa": estado_str,
             "tiempo_restante_seg": round(f_restante, 1),
@@ -1284,7 +1301,7 @@ class CoreSemaforoBase:
         )
 
         try:
-            ret_enc, jpeg_buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            ret_enc, jpeg_buf = cv2.imencode('.jpg', frame, self._jpeg_params)
             if ret_enc:
                 with self._jpeg_lock:
                     self._jpeg_frame_buffer = jpeg_buf.tobytes()
@@ -1313,13 +1330,14 @@ class CoreSemaforoBase:
             cx = (x1 + x2) // 2
             cy = (y1 + y2) // 2
             
-            color_caja = (200, 200, 200)
+            color_caja = (120, 120, 120)  # Gris tenue para objetos fuera de zona
             zona_encontrada = None
             
-            for i, (nombre, pol) in enumerate(self.poligonos.items()):
+            for nombre, pol in self.poligonos.items():
                 if cv2.pointPolygonTest(pol, (cx, cy), False) >= 0:
                     autos[nombre] += 1
                     zona_encontrada = nombre
+                    color_caja = self._zona_color_map.get(nombre, (200, 200, 200))
                     peso = PESOS_PRIORIDAD_TSP.get(cls_id, 1.0)
                     demanda[nombre] += peso
                     
@@ -1369,8 +1387,20 @@ class CoreSemaforoBase:
         cv2.putText(frame, texto_estado, (32, int(hud_h * 0.65)), cv2.FONT_HERSHEY_SIMPLEX, 0.52, color_fase, 1)
         
         model_file = self.config.get("ai_model", {}).get("model_file", "yolov8n.pt" if "CPU" in self.backend_name else "yolov8n.rknn")
-        engine_tag = f"⚡ {self.backend_name}: {model_file}" if ("NPU" in self.backend_name or "RKNN" in self.backend_name) else f"🧠 {self.backend_name}: {model_file}"
-        cv2.putText(frame, engine_tag, (int(self.w * 0.40), int(hud_h * 0.65)), cv2.FONT_HERSHEY_SIMPLEX, 0.44, (56, 189, 248), 1)
+        
+        # Obtener información del nodo actual y peers conectados en el corredor
+        if hasattr(self, 'corridor') and self.corridor:
+            node_id = self.corridor.current_node_id
+            peers = [n_id for n_id in self.corridor.nodes.keys()]
+            peers_str = f" <-> {','.join(peers)}" if peers else ""
+        else:
+            node_id = "NODO_STANDALONE"
+            peers_str = ""
+            
+        prefijo = f"[{node_id}{peers_str}]"
+        engine_tag = f"{prefijo} {self.backend_name}: {model_file}" if ("NPU" in self.backend_name or "RKNN" in self.backend_name) else f"{prefijo}  {self.backend_name}: {model_file}"
+        
+        cv2.putText(frame, engine_tag, (int(self.w * 0.35), int(hud_h * 0.65)), cv2.FONT_HERSHEY_SIMPLEX, 0.44, (56, 189, 248), 1)
         
         total_ahora = sum(autos.values()) if isinstance(autos, dict) else 0
         demanda_total = sum(self.last_demanda_ponderada.values()) if isinstance(self.last_demanda_ponderada, dict) else 0.0
@@ -1379,8 +1409,8 @@ class CoreSemaforoBase:
         cv2.putText(frame, info_der, (self.w - tw - 12, int(hud_h * 0.65)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1)
 
     def run_headless(self):
-        print(f"🚀 Iniciando FLUXA en Modo HEADLESS (Topología: {self.topology_name} | {self.backend_name})")
-        print(f"📡 WebUI y Streaming MJPEG disponibles en la red.")
+        print(f" Iniciando FLUXA en Modo HEADLESS (Topología: {self.topology_name} | {self.backend_name})")
+        print(f" WebUI y Streaming MJPEG disponibles en la red.")
         print(f"Presiona Ctrl+C para detener el servicio.")
         
         self.start()
@@ -1389,10 +1419,10 @@ class CoreSemaforoBase:
         def _sig_handler(sig, frame):
             nonlocal _terminating
             if _terminating:
-                print("\n⚡ Cierre forzado inmediato.")
+                print("\nCierre forzado inmediato.")
                 os._exit(0)
             _terminating = True
-            print("\n🛑 Señal de terminación recibida. Deteniendo servicio FLUXA...")
+            print("\n Señal de terminación recibida. Deteniendo servicio FLUXA...")
             self.running = False
             
             def _cleanup():
@@ -1404,7 +1434,7 @@ class CoreSemaforoBase:
             t = threading.Thread(target=_cleanup, daemon=True)
             t.start()
             t.join(timeout=1.0)
-            print("✅ Servicio FLUXA finalizado.")
+            print("Servicio FLUXA finalizado.")
             os._exit(0)
             
         signal.signal(signal.SIGINT, _sig_handler)
@@ -1414,9 +1444,8 @@ class CoreSemaforoBase:
             while self.running:
                 frame = self.process_frame()
                 if frame is None:
-                    time.sleep(0.02)
-                else:
-                    time.sleep(0.005)
+                    time.sleep(0.01)
+                # Sin sleep artificial: la latencia de inferencia NPU/CPU auto-regula el framerate
         except KeyboardInterrupt:
             self.stop()
             os._exit(0)
