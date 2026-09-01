@@ -1,3 +1,10 @@
+# ============================================================================
+# FLUXA Smart City - Sistema de Control de Tráfico Adaptativo
+# ============================================================================
+# Desarrollador Principal y Propietario de Derechos: Moisés Emilio Martínez Arias
+# Institución: Tecnológico de Estudios Superiores de Coacalco (TESCo) - TecNM
+# Licencia: Propietaria / Comercial (Certamen InnovaTecNM 2026)
+# ============================================================================
 import os
 import sys
 import tkinter as tk
@@ -47,7 +54,7 @@ class SemaforoController2ViasNPU:
                 model_path = p
                 break
 
-        print(f"📦 Cargando modelo RKNN desde: {model_path}")
+        print(f" Cargando modelo RKNN desde: {model_path}")
         self.rknn = RKNNLite(verbose=False)
         if self.rknn.load_rknn(model_path) != 0:
             sys.exit(1)

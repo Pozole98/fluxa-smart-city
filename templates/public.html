@@ -118,10 +118,27 @@
 
         .btn-c5:hover {
             background: var(--tesco-green);
-            color: #07120a;
+            color: #000;
         }
 
-        /* Hero Banner */
+        .btn-node {
+            background: rgba(5, 150, 105, 0.1);
+            border: 1px solid #059669;
+            color: #a7f3d0;
+            padding: 0.35rem 0.65rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-node:hover {
+            background: #059669;
+            color: #fff;
+        }
+
+        /* Main Content Layout */
         .hero-section {
             text-align: center;
             padding: 1.8rem 1.5rem 1.2rem;
@@ -483,6 +500,11 @@
             </div>
         </div>
         <div class="nav-actions">
+            <div style="display: flex; gap: 0.4rem; margin-right: 0.8rem;">
+                <a href="http://192.168.100.24:5000" class="btn-node">CRUCE_01</a>
+                <a href="http://192.168.100.24:5001" class="btn-node">CRUCE_02</a>
+                <a href="http://192.168.100.24:5002" class="btn-node">CRUCE_03</a>
+            </div>
             <a href="/login" class="btn-c5">
                 Acceso Operadores C5
             </a>

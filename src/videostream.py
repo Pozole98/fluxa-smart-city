@@ -34,6 +34,7 @@ class VideoStream:
         self.failed = False
         self.stopped = False
         self.lock = threading.RLock()
+        self.frame_ready = threading.Event()
         self.thread = None
 
         self.stream = self._conectar_fuente()
@@ -76,11 +77,11 @@ class VideoStream:
                         ret, test_f = cap.read()
                         if ret and test_f is not None:
                             cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                            print(f"🎬 Archivo de video verificado y cargado: {self.src}")
+                            print(f" Archivo de video verificado y cargado: {self.src}")
                             return cap
                         cap.release()
             except Exception as e:
-                print(f"⚠️ Error abriendo archivo de video {self.src}: {e}")
+                print(f"Error abriendo archivo de video {self.src}: {e}")
 
         # 2. Si es URL RTSP o HTTP
         if isinstance(self.src, str) and (self.src.startswith("rtsp://") or self.src.startswith("http://")):
@@ -89,14 +90,14 @@ class VideoStream:
                 if cap.isOpened():
                     ret, _ = cap.read()
                     if ret:
-                        print(f"📡 Flujo de red conectado: {self.src}")
+                        print(f" Flujo de red conectado: {self.src}")
                         return cap
                     cap.release()
             except Exception:
                 pass
 
         # 3. Cámaras de hardware
-        print("🔍 Buscando cámaras disponibles (A prueba de balas)...")
+        print(" Buscando cámaras disponibles (A prueba de balas)...")
         # 3.1. MIPI CSI Pipeline (Orange Pi 5)
         try:
             mipi_pipe = "v4l2src device=/dev/video11 ! video/x-raw, width=640, height=480, format=NV12 ! videoconvert ! appsink"
@@ -104,7 +105,7 @@ class VideoStream:
             if cap.isOpened():
                 ret, _ = cap.read()
                 if ret:
-                    print("🎥 Cámara MIPI CSI detectada exitosamente.")
+                    print(" Cámara MIPI CSI detectada exitosamente.")
                     return cap
                 cap.release()
         except Exception:
@@ -118,7 +119,7 @@ class VideoStream:
                 if cap.isOpened():
                     ret, _ = cap.read()
                     if ret:
-                        print(f"🎥 Cámara seleccionada ({dev_idx}) conectada.")
+                        print(f" Cámara seleccionada ({dev_idx}) conectada.")
                         return cap
                     cap.release()
             except Exception:
@@ -131,7 +132,7 @@ class VideoStream:
                 if cap.isOpened():
                     ret, _ = cap.read()
                     if ret:
-                        print(f"🎥 Cámara USB ({dev}) detectada.")
+                        print(f" Cámara USB ({dev}) detectada.")
                         return cap
                     cap.release()
             except Exception:
@@ -153,7 +154,7 @@ class VideoStream:
                     if ret:
                         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                         self.is_file = True
-                        print(f"🎬 Activando clip de video predeterminado: {os.path.basename(fallback_demo)}")
+                        print(f" Activando clip de video predeterminado: {os.path.basename(fallback_demo)}")
                         return cap
                     cap.release()
             except Exception:
@@ -217,14 +218,15 @@ class VideoStream:
                         self.grabbed = True
                         self.frame = frame
                         self.failed = False
+                        self.frame_ready.set()
                 
                 # Control de velocidad de reproducción para archivos de video
                 if self.is_file:
                     elapsed = time.time() - loop_start
                     sleep_time = max(0.002, frame_interval - elapsed)
                     time.sleep(sleep_time)
-                else:
-                    time.sleep(0.005)
+                # Para cámaras de hardware, el read() ya se bloquea en VSYNC
+                # No agregar delay artificial (se eliminó time.sleep(0.005))
                     
         finally:
             # Limpieza segura exclusiva dentro del hilo de captura
@@ -237,11 +239,17 @@ class VideoStream:
                     self.stream = None
                 self.grabbed = False
                 self.failed = True
+                self.frame_ready.set()  # Liberar cualquier wait pendiente
 
     def read(self):
+        # Bloquear hasta que un nuevo frame esté disponible (simula captura real y evita procesar frames duplicados)
+        self.frame_ready.wait(timeout=1.0)
+        
         with self.lock:
             if self.failed or not self.grabbed or self.frame is None:
                 return False, None
+            
+            self.frame_ready.clear()
             return True, self.frame.copy()
 
     def stop(self):

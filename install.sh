@@ -27,7 +27,7 @@ echo -e "${C_RESET}"
 
 # 1. Elevación de Privilegios con una sola solicitud de contraseña
 if [ "$EUID" -ne 0 ]; then
-    echo -e "${C_YELLOW}🔑 Se requieren permisos de administrador (sudo) para instalar dependencias de sistema y configurar hardware.${C_RESET}"
+    echo -e "${C_YELLOW} Se requieren permisos de administrador (sudo) para instalar dependencias de sistema y configurar hardware.${C_RESET}"
     sudo -v
     # Mantener sudo activo en segundo plano durante toda la ejecución
     while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
@@ -68,7 +68,7 @@ if [ ! -f "$SCRIPT_DIR/config.json" ] && [ -f "$SCRIPT_DIR/config.example.json" 
 fi
 
 # 4. Instalación Automática de Python, MariaDB y Librerías de Sistema
-echo -e "\n${C_YELLOW}📦 [1/6] Verificando e instalando Python 3, MariaDB y dependencias del sistema...${C_RESET}"
+echo -e "\n${C_YELLOW} [1/6] Verificando e instalando Python 3, MariaDB y dependencias del sistema...${C_RESET}"
 
 if command -v zypper &>/dev/null; then
     echo -e "${C_CYAN}➡️  Instalando paquetes via ZYPPER (openSUSE Tumbleweed/Leap/MicroOS/SLES)...${C_RESET}"
@@ -103,11 +103,11 @@ elif command -v apt-get &>/dev/null; then
     run_sudo apt-get update -y
     run_sudo apt-get install -y python3 python3-pip python3-venv python3-dev python3-tk libgl1 libglib2.0-0 mariadb-server mariadb-client v4l-utils curl git udev openssl tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa
 else
-    echo -e "${C_YELLOW}⚠️ Gestor de paquetes no estándar. Asegúrate de contar con Python 3.9+, MariaDB, Tesseract OCR y OpenGL.${C_RESET}"
+    echo -e "${C_YELLOW}Gestor de paquetes no estándar. Asegúrate de contar con Python 3.9+, MariaDB, Tesseract OCR y OpenGL.${C_RESET}"
 fi
 
 # 5. Configuración de Reglas Udev para Hardware Inmediato (Sin Reiniciar)
-echo -e "\n${C_YELLOW}🔌 [2/6] Configurando reglas de hardware automáticas (Arduino, Cámaras, NPU)...${C_RESET}"
+echo -e "\n${C_YELLOW} [2/6] Configurando reglas de hardware automáticas (Arduino, Cámaras, NPU)...${C_RESET}"
 
 UDEV_RULES_FILE="/etc/udev/rules.d/99-fluxa-hardware.rules"
 cat << 'EOF' > /tmp/99-fluxa-hardware.rules
@@ -139,10 +139,10 @@ if grep -q "^uucp:" /etc/group; then run_sudo usermod -a -G uucp "$CURRENT_USER"
 if grep -q "^video:" /etc/group; then run_sudo usermod -a -G video "$CURRENT_USER" || true; fi
 if grep -q "^render:" /etc/group; then run_sudo usermod -a -G render "$CURRENT_USER" || true; fi
 
-echo -e "${C_GREEN}✅ Hardware habilitado para uso inmediato sin necesidad de reiniciar la sesión.${C_RESET}"
+echo -e "${C_GREEN}Hardware habilitado para uso inmediato sin necesidad de reiniciar la sesión.${C_RESET}"
 
 # 6. Creación y Despliegue del Entorno Virtual Aislado (.venv)
-echo -e "\n${C_YELLOW}🐍 [3/6] Preparando entorno Python y librerías...${C_RESET}"
+echo -e "\n${C_YELLOW} [3/6] Preparando entorno Python y librerías...${C_RESET}"
 cd "$SCRIPT_DIR"
 
 if [ ! -d ".venv" ]; then
@@ -168,10 +168,10 @@ else
     "$PIP_CMD" install -r requirements.txt --quiet
 fi
 
-echo -e "${C_GREEN}✅ Dependencias de IA y tracking instaladas correctamente.${C_RESET}"
+echo -e "${C_GREEN}Dependencias de IA y tracking instaladas correctamente.${C_RESET}"
 
 # 7. Configuración Automática y Despliegue de MariaDB con Seguridad
-echo -e "\n${C_YELLOW}🗄️ [4/6] Desplegando e inicializando Base de Datos MariaDB...${C_RESET}"
+echo -e "\n${C_YELLOW}️ [4/6] Desplegando e inicializando Base de Datos MariaDB...${C_RESET}"
 
 DB_PASS="${DATABASE_PASSWORD:-}"
 if [ -z "$DB_PASS" ]; then
@@ -214,12 +214,12 @@ DATABASE_PORT=3306
 EOF
     chmod 600 "$ENV_FILE"
     
-    echo -e "${C_GREEN}✅ Servidor MariaDB activo y base de datos 'fluxa_traffic' lista con credenciales configuradas en .env.${C_RESET}"
+    echo -e "${C_GREEN}Servidor MariaDB activo y base de datos 'fluxa_traffic' lista con credenciales configuradas en .env.${C_RESET}"
 fi
 
 # 7.1. Inicializar Credenciales de Administrador C5 si no existen
 if [ ! -f "$SCRIPT_DIR/instance/admin_credentials.json" ]; then
-    echo -e "\n${C_BLUE}🔐 Configurando credenciales de Operador Administrador C5...${C_RESET}"
+    echo -e "\n${C_BLUE} Configurando credenciales de Operador Administrador C5...${C_RESET}"
     if [ -t 0 ]; then
         $PYTHON_CMD "$SCRIPT_DIR/scripts/set_admin_password.py"
     else
@@ -230,7 +230,7 @@ fi
 
 # 7.2. Verificación e Instalación Automática de NPU en Orange Pi 5 (aarch64)
 if [ "$ARCH" = "aarch64" ]; then
-    echo -e "\n${C_BLUE}🔍 Configurando soporte para NPU Rockchip RK3588 (rknn-toolkit-lite2)...${C_RESET}"
+    echo -e "\n${C_BLUE} Configurando soporte para NPU Rockchip RK3588 (rknn-toolkit-lite2)...${C_RESET}"
     
     # Obtener versión de Python en formato 310, 311, 312
     PY_VER=$($PYTHON_CMD -c "import sys; print(f'{sys.version_info.major}{sys.version_info.minor}')")
@@ -259,14 +259,14 @@ if [ "$ARCH" = "aarch64" ]; then
 
     # Verificar que el módulo rknnlite cargue sin errores
     if $PYTHON_CMD -c "from rknnlite.api import RKNNLite" 2>/dev/null; then
-        echo -e "${C_GREEN}✅ Soporte de NPU Rockchip RK3588 (rknnlite) verificado y activo.${C_RESET}"
+        echo -e "${C_GREEN}Soporte de NPU Rockchip RK3588 (rknnlite) verificado y activo.${C_RESET}"
     else
-        echo -e "${C_YELLOW}⚠️ Advertencia: rknnlite no pudo cargarse en este momento. El sistema usará el motor CPU de respaldo.${C_RESET}"
+        echo -e "${C_YELLOW}Advertencia: rknnlite no pudo cargarse en este momento. El sistema usará el motor CPU de respaldo.${C_RESET}"
     fi
 fi
 
 # 8. Instalación del Comando Global 'fluxa' (/usr/local/bin/fluxa)
-echo -e "\n${C_YELLOW}🚀 [5/6] Instalando acceso directo global 'fluxa'...${C_RESET}"
+echo -e "\n${C_YELLOW} [5/6] Instalando acceso directo global 'fluxa'...${C_RESET}"
 
 WRAPPER_PATH="/usr/local/bin/fluxa"
 cat << 'EOF' > /tmp/fluxa_wrapper.sh
@@ -289,7 +289,7 @@ sed -i "s|__INSTALL_DIR__|$SCRIPT_DIR|g" /tmp/fluxa_wrapper.sh
 run_sudo mv /tmp/fluxa_wrapper.sh "$WRAPPER_PATH"
 run_sudo chmod +x "$WRAPPER_PATH"
 
-echo -e "${C_GREEN}✅ Comando 'fluxa' disponible globalmente.${C_RESET}"
+echo -e "${C_GREEN}Comando 'fluxa' disponible globalmente.${C_RESET}"
 
 # 9. Configuración del Servicio Systemd de Gabinete
 echo -e "\n${C_YELLOW}⚙️  [6/6] Configurando servicio en segundo plano (Systemd)...${C_RESET}"
@@ -332,7 +332,7 @@ run_sudo mv /tmp/fluxa.service "$SERVICE_FILE"
 run_sudo chmod 644 "$SERVICE_FILE"
 run_sudo systemctl daemon-reload
 
-echo -e "${C_GREEN}✅ Servicio systemd creado en ${SERVICE_FILE} (Backend: ${BACKEND_DEFAULT}).${C_RESET}"
+echo -e "${C_GREEN}Servicio systemd creado en ${SERVICE_FILE} (Backend: ${BACKEND_DEFAULT}).${C_RESET}"
 
 # Resumen Final
 echo -e "\n${C_GREEN}${C_BOLD}"

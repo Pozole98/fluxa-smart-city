@@ -523,3 +523,10 @@ docker compose logs -f
 * **Titularidad:** Moisés Emilio Martínez Arias © 2026. Todos los derechos reservados.
 * **Respaldo Institucional:** Tecnológico de Estudios Superiores de Coacalco (TESCo) • Tecnológico Nacional de México (TecNM).
 * **Marco Legal:** Consulte el contrato de licenciamiento en [LICENSE.md](../LICENSE.md) y la justificación económica en [Modelo de Negocio B2G y ROI](MODELO_NEGOCIO_B2G.md).
+
+## 10. Topología de Corredor Vial (Olas Verdes) y Tri-Core NPU
+FLUXA permite el despliegue concurrente de múltiples cruces semafóricos interconectados en la misma placa base (Edge). Aprovechando la arquitectura multinúcleo de la NPU del RK3588, se instancian nodos independientes (p. ej. `CRUCE_01`, `CRUCE_02`, `CRUCE_03`) asociados a los núcleos físicos de inferencia (`npu0`, `npu1`, `npu2`).
+Esto otorga:
+- **Redundancia de Procesamiento:** Aislamiento de memoria de red neuronal.
+- **Sincronización P2P:** Transmisión descentralizada asíncrona mediante un orquestador para la configuración anticipada de Olas Verdes.
+- **Rendimiento Dinámico:** 60+ FPS estables con control asíncrono para bloqueo V-Sync contra los fotogramas del buffer de cámara (ahorro masivo de energía).

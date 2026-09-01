@@ -163,7 +163,7 @@ Ejemplos de Uso:
     args = parser.parse_args()
 
     if args.list_topologies:
-        print("\n📍 Topologías Viales Soportadas en FLUXA:")
+        print("\n Topologías Viales Soportadas en FLUXA:")
         for k, v in TOPOLOGIAS_DISPONIBLES.items():
             print(f"  • {k:<18} : {v['descripcion']}")
         print()
@@ -175,9 +175,9 @@ Ejemplos de Uso:
     topology_info = TOPOLOGIAS_DISPONIBLES[args.topology]
     print_banner(args.topology, args.backend, is_headless, args.port)
     if args.video:
-        print(f"🎬 Fuente de video especificada por CLI: {args.video}\n")
+        print(f" Fuente de video especificada por CLI: {args.video}\n")
     if args.npu_core and args.backend == "rknn":
-        print(f"⚡ Núcleo NPU RK3588 asignado: Core {args.npu_core}\n")
+        print(f"Núcleo NPU RK3588 asignado: Core {args.npu_core}\n")
 
     # Instanciar el controlador según backend
     if args.backend == "cpu":
@@ -190,7 +190,7 @@ Ejemplos de Uso:
             tk = getattr(mod, "tk", None)
             if tk is None or not getattr(mod, "TKINTER_AVAILABLE", True):
                 print("\n❌ Error: La interfaz gráfica de escritorio (--gui) requiere Tkinter.")
-                print("💡 Solución:")
+                print(" Solución:")
                 print("   • En Ubuntu/Debian/Armbian:  sudo apt install python3-tk")
                 print("   • En Fedora/RHEL:           sudo dnf install python3-tkinter")
                 print("   • O ejecuta en modo Headless (WebUI): python3 main.py --headless\n")
@@ -209,7 +209,7 @@ Ejemplos de Uso:
             tk = getattr(mod, "tk", None)
             if tk is None or not getattr(mod, "TKINTER_AVAILABLE", True):
                 print("\n❌ Error: La interfaz gráfica de escritorio (--gui) requiere Tkinter.")
-                print("💡 Solución:")
+                print(" Solución:")
                 print("   • En Ubuntu/Debian/Armbian:  sudo apt install python3-tk")
                 print("   • En Fedora/RHEL:           sudo dnf install python3-tkinter")
                 print("   • O ejecuta en modo Headless (WebUI): python3 main.py --backend rknn --headless\n")

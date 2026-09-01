@@ -12,11 +12,11 @@ CURRENT_USER="${SUDO_USER:-$USER}"
 ARCH=$(uname -m)
 
 if [ "$EUID" -ne 0 ]; then
-  echo "⚠️ Por favor ejecuta este script con privilegios root (sudo bash systemd/install_service.sh)"
+  echo "Por favor ejecuta este script con privilegios root (sudo bash systemd/install_service.sh)"
   exit 1
 fi
 
-echo "🚦 Configurando servicio $SERVICE_NAME para usuario $CURRENT_USER en $SCRIPT_DIR..."
+echo " Configurando servicio $SERVICE_NAME para usuario $CURRENT_USER en $SCRIPT_DIR..."
 
 BACKEND="cpu"
 if [ "$ARCH" = "aarch64" ]; then
@@ -54,15 +54,15 @@ EOF
 
 chmod 644 "$SERVICE_DEST"
 
-echo "🔄 Recargando daemon de systemd..."
+echo " Recargando daemon de systemd..."
 systemctl daemon-reload
 
-echo "⚡ Habilitando servicio para auto-arranque..."
+echo "Habilitando servicio para auto-arranque..."
 systemctl enable "$SERVICE_NAME"
 
-echo "🚀 Iniciando servicio FLUXA..."
+echo " Iniciando servicio FLUXA..."
 systemctl restart "$SERVICE_NAME"
 
-echo "✅ Servicio FLUXA instalado y corriendo exitosamente (Backend: $BACKEND)."
+echo "Servicio FLUXA instalado y corriendo exitosamente (Backend: $BACKEND)."
 echo "Para verificar el estado ejecuta: sudo systemctl status $SERVICE_NAME"
 echo "Para ver logs en tiempo real ejecuta: sudo journalctl -u $SERVICE_NAME -f"

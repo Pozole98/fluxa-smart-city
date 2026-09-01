@@ -1,3 +1,10 @@
+# ============================================================================
+# FLUXA Smart City - Sistema de Control de Tráfico Adaptativo
+# ============================================================================
+# Desarrollador Principal y Propietario de Derechos: Moisés Emilio Martínez Arias
+# Institución: Tecnológico de Estudios Superiores de Coacalco (TESCo) - TecNM
+# Licencia: Propietaria / Comercial (Certamen InnovaTecNM 2026)
+# ============================================================================
 import os
 import sys
 import tkinter as tk
@@ -41,7 +48,7 @@ class SemaforoController2Vias:
         if os.path.exists(posible):
             model_path = posible
             
-        print(f"📦 Cargando modelo YOLO nativo en CPU desde: {model_path}")
+        print(f" Cargando modelo YOLO nativo en CPU desde: {model_path}")
         self.model = YOLO(model_path)
             
         args = SimpleNamespace(
@@ -135,7 +142,7 @@ class SemaforoController2Vias:
         try:
             self.arduino = serial.Serial(port=port, baudrate=baud, timeout=0.1)
             time.sleep(2)
-            print("✅ Arduino conectado.")
+            print("Arduino conectado.")
         except Exception:
             self.arduino = None
 

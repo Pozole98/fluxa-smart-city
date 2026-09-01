@@ -106,7 +106,7 @@ estado_global = {
         "fase_activa": "VERDE_NS",
         "tiempo_restante_seg": 0.0,
         "velocidad_recomendada_kmh": 45,
-        "aviso_conductor": "🟢 Mantenga 40-50 km/h (Ola Verde Activa)",
+        "aviso_conductor": " Mantenga 40-50 km/h (Ola Verde Activa)",
         "spat_timestamp": datetime.now().isoformat()
     },
     "latencias_ms": {
@@ -210,14 +210,14 @@ def load_auth_config():
             json.dump(auto_creds, f, indent=4)
         os.chmod(admin_creds_file, 0o600)
     except Exception as e:
-        print(f"⚠️ Error guardando credenciales seguras: {e}")
+        print(f"Error guardando credenciales seguras: {e}")
 
     print("\n" + "=" * 72)
-    print("⚠️  FLUXA SEGURIDAD: Credenciales de Administrador C5 Generadas")
-    print("👤 Usuario:     admin")
-    print(f"🔑 Contraseña:  {raw_pass}")
+    print(" FLUXA SEGURIDAD: Credenciales de Administrador C5 Generadas")
+    print(" Usuario:     admin")
+    print(f" Contraseña:  {raw_pass}")
     print("ℹ️  Guarda esta contraseña de forma segura. No se volverá a mostrar en texto plano.")
-    print("💡 Para cambiarla: python3 scripts/set_admin_password.py")
+    print(" Para cambiarla: python3 scripts/set_admin_password.py")
     print("=" * 72 + "\n")
 
     return auto_creds
@@ -524,7 +524,7 @@ def trigger_corridor_wave_api():
         vehicles = int(data.get("vehicle_count", 5))
         direction = str(data.get("direction", "SUR"))
         corridor_manager_instance.notify_departure_platoon(vehicle_count=vehicles, direction=direction)
-        registrar_evento('EMERG', f"🌊 Ola Verde Manual iniciada en corredor hacia {direction} (Pelotón: {vehicles} veh)")
+        registrar_evento('EMERG', f" Ola Verde Manual iniciada en corredor hacia {direction} (Pelotón: {vehicles} veh)")
         return jsonify({"status": "wave_emitted", "vehicles": vehicles, "direction": direction})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -656,7 +656,8 @@ def manage_full_config():
                 "backend": estado_global.get("backend", "CPU"),
                 "zones": cfg.get("zones", {}),
                 "traffic_light": cfg.get("traffic_light", {}),
-                "ai_model": cfg.get("ai_model", {})
+                "ai_model": cfg.get("ai_model", {}),
+                "corridor": cfg.get("corridor", {})
             })
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -683,6 +684,18 @@ def manage_full_config():
                         cfg["ai_model"][k] = float(v)
                     elif k == "model_file":
                         cfg["ai_model"][k] = str(v)
+                        
+            if "corridor" in data and isinstance(data["corridor"], dict):
+                if "corridor" not in cfg:
+                    cfg["corridor"] = {}
+                for k, v in data["corridor"].items():
+                    if k == "avg_speed_kmh":
+                        cfg["corridor"][k] = float(v)
+                        if corridor_manager_instance:
+                            corridor_manager_instance.avg_speed_kmh = max(20.0, float(v))
+                            corridor_manager_instance.avg_speed_mps = (corridor_manager_instance.avg_speed_kmh * 1000.0) / 3600.0
+                    else:
+                        cfg["corridor"][k] = v
                         
             with open(config_path, 'w') as f:
                 json.dump(cfg, f, indent=4)
@@ -921,8 +934,8 @@ def control():
     elif action == "emergency_corridor":
         eje = target if target else "NS"
         control_callback(eje)
-        registrar_evento('EMERG', f"🚨 CORREDOR DE EMERGENCIA C5 ACTIVADO PARA EJE {eje}")
-        return jsonify({"message": f"🚨 Corredor de Emergencia despejado para {eje}", "status": "ok"})
+        registrar_evento('EMERG', f" CORREDOR DE EMERGENCIA C5 ACTIVADO PARA EJE {eje}")
+        return jsonify({"message": f" Corredor de Emergencia despejado para {eje}", "status": "ok"})
     elif action == "pedestrian_call":
         control_callback("PEATONES")
         registrar_evento('INFO', "Demanda peatonal forzada vía API C5")
@@ -959,7 +972,7 @@ class TelemetryAPI:
         if not self.enabled:
             return
             
-        print(f"🌐 Servidor Web de Comando y Streaming listo en http://{self.host}:{self.port}")
+        print(f" Servidor Web de Comando y Streaming listo en http://{self.host}:{self.port}")
         self.thread = threading.Thread(target=self._run_flask, daemon=True)
         self.thread.start()
         registrar_evento('INFO', f"Servidor API y Telemetría iniciado en puerto {self.port}")
