@@ -252,12 +252,21 @@ fluxa --topology 4_way --backend cpu --headless --video videos/demo.mp4 --port 5
 fluxa --topology 4_way --backend rknn --headless --port 5000
 ```
 
-### Control del Servicio de Gabinete Vial (Systemd)
+### Instalación y Control del Servicio de Gabinete Vial (Systemd Tri-Core)
+
+Para despliegues permanentes en semáforos, **FLUXA debe operar en segundo plano** utilizando `systemd`. Esto despliega simultáneamente los 3 nodos de la intersección (Puertos 5000, 5001 y 5002) aislando cada cruce en un núcleo físico independiente de la NPU del RK3588.
+
 ```bash
-sudo systemctl start fluxa      # Iniciar servicio
-sudo systemctl stop fluxa       # Detener servicio
-sudo systemctl restart fluxa    # Reiniciar servicio
-journalctl -u fluxa -f          # Telemetría en tiempo real
+# 1. Instalar y habilitar el cluster de servicios en background
+sudo bash systemd/install_service.sh
+
+# 2. Controlar servicios individualmente (Nodos 0, 1 y 2)
+sudo systemctl start fluxa-node0 fluxa-node1 fluxa-node2
+sudo systemctl stop fluxa-node0 fluxa-node1 fluxa-node2
+sudo systemctl restart fluxa-node0 fluxa-node1 fluxa-node2
+
+# 3. Telemetría de Kernel en tiempo real (Ejemplo: Cruce 01)
+sudo journalctl -u fluxa-node0 -f
 ```
 
 ---
