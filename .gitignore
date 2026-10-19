@@ -46,5 +46,10 @@ guiaregional.pdf
 entregasanteriores/
 docs/ENTREGABLE_*.md
 docs/MODELO_NEGOCIO_*.md
+docs/*.pdf
+docs/GUIAS_EXPOSICION.md
 imagenes_plataforma/
+presentaciones/
+_archived_backups/
+
 
