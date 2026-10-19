@@ -36,22 +36,22 @@ class EstadoSemaforoPedestrian(Enum):
     ROJO_TODOS_2 = 6
 
 class SemaforoControllerPedestrian_RKNN(CoreSemaforoRKNN):
-    def __init__(self, port=None, video_source=None, npu_core_id=None):
-        super().__init__(topology_name="pedestrian", port=port, video_source=video_source, npu_core_id=npu_core_id)
+    def __init__(self, port=None, video_source=None, npu_core_id=None, enable_arduino=None, **kwargs):
+        super().__init__(topology_name="pedestrian", port=port, video_source=video_source, npu_core_id=npu_core_id, enable_arduino=enable_arduino, **kwargs)
         self.estado_actual = EstadoSemaforoPedestrian.VERDE_VEHICULOS
 
     def _dibujar_interfaz_topologia(self, frame, autos):
         pass
 
 class AppPedestrian_RKNN:
-    def __init__(self, root, video_source=None):
+    def __init__(self, root, video_source=None, enable_arduino=None, **kwargs):
         self.ventana = root
         self.ventana.title("FLUXA - Cruce Peatonal (RKNN NPU)")
         self.ventana.geometry("1100x750")
         self.ventana.configure(bg="#0f172a")
         self.ventana.protocol("WM_DELETE_WINDOW", self.on_closing)
         
-        self.controller = SemaforoControllerPedestrian_RKNN(video_source=video_source)
+        self.controller = SemaforoControllerPedestrian_RKNN(video_source=video_source, enable_arduino=enable_arduino, **kwargs)
         self.video_loop_id = None
         self._crear_ui()
         

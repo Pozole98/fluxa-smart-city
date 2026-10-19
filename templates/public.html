@@ -334,6 +334,95 @@
             margin-top: 0.2rem;
         }
 
+        /* Semáforos Virtuales Realistas (Digital Twin C5) */
+        .v-signal-box {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0.85rem 0.6rem;
+            background: rgba(6, 12, 8, 0.9);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-md);
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+            margin-top: 0.6rem;
+        }
+
+        .v-traffic-head {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 7px;
+            background: linear-gradient(180deg, #18221c 0%, #0d1410 100%);
+            border: 2px solid #233428;
+            border-radius: 18px;
+            padding: 10px 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.08);
+            position: relative;
+        }
+
+        .v-lens-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .v-lens-visor {
+            position: absolute;
+            top: -4px;
+            width: 34px;
+            height: 10px;
+            border-top: 3px solid #334737;
+            border-radius: 50% 50% 0 0;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .v-lens {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #232c25 0%, #0c120e 85%);
+            border: 2px solid #1a241d;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.9);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .v-lens.lens-red.on {
+            background: radial-gradient(circle at 40% 40%, #ffa3a3 0%, #ef4444 55%, #991b1b 100%);
+            border-color: #fca5a5;
+            box-shadow: 0 0 18px rgba(239, 68, 68, 0.95), 0 0 36px rgba(239, 68, 68, 0.4), inset 0 0 6px #ffffffcc;
+        }
+
+        .v-lens.lens-yellow.on {
+            background: radial-gradient(circle at 40% 40%, #fef08a 0%, #eab308 55%, #854d0e 100%);
+            border-color: #fde047;
+            box-shadow: 0 0 18px rgba(234, 179, 8, 0.95), 0 0 36px rgba(234, 179, 8, 0.4), inset 0 0 6px #ffffffcc;
+        }
+
+        .v-lens.lens-green.on {
+            background: radial-gradient(circle at 40% 40%, #a7f3d0 0%, #22c55e 55%, #166534 100%);
+            border-color: #86efac;
+            box-shadow: 0 0 18px rgba(34, 197, 94, 0.95), 0 0 36px rgba(34, 197, 94, 0.4), inset 0 0 6px #ffffffcc;
+        }
+
+        .v-state-pill {
+            font-size: 0.7rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            letter-spacing: 0.5px;
+            text-align: center;
+            min-width: 65px;
+            transition: all 0.2s ease;
+        }
+        .v-state-pill.is-green { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
+        .v-state-pill.is-yellow { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; }
+        .v-state-pill.is-red { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+
         /* V2X GLOSA Speed Advisor */
         .v2x-card {
             background: rgba(112, 186, 40, 0.06);
@@ -544,18 +633,72 @@
                     </div>
                 </div>
 
-                <!-- Phase Countdown -->
-                <div class="phase-widget">
-                    <div class="phase-display">
-                        <div class="phase-light" id="pub-light"></div>
-                        <div class="phase-label-box">
-                            <h3 id="pub-phase-name">Calculando Fase...</h3>
-                            <p>Control Dinámico por Demanda</p>
+                <!-- Phase Countdown & Virtual Traffic Signals -->
+                <div class="phase-widget" style="display: block;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                        <div class="phase-display">
+                            <div class="phase-light" id="pub-light"></div>
+                            <div class="phase-label-box">
+                                <h3 id="pub-phase-name">Calculando Fase...</h3>
+                                <p>Control Adaptativo IA (Edge Computing)</p>
+                            </div>
+                        </div>
+                        <div class="phase-counter">
+                            <div class="phase-counter-val" id="pub-time-remaining">--s</div>
+                            <div class="phase-counter-lbl">Tiempo Restante</div>
                         </div>
                     </div>
-                    <div class="phase-counter">
-                        <div class="phase-counter-val" id="pub-time-remaining">--s</div>
-                        <div class="phase-counter-lbl">Tiempo Restante</div>
+
+                    <!-- Dual Virtual Traffic Lights -->
+                    <div class="v-signal-box" style="margin-top: 0.4rem; background: rgba(0,0,0,0.4);">
+                        <!-- Signal A -->
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
+                            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;" id="pub-sem-a-title">Vía A (Principal)</div>
+                            <div class="v-traffic-head">
+                                <div class="v-lens-wrapper">
+                                    <div class="v-lens-visor"></div>
+                                    <div class="v-lens lens-red" id="pub-vlens-a-red"></div>
+                                </div>
+                                <div class="v-lens-wrapper">
+                                    <div class="v-lens-visor"></div>
+                                    <div class="v-lens lens-yellow" id="pub-vlens-a-yellow"></div>
+                                </div>
+                                <div class="v-lens-wrapper">
+                                    <div class="v-lens-visor"></div>
+                                    <div class="v-lens lens-green" id="pub-vlens-a-green"></div>
+                                </div>
+                            </div>
+                            <span class="v-state-pill is-red" id="pub-sem-a-badge">ROJO</span>
+                            <span style="font-size: 0.62rem; color: #94a3b8; font-family: 'JetBrains Mono';" id="pub-sem-a-sub">Pins D2, D3, D4</span>
+                        </div>
+
+                        <!-- Central indicator -->
+                        <div style="text-align: center; padding: 0 8px;">
+                            <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">Topología</div>
+                            <div style="font-size: 0.85rem; font-weight: 800; color: #38bdf8; font-family: 'JetBrains Mono';" id="pub-topology-badge">2_WAY</div>
+                            <div style="font-size: 0.62rem; color: #86efac; margin-top: 4px;">● Gemelo Digital</div>
+                        </div>
+
+                        <!-- Signal B -->
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
+                            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;" id="pub-sem-b-title">Vía B (Secundaria)</div>
+                            <div class="v-traffic-head">
+                                <div class="v-lens-wrapper">
+                                    <div class="v-lens-visor"></div>
+                                    <div class="v-lens lens-red" id="pub-vlens-b-red"></div>
+                                </div>
+                                <div class="v-lens-wrapper">
+                                    <div class="v-lens-visor"></div>
+                                    <div class="v-lens lens-yellow" id="pub-vlens-b-yellow"></div>
+                                </div>
+                                <div class="v-lens-wrapper">
+                                    <div class="v-lens-visor"></div>
+                                    <div class="v-lens lens-green" id="pub-vlens-b-green"></div>
+                                </div>
+                            </div>
+                            <span class="v-state-pill is-red" id="pub-sem-b-badge">ROJO</span>
+                            <span style="font-size: 0.62rem; color: #94a3b8; font-family: 'JetBrains Mono';" id="pub-sem-b-sub">Pins D5, D6, D7</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -686,6 +829,55 @@
                     phaseName.innerText = 'Luz Roja • Alto Total';
                 }
 
+                // Actualizar Semáforos Virtuales (Digital Twin)
+                if (data.semaforos) {
+                    const stA = data.semaforos.semaforo_a;
+                    const stB = data.semaforos.semaforo_b;
+
+                    const updateLenses = (prefix, state) => {
+                        const red = document.getElementById(`${prefix}-red`);
+                        const yel = document.getElementById(`${prefix}-yellow`);
+                        const grn = document.getElementById(`${prefix}-green`);
+                        if (red) red.classList.toggle('on', state === 'ROJO');
+                        if (yel) yel.classList.toggle('on', state === 'AMARILLO');
+                        if (grn) grn.classList.toggle('on', state === 'VERDE');
+                    };
+
+                    const updateBadge = (id, state) => {
+                        const badge = document.getElementById(id);
+                        if (badge) {
+                            badge.innerText = state;
+                            badge.className = "v-state-pill " + (state === 'VERDE' ? 'is-green' : (state === 'AMARILLO' ? 'is-yellow' : 'is-red'));
+                        }
+                    };
+
+                    updateLenses('pub-vlens-a', stA);
+                    updateLenses('pub-vlens-b', stB);
+                    updateBadge('pub-sem-a-badge', stA);
+                    updateBadge('pub-sem-b-badge', stB);
+
+                    if (data.semaforos.etiqueta_a) {
+                        const el = document.getElementById('pub-sem-a-title');
+                        if (el) el.innerText = data.semaforos.etiqueta_a;
+                    }
+                    if (data.semaforos.etiqueta_b) {
+                        const el = document.getElementById('pub-sem-b-title');
+                        if (el) el.innerText = data.semaforos.etiqueta_b;
+                    }
+                    if (data.semaforos.pins_a) {
+                        const el = document.getElementById('pub-sem-a-sub');
+                        if (el) el.innerText = data.semaforos.pins_a;
+                    }
+                    if (data.semaforos.pins_b) {
+                        const el = document.getElementById('pub-sem-b-sub');
+                        if (el) el.innerText = data.semaforos.pins_b;
+                    }
+                    if (data.topologia) {
+                        const el = document.getElementById('pub-topology-badge');
+                        if (el) el.innerText = `${data.topologia.toUpperCase()} ${data.backend || ''}`;
+                    }
+                }
+
                 const rem = data.v2x && data.v2x.tiempo_restante_seg !== undefined ? data.v2x.tiempo_restante_seg : Math.max(0, data.fase_tiempo_asignado - data.fase_tiempo_transcurrido);
                 timeRem.innerText = Math.round(rem) + 's';
 
@@ -721,7 +913,7 @@
             } catch (e) {}
         }
 
-        setInterval(updatePublicPortal, 1000);
+        setInterval(updatePublicPortal, 500);
         updatePublicPortal();
 
         // Auto-reconexión del stream

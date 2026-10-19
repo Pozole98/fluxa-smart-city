@@ -28,6 +28,7 @@ from analytics import TrafficAnalyticsLogger
 from api_server import TelemetryAPI
 from db_manager import DatabaseManager
 from corridor_sync import CorridorSyncManager
+from arduino_locker import ArduinoDeviceLock, inspect_port_lock
 
 # Diccionario de nombres y pesos de clases COCO para Prioridad TSP
 NOMBRES_CLASES_COCO = {
@@ -87,14 +88,29 @@ class CoreSemaforoBase:
     telemetría V2X (SPaT), transmisión de video MJPEG para WebUI
     y conmutación dinámica en caliente a prueba de fallos entre Cámara y Video.
     """
-    def __init__(self, topology_name="4_way", backend_name="CPU", port=None, video_source=None):
+    def __init__(self, topology_name="4_way", backend_name="CPU", port=None, video_source=None, enable_arduino=None, **kwargs):
         self.topology_name = topology_name
         self.backend_name = backend_name
+        self.port = port
         print(f"⏳ Inicializando CoreSemaforoBase (Topología: {topology_name} | Motor: {backend_name})...")
         
         self.arduino = None
         self.cap = None
         self.config = self._load_config()
+        
+        # Modo de Semáforos Físicos (Arduino) vs Virtuales (Simulación)
+        if enable_arduino is not None:
+            self.enable_arduino = bool(enable_arduino)
+        else:
+            cfg_enable = self.config.get("system", {}).get("enable_arduino", None)
+            if cfg_enable is not None:
+                self.enable_arduino = bool(cfg_enable)
+            else:
+                self.enable_arduino = True
+
+        # Secuestrador de hardware exclusivo a nivel de sistema operativo (Linux flock)
+        # Cada nodo (5000, 5001, 5002) secuestra de forma exclusiva un único Arduino físico.
+        self._arduino_locker = ArduinoDeviceLock(node_port=self.port or 5000)
         
         # Fuente de video inicial
         if video_source is not None:
@@ -108,6 +124,7 @@ class CoreSemaforoBase:
         self.arduino_tx_count = 0
         self.arduino_reconnect_count = 0
         self.ultimo_comando = None
+        self._ultimo_tx_time = 0.0
         self.tiempo_desconexion_arduino = time.time()
         self.alerta_desconexion_prolongada = False
         self._alerta_desconexion_notificada = False
@@ -185,7 +202,7 @@ class CoreSemaforoBase:
         self.TIEMPO_REPOSO = cfg_tl.get("tiempo_reposo", 20.0)
         
         self.CLASES_VEHICULOS = self.config.get("ai_model", {}).get("classes_to_detect", [0, 1, 2, 3, 5, 7])
-        self.CONF_THRESH = self.config.get("ai_model", {}).get("confidence_threshold", 0.35)
+        self.CONF_THRESH = self.config.get("ai_model", {}).get("confidence_threshold", 0.15)
         
         # Paleta de colores para ROIs y cajas (formato BGR para OpenCV)
         self.COLORES_ZONAS = [
@@ -206,14 +223,18 @@ class CoreSemaforoBase:
         self.ultimo_log_time = time.time()
         
         db_cfg = self.config.get("database", {})
-        self.db = DatabaseManager(
-            host=db_cfg.get("host", "localhost"),
-            user=db_cfg.get("user", "root"),
-            password=db_cfg.get("password", None),
-            db_name=db_cfg.get("name", "fluxa_traffic"),
-            port=db_cfg.get("port", 3306),
-            enabled=db_cfg.get("enabled", True)
-        )
+        try:
+            self.db = DatabaseManager(
+                host=db_cfg.get("host", "localhost"),
+                user=db_cfg.get("user", "root"),
+                password=db_cfg.get("password", None),
+                db_name=db_cfg.get("name", "fluxa_traffic"),
+                port=db_cfg.get("port", 3306),
+                enabled=db_cfg.get("enabled", True)
+            )
+        except Exception as e:
+            logging.warning(f"Error inicializando MariaDB ({e}). Operando en modo local/RAM para asegurar operación semafórica ininterrumpida.")
+            self.db = DatabaseManager(enabled=False)
         
         # Inicializar Servidor Web API
         api_cfg = self.config.get("api", {})
@@ -231,7 +252,8 @@ class CoreSemaforoBase:
         self.corridor = CorridorSyncManager(
             current_node_id=node_id,
             corridor_name=corr_cfg.get("name", "Corredor Principal"),
-            avg_speed_kmh=corr_cfg.get("avg_speed_kmh", 45.0)
+            avg_speed_kmh=corr_cfg.get("avg_speed_kmh", 45.0),
+            enabled=corr_cfg.get("enabled", False)
         )
         self.api = TelemetryAPI(host=api_cfg.get("host", "0.0.0.0"), port=api_port, enabled=api_cfg.get("enabled", True))
         self.api.start(
@@ -240,7 +262,8 @@ class CoreSemaforoBase:
             db_instance=self.db,
             hot_reload_callback=self.reload_zones,
             change_source_callback=self.cambiar_fuente_video,
-            corridor_instance=self.corridor
+            corridor_instance=self.corridor,
+            change_arduino_port_callback=self.set_arduino_port
         )
 
         # Inicialización del modelo (implementado en subclases)
@@ -248,9 +271,9 @@ class CoreSemaforoBase:
 
     def _init_tracker(self):
         args = SimpleNamespace(
-            track_high_thresh=self.config.get("tracker", {}).get("track_high_thresh", 0.4), 
+            track_high_thresh=self.config.get("tracker", {}).get("track_high_thresh", 0.15), 
             track_low_thresh=self.config.get("tracker", {}).get("track_low_thresh", 0.05), 
-            new_track_thresh=self.config.get("tracker", {}).get("new_track_thresh", 0.5), 
+            new_track_thresh=self.config.get("tracker", {}).get("new_track_thresh", 0.18), 
             track_buffer=self.config.get("tracker", {}).get("track_buffer", 120), 
             match_thresh=self.config.get("tracker", {}).get("match_thresh", 0.8), 
             gmc_method='sparseOptFlow',
@@ -518,6 +541,10 @@ class CoreSemaforoBase:
             
             hay_demanda_opuesta = (autos_eje_2 > 0 or demanda_eje_2 > 0) if not self.is_pedestrian else ((autos_eje_2 > 0 or demanda_eje_2 > 0) or getattr(self, 'llamada_peatonal_manual', False))
             
+            # Reposo / Standby demostrativo cuando la maqueta no tiene vehículos en ningún carril
+            sin_vehiculos_total = (autos_eje_1 == 0 and autos_eje_2 == 0 and demanda_eje_1 == 0 and demanda_eje_2 == 0)
+            tiempo_limite_reposo = getattr(self, 'TIEMPO_REPOSO', 15.0)
+            
             if hay_demanda_opuesta and tiempo_transcurrido > tiempo_minimo_actual:
                 # No cortar la fase verde si la ola verde aún está pasando
                 if not is_green_wave and (autos_eje_1 == 0 or tiempo_transcurrido >= self.fase_tiempo_asignado):
@@ -528,6 +555,9 @@ class CoreSemaforoBase:
                     self._cambiar_fase("AMARILLO_1")
                     if self.is_pedestrian:
                         self.llamada_peatonal_manual = False
+            elif sin_vehiculos_total and not is_green_wave and tiempo_transcurrido >= tiempo_limite_reposo:
+                # Rotación autónoma preventiva para que la maqueta no se congele durante la exposición
+                self._cambiar_fase("AMARILLO_1")
 
         # --- FASE 1: AMARILLO EJE 1 ---
         elif any(k in estado_str for k in ["AMARILLO_1", "AMARILLO_NS", "AMARILLO_A", "AMARILLO_PRINCIPAL", "AMARILLO_FRENTE", "AMARILLO_VEHICULOS"]):
@@ -557,9 +587,16 @@ class CoreSemaforoBase:
                     self._cambiar_fase("AMARILLO_2")
             else:
                 self.fase_tiempo_asignado = min(self.TIEMPO_MAXIMO_VERDE, max(tiempo_minimo_actual, demanda_eje_2 * factor))
-                if ((autos_eje_1 > 0 or demanda_eje_1 > 0) or is_green_wave) and tiempo_transcurrido > tiempo_minimo_actual:
+                
+                hay_demanda_eje_1 = (autos_eje_1 > 0 or demanda_eje_1 > 0 or is_green_wave)
+                sin_autos_eje_2 = (autos_eje_2 == 0 and demanda_eje_2 == 0)
+                
+                # Despeje: Si hay demanda en Eje 1 y ya pasó el tiempo mínimo, o si Eje 2 no tiene autos y terminó su verde asignado
+                if hay_demanda_eje_1 and tiempo_transcurrido > tiempo_minimo_actual:
                     if autos_eje_2 == 0 or tiempo_transcurrido >= self.fase_tiempo_asignado or is_green_wave:
                         self._cambiar_fase("AMARILLO_2")
+                elif sin_autos_eje_2 and tiempo_transcurrido >= self.fase_tiempo_asignado:
+                    self._cambiar_fase("AMARILLO_2")
 
         # --- FASE 2: AMARILLO EJE 2 ---
         elif any(k in estado_str for k in ["AMARILLO_2", "AMARILLO_EO", "AMARILLO_B", "AMARILLO_SECUNDARIA", "AMARILLO_GIRO", "AMARILLO_PEATONES"]):
@@ -623,7 +660,7 @@ class CoreSemaforoBase:
         
         # Recargar umbrales de IA
         cfg_ai = self.config.get("ai_model", {})
-        self.CONF_THRESH = cfg_ai.get("confidence_threshold", 0.35)
+        self.CONF_THRESH = cfg_ai.get("confidence_threshold", 0.15)
         self.CLASES_VEHICULOS = cfg_ai.get("classes_to_detect", [0, 1, 2, 3, 5, 7])
         
         new_model = cfg_ai.get("model_file", "yolov8n.pt")
@@ -740,7 +777,10 @@ class CoreSemaforoBase:
 
     def start(self):
         self.running = True
-        threading.Thread(target=self._init_arduino, daemon=True).start()
+        if self.enable_arduino:
+            threading.Thread(target=self._init_arduino, daemon=True).start()
+        else:
+            logging.info(f"Instancia en puerto {self.port}: Semáforos Virtuales activos (sin conexión física a microcontrolador).")
         
         self.cap = VideoStream(src=self.fuente_actual).start()
         time.sleep(0.8)
@@ -755,31 +795,133 @@ class CoreSemaforoBase:
         self.db.log_event_async('INFO', f"Sistema FLUXA iniciado ({self.topology_name} - {self.backend_name})")
 
     def _construir_poligonos(self):
+        """
+        Construye las geometrías de las ROIs en memoria.
+        Blindado contra crashes si el usuario deja áreas vacías, con < 3 vértices o con área nula.
+        """
         self.poligonos = {}
-        for nombre, puntos in self.zonas_raw.items():
-            pts = []
-            for px, py in puntos:
-                pts.append([int(px * self.w), int(py * self.h)])
-            self.poligonos[nombre] = np.array(pts, np.int32)
-        
-        # Pre-calcular mapa zona→color y centroides (constantes que no cambian por frame)
         self._zona_color_map = {}
         self._zona_centroids = {}
-        for i, (nombre, pts) in enumerate(self.poligonos.items()):
-            self._zona_color_map[nombre] = self.COLORES_ZONAS[i % len(self.COLORES_ZONAS)]
-            self._zona_centroids[nombre] = (int(np.mean(pts[:, 0])), int(np.mean(pts[:, 1])))
+
+        for i, (nombre, puntos) in enumerate(self.zonas_raw.items()):
+            color = self.COLORES_ZONAS[i % len(self.COLORES_ZONAS)]
+            self._zona_color_map[nombre] = color
+
+            # Asegurar siempre contadores y rastreadores iniciales para evitar KeyError en la FSM y en la API
+            if nombre not in self.last_autos:
+                self.last_autos[nombre] = 0
+            if nombre not in self.last_demanda_ponderada:
+                self.last_demanda_ponderada[nombre] = 0.0
+            if hasattr(self, 'tracked_ids_por_zona') and nombre not in self.tracked_ids_por_zona:
+                self.tracked_ids_por_zona[nombre] = set()
+            if hasattr(self, 'autos_acumulados') and nombre not in self.autos_acumulados:
+                self.autos_acumulados[nombre] = 0
+
+            # Blindaje 1: Detección de listas vacías o vértices insuficientes (< 3 puntos)
+            if not puntos or not isinstance(puntos, (list, tuple)) or len(puntos) < 3:
+                logging.warning(f"⚠️ ROI '{nombre}' contiene puntos insuficientes ({len(puntos) if puntos else 0} < 3). Se mantendrá en modo seguro sin detecciones.")
+                self._zona_centroids[nombre] = (max(10, self.w // 2), max(10, self.h // 2))
+                continue
+
+            pts = []
+            for pt in puntos:
+                if isinstance(pt, (list, tuple)) and len(pt) >= 2:
+                    try:
+                        px, py = float(pt[0]), float(pt[1])
+                        pts.append([int(px * self.w), int(py * self.h)])
+                    except (ValueError, TypeError):
+                        pass
+
+            if len(pts) < 3:
+                logging.warning(f"⚠️ ROI '{nombre}' tiene coordenadas inválidas. Omitiendo.")
+                self._zona_centroids[nombre] = (max(10, self.w // 2), max(10, self.h // 2))
+                continue
+
+            pts_arr = np.array(pts, np.int32)
+
+            # Blindaje 2: Detección de áreas colineales o nulas (evitar excepción en OpenCV)
+            area = abs(cv2.contourArea(pts_arr))
+            if area < 1.0:
+                logging.warning(f"⚠️ ROI '{nombre}' tiene área nula ({area:.1f} px). Omitiendo geometría para prevenir crash.")
+                self._zona_centroids[nombre] = (max(10, self.w // 2), max(10, self.h // 2))
+                continue
+
+            self.poligonos[nombre] = pts_arr
+            cx = int(np.mean(pts_arr[:, 0]))
+            cy = int(np.mean(pts_arr[:, 1]))
+            self._zona_centroids[nombre] = (cx, cy)
+
+    def set_arduino_port(self, port):
+        """
+        Establece el puerto serial del Arduino secuestrándolo de forma exclusiva
+        o conmuta a modo de Semáforos Virtuales (Gemelo Digital).
+        Cualquier nodo (5000, 5001, 5002) puede secuestrar un Arduino libre.
+        """
+        port_str = str(port).strip()
+        if port_str.upper() in ["VIRTUAL", "NONE", "DESACTIVADO", "DISABLED", "NULL"]:
+            logging.info(f"Instancia Nodo {self.port or 5000}: Conmutando a modo de Semáforos Virtuales.")
+            if hasattr(self, '_arduino_locker') and self._arduino_locker:
+                self._arduino_locker.release()
+            self.enable_arduino = False
+            self.arduino_port_actual = "VIRTUAL"
+            if hasattr(self, 'arduino') and self.arduino:
+                try:
+                    self.arduino.close()
+                except Exception:
+                    pass
+                self.arduino = None
+            self.alerta_desconexion_prolongada = False
+            self._alerta_desconexion_notificada = False
+            self.api.log_event('INFO', "Modo Semáforos Virtuales activado en este nodo")
+            return {"status": "ok", "message": "Modo Semáforos Virtuales activado exitosamente"}
+
+        # Verificar si el puerto ya está secuestrado por otro nodo
+        my_node_port = self.port or 5000
+        lock_status = inspect_port_lock(port_str, current_node_port=my_node_port)
+        if lock_status["is_locked"] and not lock_status["is_mine"]:
+            msg = f"Puerto {port_str} ya se encuentra secuestrado por {lock_status.get('owner', 'otro nodo')}. Asignación rechazada."
+            logging.warning(f"⚠️ Nodo {my_node_port}: {msg}")
+            return {"status": "error", "error": msg}
+
+        # Intentar secuestro exclusivo a nivel de sistema operativo
+        if hasattr(self, '_arduino_locker') and self._arduino_locker:
+            if not self._arduino_locker.acquire(port_str):
+                msg = f"No se pudo secuestrar el puerto {port_str} (recurso ocupado o no disponible)."
+                return {"status": "error", "error": msg}
+
+        logging.info(f"Instancia Nodo {my_node_port}: Secuestrado puerto Arduino {port_str}")
+        self.enable_arduino = True
+        self.arduino_port_actual = port_str
+        
+        # Cerrar conexión anterior para forzar reconexión con el nuevo hardware
+        if hasattr(self, 'arduino') and self.arduino:
+            try:
+                self.arduino.close()
+            except Exception:
+                pass
+            self.arduino = None
+        
+        threading.Thread(target=self._init_arduino, daemon=True).start()
+        return {"status": "ok", "message": f"Puerto {port_str} secuestrado y asignado con éxito a este nodo"}
 
     def _init_arduino(self):
-        ports_to_try = [
-            self.arduino_port_actual,
-            "/dev/ttyACM0", "/dev/ttyACM1", "/dev/ttyACM2",
-            "/dev/ttyUSB0", "/dev/ttyUSB1"
-        ]
-        
+        if not self.enable_arduino or self.arduino_port_actual == "VIRTUAL":
+            return
+
+        my_node_port = self.port or 5000
+
         while self.running:
+            if not self.enable_arduino or self.arduino_port_actual == "VIRTUAL":
+                break
+
+            ports_to_try = [
+                self.arduino_port_actual,
+                "/dev/ttyACM0", "/dev/ttyACM1", "/dev/ttyACM2",
+                "/dev/ttyUSB0", "/dev/ttyUSB1"
+            ]
+            
             is_connected = self.arduino is not None and getattr(self.arduino, 'is_open', False)
             if not is_connected:
-                # Notificación informativa y bandera de operación autónoma / demo si no hay Arduino
                 tiempo_desconectado = time.time() - self.tiempo_desconexion_arduino
                 if tiempo_desconectado > 5.0:
                     self.alerta_desconexion_prolongada = True
@@ -792,19 +934,34 @@ class CoreSemaforoBase:
 
                 connected = False
                 for port in ports_to_try:
+                    if not port or port.upper() in ["VIRTUAL", "NONE"]:
+                        continue
+
+                    # Comprobar cerrojo: Si otro nodo lo tiene secuestrado, NO tocarlo
+                    lock_check = inspect_port_lock(port, current_node_port=my_node_port)
+                    if lock_check["is_locked"] and not lock_check["is_mine"]:
+                        continue
+
+                    # Intentar secuestro exclusivo
+                    if hasattr(self, '_arduino_locker') and self._arduino_locker:
+                        if not self._arduino_locker.acquire(port):
+                            continue
+
                     try:
-                        self.arduino = serial.Serial(port=port, baudrate=self.arduino_baud, timeout=0.1)
+                        self.arduino = serial.Serial(port=port, baudrate=self.arduino_baud, timeout=0.1, exclusive=True)
                         time.sleep(2)
                         self.arduino.reset_input_buffer()
                         self.arduino_port_actual = port
                         connected = True
                         break
                     except Exception:
-                        pass
+                        # Si no pudo abrir el serial, soltar el cerrojo para no dejarlo bloqueado
+                        if hasattr(self, '_arduino_locker') and self._arduino_locker and self.arduino_port_actual != port:
+                            self._arduino_locker.release()
                 
                 if connected:
-                    logging.info(f"Enlace serial con Arduino UNO R4 activo en {self.arduino_port_actual}.")
-                    self.api.log_event('INFO', f"Controlador físico (Arduino UNO R4) reconectado en {self.arduino_port_actual}")
+                    logging.info(f"🔒 Enlace serial con Arduino UNO R4 activo y secuestrado en {self.arduino_port_actual} por Nodo {my_node_port}.")
+                    self.api.log_event('INFO', f"Controlador físico (Arduino UNO R4) reconectado y secuestrado en {self.arduino_port_actual}")
                     self.db.log_event_async('INFO', f"Controlador físico (Arduino UNO R4) reconectado en {self.arduino_port_actual}")
                     self.alerta_desconexion_prolongada = False
                     self._alerta_desconexion_notificada = False
@@ -827,6 +984,11 @@ class CoreSemaforoBase:
 
     def stop(self):
         self.running = False
+        if hasattr(self, '_arduino_locker') and self._arduino_locker:
+            try:
+                self._arduino_locker.release()
+            except Exception:
+                pass
         if hasattr(self, 'cap') and self.cap:
             try:
                 self.cap.stop()
@@ -849,12 +1011,39 @@ class CoreSemaforoBase:
                 pass
 
     def enviar_comando(self, comando):
-        if self.arduino and comando != self.ultimo_comando:
-            try:
-                self.arduino.write(comando.encode())
+        if not self.enable_arduino:
+            ahora = time.time()
+            es_cambio = (comando != self.ultimo_comando)
+            if es_cambio:
                 self.ultimo_comando = comando
                 self.arduino_tx_count += 1
-                self.api.log_event('ARDUINO', f"Comando '{comando}' enviado a semáforos")
+                self._ultimo_tx_time = ahora
+                self.api.log_event('VIRTUAL', f"Semáforos virtuales actualizados a comando '{comando}'")
+            return
+
+        if not self.arduino:
+            return
+
+        ahora = time.time()
+        ultimo_tx = getattr(self, '_ultimo_tx_time', 0.0)
+        es_cambio = (comando != self.ultimo_comando)
+        # Re-enviar comando como heartbeat periódico (1.0s) para mantener activo el watchdog (15s) del Arduino
+        debe_enviar = es_cambio or (ahora - ultimo_tx >= 1.0)
+
+        if debe_enviar:
+            try:
+                self.arduino.write(comando.encode())
+                try:
+                    self.arduino.flush()
+                except Exception:
+                    pass
+                self._ultimo_tx_time = ahora
+                if es_cambio:
+                    self.ultimo_comando = comando
+                    self.arduino_tx_count += 1
+                    self.api.log_event('ARDUINO', f"Comando '{comando}' enviado a semáforos")
+                if hasattr(self.arduino, 'in_waiting') and self.arduino.in_waiting > 0:
+                    self.arduino.reset_input_buffer()
             except serial.SerialException:
                 logging.warning("❌ Falla de comunicación Serial con Arduino R4. Iniciando watchdog de reconexión...")
                 self.api.log_event('WARN', "Desconexión de Arduino detectada. Iniciando watchdog...")
@@ -895,7 +1084,7 @@ class CoreSemaforoBase:
     def _check_modo_noche(self):
         night_cfg = self.config.get("night_mode", {})
         if not night_cfg.get("enabled", False):
-            if not self.emergencia_activa and not self.modo_actual.startswith(""):
+            if not self.emergencia_activa and not self.modo_actual.startswith("🚨"):
                 self.modo_actual = "Normal"
             return self.TIEMPO_MINIMO_VERDE_BASE
             
@@ -947,8 +1136,8 @@ class CoreSemaforoBase:
             if zona_nombre in ['frente']:
                 es_luz_roja = True
         elif "VERDE_VEHICULOS" in estado_str or "AMARILLO_VEHICULOS" in estado_str:
-            if zona_nombre in ['peatones_esperando']:
-                es_luz_roja = True
+            # En verde vehicular, peatones esperando legalmente en la acera no son infractores
+            pass
         elif "VERDE_PEATONES" in estado_str or "AMARILLO_PEATONES" in estado_str:
             if zona_nombre in ['vehiculos']:
                 es_luz_roja = True
@@ -1220,14 +1409,72 @@ class CoreSemaforoBase:
         f_transcurrido = time.time() - self.tiempo_ultimo_cambio
         f_restante = max(0.0, self.fase_tiempo_asignado - f_transcurrido)
         
-        arduino_info = {
-            "connected": self.arduino is not None and getattr(self.arduino, 'is_open', False),
-            "port": self.arduino_port_actual,
-            "baudrate": self.arduino_baud,
-            "tx_count": self.arduino_tx_count,
-            "last_command": self.ultimo_comando,
-            "reconnects": self.arduino_reconnect_count,
-            "alerta_desconexion_prolongada": self.alerta_desconexion_prolongada
+        if not self.enable_arduino:
+            arduino_info = {
+                "connected": True,
+                "virtual_mode": True,
+                "port": "Virtual (Simulado)",
+                "baudrate": 0,
+                "tx_count": self.arduino_tx_count,
+                "last_command": self.ultimo_comando,
+                "last_tx_ago": round(time.time() - getattr(self, '_ultimo_tx_time', 0.0), 1),
+                "reconnects": 0,
+                "alerta_desconexion_prolongada": False
+            }
+        else:
+            arduino_info = {
+                "connected": self.arduino is not None and getattr(self.arduino, 'is_open', False),
+                "virtual_mode": False,
+                "port": self.arduino_port_actual,
+                "baudrate": self.arduino_baud,
+                "tx_count": self.arduino_tx_count,
+                "last_command": self.ultimo_comando,
+                "last_tx_ago": round(time.time() - getattr(self, '_ultimo_tx_time', 0.0), 1),
+                "reconnects": self.arduino_reconnect_count,
+                "alerta_desconexion_prolongada": self.alerta_desconexion_prolongada
+            }
+        
+        # Desglose de estados individuales para semáforos físicos/lógicos
+        sem_a = "ROJO"
+        sem_b = "ROJO"
+        
+        if any(k in estado_str for k in ["VERDE_1", "VERDE_NS", "VERDE_A", "VERDE_PRINCIPAL", "VERDE_FRENTE", "VERDE_VEHICULOS"]):
+            sem_a = "VERDE"
+            sem_b = "ROJO"
+        elif any(k in estado_str for k in ["AMARILLO_1", "AMARILLO_NS", "AMARILLO_A", "AMARILLO_PRINCIPAL", "AMARILLO_FRENTE", "AMARILLO_VEHICULOS"]):
+            sem_a = "AMARILLO"
+            sem_b = "ROJO"
+        elif any(k in estado_str for k in ["VERDE_2", "VERDE_EO", "VERDE_B", "VERDE_SECUNDARIA", "VERDE_GIRO", "VERDE_PEATONES"]):
+            sem_a = "ROJO"
+            sem_b = "VERDE"
+        elif any(k in estado_str for k in ["AMARILLO_2", "AMARILLO_EO", "AMARILLO_B", "AMARILLO_SECUNDARIA", "AMARILLO_GIRO", "AMARILLO_PEATONES"]):
+            sem_a = "ROJO"
+            sem_b = "AMARILLO"
+        else:
+            sem_a = "ROJO"
+            sem_b = "ROJO"
+
+        if self.topology_name == "2_way":
+            lbl_a, lbl_b = "Semáforo A (Vía A)", "Semáforo B (Vía B)"
+            pins_a, pins_b = "Pins D2, D3, D4", "Pins D5, D6, D8"
+        elif self.topology_name == "4_way":
+            lbl_a, lbl_b = "Semáforos Norte-Sur", "Semáforos Este-Oeste"
+            pins_a, pins_b = "Eje Principal", "Eje Secundario"
+        elif self.topology_name == "pedestrian":
+            lbl_a, lbl_b = "Semáforo Vehicular", "Semáforo Peatonal"
+            pins_a, pins_b = "Vía Principal", "Paso de Cebra"
+        else:
+            lbl_a, lbl_b = "Semáforo Principal", "Semáforo Secundario"
+            pins_a, pins_b = "Fase 1", "Fase 2"
+
+        semaforos_info = {
+            "semaforo_a": sem_a,
+            "semaforo_b": sem_b,
+            "etiqueta_a": lbl_a,
+            "etiqueta_b": lbl_b,
+            "pins_a": pins_a,
+            "pins_b": pins_b,
+            "comando_arduino": self.ultimo_comando
         }
         
         # Describir tipo de fuente activa
@@ -1297,7 +1544,8 @@ class CoreSemaforoBase:
             sostenibilidad=sostenibilidad_info,
             v2x=v2x_info,
             ai_engine=ai_engine_info,
-            corridor=self.corridor.get_status() if hasattr(self, 'corridor') and self.corridor else {}
+            corridor=self.corridor.get_status() if hasattr(self, 'corridor') and self.corridor else {},
+            semaforos=semaforos_info
         )
 
         try:
@@ -1311,7 +1559,11 @@ class CoreSemaforoBase:
         return frame
 
     def _procesar_tracking(self, tracked, frame, overlay):
-        """Mapea detecciones rastreadas [x1, y1, x2, y2, track_id, conf, cls, idx] a zonas, calcula TSP e infracciones"""
+        """
+        Mapea detecciones rastreadas [x1, y1, x2, y2, track_id, conf, cls, idx] a zonas.
+        Blindado contra crashes por polígonos vacíos o degenerados y con algoritmo de
+        resolución de solapamiento (overlapping) basado en máxima penetración geométrica.
+        """
         autos = {zona: 0 for zona in self.zonas_raw.keys()}
         demanda = {zona: 0.0 for zona in self.zonas_raw.keys()}
         
@@ -1319,7 +1571,10 @@ class CoreSemaforoBase:
             self.last_autos = autos
             self.last_demanda_ponderada = demanda
             return
-            
+
+        estado_nombre = getattr(self, "estado_actual", None)
+        estado_str = estado_nombre.name if estado_nombre else ""
+
         for row in tracked:
             if len(row) < 7:
                 continue
@@ -1333,20 +1588,50 @@ class CoreSemaforoBase:
             color_caja = (120, 120, 120)  # Gris tenue para objetos fuera de zona
             zona_encontrada = None
             
+            # RESOLUCIÓN INTELIGENTE DE SOLAPAMIENTO (OVERLAPPING):
+            # Evaluamos todas las zonas activas que contengan el centroide (cx, cy)
+            candidatos = []
             for nombre, pol in self.poligonos.items():
-                if cv2.pointPolygonTest(pol, (cx, cy), False) >= 0:
-                    autos[nombre] += 1
-                    zona_encontrada = nombre
-                    color_caja = self._zona_color_map.get(nombre, (200, 200, 200))
-                    peso = PESOS_PRIORIDAD_TSP.get(cls_id, 1.0)
-                    demanda[nombre] += peso
+                if pol is None or len(pol) < 3:
+                    continue
+                try:
+                    # measureDist=True retorna distancia euclidiana en píxeles al contorno:
+                    # > 0 si el punto está dentro, 0 si está en el borde, < 0 si está fuera.
+                    dist = cv2.pointPolygonTest(pol, (float(cx), float(cy)), True)
+                    if dist >= 0:
+                        candidatos.append((nombre, dist))
+                except Exception:
+                    continue
+
+            if candidatos:
+                if len(candidatos) == 1:
+                    zona_encontrada = candidatos[0][0]
+                else:
+                    # En caso de overlapping, desempatar evaluando:
+                    # 1. Mayor profundidad (distancia al borde más lejano)
+                    # 2. Preferencia por el eje vial que esté con luz verde o amarilla activa
+                    def criterio_solapamiento(item):
+                        nom, dist = item
+                        es_eje_activo = False
+                        if "NS" in estado_str or "VERDE_1" in estado_str or "VERDE_A" in estado_str:
+                            es_eje_activo = (nom in getattr(self, 'eje_1_zonas', ['norte', 'sur', 'zona_a']))
+                        elif "EO" in estado_str or "VERDE_2" in estado_str or "VERDE_B" in estado_str:
+                            es_eje_activo = (nom in getattr(self, 'eje_2_zonas', ['este', 'oeste', 'zona_b']))
+                        return (1 if es_eje_activo else 0, dist)
+
+                    candidatos.sort(key=criterio_solapamiento, reverse=True)
+                    zona_encontrada = candidatos[0][0]
+
+                autos[zona_encontrada] += 1
+                color_caja = self._zona_color_map.get(zona_encontrada, (200, 200, 200))
+                peso = PESOS_PRIORIDAD_TSP.get(cls_id, 1.0)
+                demanda[zona_encontrada] += peso
+                
+                if tid not in self.tracked_ids_por_zona[zona_encontrada]:
+                    self.tracked_ids_por_zona[zona_encontrada].add(tid)
+                    self.autos_acumulados[zona_encontrada] += 1
                     
-                    if tid not in self.tracked_ids_por_zona[nombre]:
-                        self.tracked_ids_por_zona[nombre].add(tid)
-                        self.autos_acumulados[nombre] += 1
-                        
-                    self._verificar_infraccion_luz_roja(nombre, tid, frame, cx, cy, bbox=(x1, y1, x2, y2))
-                    break
+                self._verificar_infraccion_luz_roja(zona_encontrada, tid, frame, cx, cy, bbox=(x1, y1, x2, y2))
             
             cv2.rectangle(frame, (x1, y1), (x2, y2), color_caja, 2)
             cv2.circle(frame, (cx, cy), 4, color_caja, -1)
@@ -1391,7 +1676,8 @@ class CoreSemaforoBase:
         # Obtener información del nodo actual y peers conectados en el corredor
         if hasattr(self, 'corridor') and self.corridor:
             node_id = self.corridor.current_node_id
-            peers = [n_id for n_id in self.corridor.nodes.keys()]
+            with self.corridor.lock:
+                peers = list(self.corridor.nodes.keys())
             peers_str = f" <-> {','.join(peers)}" if peers else ""
         else:
             node_id = "NODO_STANDALONE"

@@ -53,7 +53,8 @@ class CorridorSyncManager:
     y anticipar la fase verde en cruces aguas abajo para evitar detenciones.
     """
 
-    def __init__(self, current_node_id="CRUCE_01", corridor_name="Avenida Principal Coacalco", avg_speed_kmh=45.0):
+    def __init__(self, current_node_id="CRUCE_01", corridor_name="Avenida Principal Coacalco", avg_speed_kmh=45.0, enabled=True):
+        self.enabled = bool(enabled)
         self.current_node_id = str(current_node_id)
         self.corridor_name = corridor_name
         self.avg_speed_kmh = max(20.0, float(avg_speed_kmh))
@@ -84,6 +85,9 @@ class CorridorSyncManager:
         Invocado por el nodo actual cuando abre su fase verde principal con alta densidad vehicular.
         Calcula el tiempo de viaje estimado (ETA) y propaga la alerta a los nodos siguientes.
         """
+        if not self.enabled:
+            return
+
         if vehicle_count < 2:
             return  # No se justifica una ola verde para 1 solo auto
 
@@ -139,6 +143,10 @@ class CorridorSyncManager:
         """
         Recibe una alerta de pelotón entrante y activa la preparación de fase verde.
         """
+        if not self.enabled:
+            logging.debug("Aviso de pelotón recibido pero sincronización de corredor está deshabilitada (modo aislado).")
+            return
+
         now = time.time()
         origin = payload.get("origin_node", "NODO_EXTERNO")
         v_count = payload.get("vehicle_count", 3)
@@ -167,6 +175,9 @@ class CorridorSyncManager:
         """
         Consulta si la FSM debe favorecer o extender la fase verde debido a una ola verde activa.
         """
+        if not self.enabled:
+            return False, None, 0.0
+
         now = time.time()
         with self.lock:
             if self.active_green_wave:
@@ -182,12 +193,13 @@ class CorridorSyncManager:
         is_active, origin, remaining = self.should_prioritize_green_wave()
         with self.lock:
             return {
+                "enabled": self.enabled,
                 "corridor_name": self.corridor_name,
                 "current_node_id": self.current_node_id,
                 "avg_speed_kmh": self.avg_speed_kmh,
                 "green_wave_active": is_active,
                 "green_wave_origin": origin,
                 "green_wave_remaining_sec": remaining,
-                "nodes": [node.to_dict() for node in self.nodes.values()],
+                "nodes": [node.to_dict() for node in self.nodes.values()] if self.enabled else [],
                 "recent_waves": list(reversed(self.wave_history[-5:]))
             }

@@ -20,6 +20,7 @@ import secrets
 from functools import wraps
 from datetime import datetime
 import cv2
+import numpy as np
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, jsonify, request, render_template, Response, send_file, send_from_directory, session, redirect, url_for
 
@@ -122,6 +123,13 @@ estado_global = {
         "last_command": None,
         "reconnects": 0
     },
+    "semaforos": {
+        "semaforo_a": "ROJO",
+        "semaforo_b": "ROJO",
+        "etiqueta_a": "Vía A",
+        "etiqueta_b": "Vía B",
+        "comando_arduino": None
+    },
     "camara": {
         "connected": False,
         "resolution": "640x480",
@@ -141,6 +149,7 @@ estado_global = {
 
 eventos_sistema = []
 eventos_lock = threading.Lock()
+estado_lock = threading.RLock()
 
 control_callback = None
 frame_getter_callback = None
@@ -162,25 +171,34 @@ def registrar_evento(tipo, mensaje):
 
 _login_failures = {}
 _login_lock = threading.Lock()
+_cached_auth_cfg = None
+_cached_auth_time = 0.0
 
-def load_auth_config():
+def load_auth_config(force_reload=False):
     """
-    Carga la configuración de autenticación con hash seguro.
+    Carga la configuración de autenticación con hash seguro y caché en memoria.
     Si no existen credenciales configuradas, genera una contraseña aleatoria de 12 caracteres,
     la almacena de forma segura en instance/admin_credentials.json con hash pbkdf2/sha256 y la muestra una única vez.
     """
+    global _cached_auth_cfg, _cached_auth_time
+    now = time.time()
+    if not force_reload and _cached_auth_cfg is not None and (now - _cached_auth_time < 10.0):
+        return _cached_auth_cfg
+
     # 1. Prioridad: Archivo local protegido instance/admin_credentials.json
     if os.path.exists(admin_creds_file):
         try:
             with open(admin_creds_file, 'r') as f:
                 creds = json.load(f)
                 if creds.get("admin_pass_hash") or creds.get("admin_pass"):
-                    return {
+                    _cached_auth_cfg = {
                         "enabled": creds.get("enabled", True),
                         "admin_user": creds.get("admin_user", "admin"),
                         "admin_pass_hash": creds.get("admin_pass_hash"),
                         "admin_pass": creds.get("admin_pass")
                     }
+                    _cached_auth_time = now
+                    return _cached_auth_cfg
         except Exception:
             pass
 
@@ -192,7 +210,9 @@ def load_auth_config():
                 cfg = json.load(f)
                 auth_cfg = cfg.get("auth", {})
                 if auth_cfg.get("admin_pass_hash") or auth_cfg.get("admin_pass"):
-                    return auth_cfg
+                    _cached_auth_cfg = auth_cfg
+                    _cached_auth_time = now
+                    return _cached_auth_cfg
         except Exception:
             pass
 
@@ -220,7 +240,9 @@ def load_auth_config():
     print(" Para cambiarla: python3 scripts/set_admin_password.py")
     print("=" * 72 + "\n")
 
-    return auto_creds
+    _cached_auth_cfg = auto_creds
+    _cached_auth_time = now
+    return _cached_auth_cfg
 
 def admin_required(f):
     @wraps(f)
@@ -244,6 +266,12 @@ def serve_logo(filename):
     """Sirve los logos institucionales (TESCo, TecNM, SIC)"""
     logos_dir = os.path.join(base_dir, 'logos')
     return send_from_directory(logos_dir, filename)
+
+@app.route('/presentaciones/<path:filename>')
+def serve_presentaciones(filename):
+    """Sirve las presentaciones oficiales para la defensa InnovaTecNM 2026"""
+    pres_dir = os.path.join(base_dir, 'presentaciones')
+    return send_from_directory(pres_dir, filename)
 
 @app.route('/')
 def public_index():
@@ -372,6 +400,8 @@ def video_feed():
                     if frame_bytes is not None:
                         yield (b'--frame\r\n'
                                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            except (GeneratorExit, BrokenPipeError, ConnectionResetError):
+                break
             except Exception:
                 pass
             time.sleep(0.033)
@@ -380,15 +410,17 @@ def video_feed():
 
 @app.route('/api/status', methods=['GET'])
 def get_status():
-    """Retorna el paquete completo de telemetría"""
+    """Retorna el paquete completo de telemetría de forma thread-safe"""
     global cached_hw_metrics
     try:
         cached_hw_metrics = hw_monitor.get_metrics()
-        estado_global["hardware"] = cached_hw_metrics
     except Exception as e:
-        estado_global["hardware"] = {"error": str(e)}
+        cached_hw_metrics = {"error": str(e)}
         
-    return jsonify(estado_global)
+    with estado_lock:
+        estado_global["hardware"] = cached_hw_metrics
+        snapshot = dict(estado_global)
+    return jsonify(snapshot)
 
 @app.route('/api/v2x/spat', methods=['GET'])
 def get_v2x_spat():
@@ -694,6 +726,10 @@ def manage_full_config():
                         if corridor_manager_instance:
                             corridor_manager_instance.avg_speed_kmh = max(20.0, float(v))
                             corridor_manager_instance.avg_speed_mps = (corridor_manager_instance.avg_speed_kmh * 1000.0) / 3600.0
+                    elif k == "enabled":
+                        cfg["corridor"][k] = bool(v)
+                        if corridor_manager_instance:
+                            corridor_manager_instance.enabled = bool(v)
                     else:
                         cfg["corridor"][k] = v
                         
@@ -953,6 +989,8 @@ def control():
         return jsonify({"error": f"Acción desconocida '{action}'"}), 400
 
 
+change_arduino_port_callback_global = None
+
 class TelemetryAPI:
     def __init__(self, host='0.0.0.0', port=5000, enabled=True):
         self.host = host
@@ -960,14 +998,16 @@ class TelemetryAPI:
         self.enabled = enabled
         self.thread = None
 
-    def start(self, controller_callback=None, frame_getter=None, db_instance=None, hot_reload_callback=None, change_source_callback=None, corridor_instance=None):
-        global control_callback, frame_getter_callback, db_manager_instance, hot_reload_callback_global, change_source_callback_global, corridor_manager_instance
+    def start(self, controller_callback=None, frame_getter=None, db_instance=None, hot_reload_callback=None, change_source_callback=None, corridor_instance=None, change_arduino_port_callback=None):
+        global control_callback, frame_getter_callback, db_manager_instance, hot_reload_callback_global, change_source_callback_global, corridor_manager_instance, change_arduino_port_callback_global, server_port_global
         control_callback = controller_callback
         frame_getter_callback = frame_getter
         db_manager_instance = db_instance
         hot_reload_callback_global = hot_reload_callback
         change_source_callback_global = change_source_callback
         corridor_manager_instance = corridor_instance
+        change_arduino_port_callback_global = change_arduino_port_callback
+        server_port_global = self.port
         
         if not self.enabled:
             return
@@ -990,32 +1030,112 @@ class TelemetryAPI:
     def update_state(self, topologia, backend, status_msg, autos_dict, autos_acumulados, fps, modo, 
                      arduino_info, camara_info, latencias, f_transcurrido=0, f_asignado=0,
                      emergencia_activa=False, eje_emergencia=None, demanda_ponderada=None,
-                     sostenibilidad=None, v2x=None, ai_engine=None, corridor=None):
+                     sostenibilidad=None, v2x=None, ai_engine=None, corridor=None, semaforos=None):
         if not self.enabled:
             return
             
-        estado_global["topologia"] = topologia
-        estado_global["backend"] = backend
-        estado_global["status"] = status_msg
-        estado_global["autos"] = autos_dict.copy()
-        estado_global["autos_acumulados"] = autos_acumulados.copy()
-        estado_global["total_acumulado"] = sum(autos_acumulados.values())
-        if demanda_ponderada is not None:
-            estado_global["demanda_ponderada"] = demanda_ponderada.copy()
-        if sostenibilidad is not None:
-            estado_global["sostenibilidad"] = sostenibilidad.copy()
-        if v2x is not None:
-            estado_global["v2x"] = v2x.copy()
-        if ai_engine is not None:
-            estado_global["ai_engine"] = ai_engine.copy()
-        if corridor is not None:
-            estado_global["corridor"] = corridor.copy()
-        estado_global["fps"] = round(fps, 1)
-        estado_global["modo"] = modo
-        estado_global["emergencia_activa"] = emergencia_activa
-        estado_global["eje_emergencia"] = eje_emergencia
-        estado_global["fase_tiempo_transcurrido"] = round(f_transcurrido, 1)
-        estado_global["fase_tiempo_asignado"] = round(f_asignado, 1)
-        estado_global["arduino"] = arduino_info
-        estado_global["camara"] = camara_info
-        estado_global["latencias_ms"] = latencias
+        with estado_lock:
+            estado_global["topologia"] = topologia
+            estado_global["backend"] = backend
+            estado_global["status"] = status_msg
+            estado_global["autos"] = autos_dict.copy()
+            estado_global["autos_acumulados"] = autos_acumulados.copy()
+            estado_global["total_acumulado"] = sum(autos_acumulados.values())
+            if demanda_ponderada is not None:
+                estado_global["demanda_ponderada"] = demanda_ponderada.copy()
+            if sostenibilidad is not None:
+                estado_global["sostenibilidad"] = sostenibilidad.copy()
+            if v2x is not None:
+                estado_global["v2x"] = v2x.copy()
+            if ai_engine is not None:
+                estado_global["ai_engine"] = ai_engine.copy()
+            if corridor is not None:
+                estado_global["corridor"] = corridor.copy()
+            if semaforos is not None:
+                estado_global["semaforos"] = semaforos.copy()
+            estado_global["fps"] = round(fps, 1)
+            estado_global["modo"] = modo
+            estado_global["emergencia_activa"] = emergencia_activa
+            estado_global["eje_emergencia"] = eje_emergencia
+            estado_global["fase_tiempo_transcurrido"] = round(f_transcurrido, 1)
+            estado_global["fase_tiempo_asignado"] = round(f_asignado, 1)
+            estado_global["arduino"] = arduino_info
+            estado_global["camara"] = camara_info
+            estado_global["latencias_ms"] = latencias
+
+server_port_global = 5000
+
+@app.route('/api/config/arduino_ports', methods=['GET'])
+@admin_required
+def list_arduino_ports():
+    import glob
+    import serial.tools.list_ports
+    from arduino_locker import inspect_port_lock
+
+    my_node_port = server_port_global or 5000
+    current_ard = estado_global.get("arduino", {})
+    current_port_name = current_ard.get("port")
+    is_virtual_active = current_ard.get("virtual_mode", False) or (current_port_name in ["Virtual (Simulado)", "VIRTUAL"])
+
+    ports_detected = {}
+    try:
+        for p in serial.tools.list_ports.comports():
+            ports_detected[p.device] = p.description or f"Dispositivo Serial ({p.device})"
+    except Exception:
+        pass
+
+    for dev in sorted(glob.glob('/dev/ttyACM*') + glob.glob('/dev/ttyUSB*')):
+        if dev not in ports_detected:
+            ports_detected[dev] = f"Microcontrolador Serial ({os.path.basename(dev)})"
+
+    port_list = []
+    # Opción Semáforo Virtual
+    port_list.append({
+        "port": "VIRTUAL",
+        "desc": "Semáforos Virtuales (Gemelo Digital / Sin Hardware)",
+        "status": "propio" if is_virtual_active else "disponible",
+        "locked_by": f"Nodo {my_node_port} (Virtual)" if is_virtual_active else None,
+        "is_current": is_virtual_active,
+        "available": True
+    })
+
+    for dev, desc in ports_detected.items():
+        info = inspect_port_lock(dev, current_node_port=my_node_port)
+        is_cur = (current_port_name == dev and not is_virtual_active)
+        available = (not info["is_locked"]) or info["is_mine"]
+        port_list.append({
+            "port": dev,
+            "desc": desc,
+            "status": info["status"],  # "disponible", "propio", "ocupado"
+            "locked_by": info.get("owner"),
+            "is_current": is_cur,
+            "available": available
+        })
+
+    return jsonify({
+        "ports": port_list,
+        "status": "ok",
+        "node_port": my_node_port,
+        "current_port": current_port_name,
+        "virtual_mode": is_virtual_active
+    })
+
+@app.route('/api/config/arduino_port', methods=['POST'])
+@admin_required
+def set_arduino_port_api():
+    global change_arduino_port_callback_global
+    if not change_arduino_port_callback_global:
+        return jsonify({"error": "Controlador de Arduino no enlazado"}), 500
+        
+    data = request.json or {}
+    port = data.get("port")
+    if not port:
+        return jsonify({"error": "Se requiere el parámetro 'port'"}), 400
+        
+    res = change_arduino_port_callback_global(port)
+    if isinstance(res, dict) and res.get("status") == "error":
+        return jsonify(res), 409
+    
+    msg = res.get("message", f"Puerto del Arduino cambiado a {port}") if isinstance(res, dict) else f"Puerto cambiado a {port}"
+    registrar_evento('INFO', f"Asignación exclusiva serial: {msg}")
+    return jsonify({"message": msg, "status": "ok"})

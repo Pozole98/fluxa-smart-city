@@ -89,11 +89,14 @@ class DatabaseManager:
 
     def _init_db_schema(self):
         """Inicializa la base de datos relacional y las tablas requeridas"""
+        conn = None
         try:
+            safe_db = "".join(c for c in self.db_name if c.isalnum() or c == '_') or "fluxa_traffic"
             conn = self._get_connection(use_db=False)
             with conn.cursor() as cur:
-                cur.execute(f"CREATE DATABASE IF NOT EXISTS {self.db_name} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
+                cur.execute(f"CREATE DATABASE IF NOT EXISTS `{safe_db}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
             conn.close()
+            conn = None
 
             conn = self._get_connection(use_db=True)
             with conn.cursor() as cur:
@@ -146,15 +149,21 @@ class DatabaseManager:
                 except Exception:
                     pass
             conn.commit()
-            conn.close()
             self.connected = True
             logging.info(f"Esquema MariaDB '{self.db_name}' verificado e inicializado correctamente.")
         except Exception as e:
             self.connected = False
             logging.warning(f"No fue posible conectar con el servidor MariaDB ({e}). Operando en modo local.")
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def _queue_worker(self):
         """Procesa las inserciones a base de datos en segundo plano sin impactar los FPS"""
+        consecutive_errors = 0
         while self.running:
             try:
                 task = self.write_queue.get(timeout=2.0)
@@ -162,15 +171,23 @@ class DatabaseManager:
                     break
                     
                 task_type, data = task
-                self._execute_insert(task_type, data)
+                success = self._execute_insert(task_type, data)
                 self.write_queue.task_done()
+                if not success:
+                    consecutive_errors += 1
+                    if consecutive_errors > 3:
+                        time.sleep(min(3.0, consecutive_errors * 0.5))
+                else:
+                    consecutive_errors = 0
             except queue.Empty:
+                consecutive_errors = 0
                 continue
             except Exception as e:
                 logging.warning(f"Error procesando cola de base de datos: {e}")
 
     def _execute_insert(self, task_type, data):
         """Ejecuta las consultas SQL correspondientes según el tipo de registro"""
+        conn = None
         try:
             conn = self._get_connection(use_db=True)
             with conn.cursor() as cur:
@@ -202,10 +219,17 @@ class DatabaseManager:
                         data.get("plate_confidence", 0.0)
                     ))
             conn.commit()
-            conn.close()
             self.connected = True
+            return True
         except Exception:
             self.connected = False
+            return False
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def log_telemetry_async(self, topology, active_phase, total_cars, lane_counts, weighted_demand=0.0, cpu_percent=0.0, cpu_temp_c=0.0, ram_percent=0.0, fps=0.0):
         """Encola el registro de telemetría de tráfico y métricas del sistema"""
@@ -279,6 +303,7 @@ class DatabaseManager:
         if target_date is None:
             target_date = datetime.now().strftime("%Y-%m-%d")
             
+        conn = None
         try:
             conn = self._get_connection(use_db=True)
             with conn.cursor() as cur:
@@ -305,8 +330,6 @@ class DatabaseManager:
                     WHERE DATE(timestamp) = %s;
                 """, (target_date,))
                 hw_summary = cur.fetchone() or {}
-
-            conn.close()
 
             # Cálculo de la hora con mayor congestión promedio
             peak_hour = None
@@ -343,10 +366,17 @@ class DatabaseManager:
                     "avg_cpu": 0.0, "avg_temp_c": 0.0, "avg_ram": 0.0, "avg_fps": 0.0
                 }
             }
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def get_recent_violations(self, limit=50):
         """Recupera el historial de infracciones desde MariaDB o desde los respaldos en RAM y disco"""
         if self.enabled:
+            conn = None
             try:
                 conn = self._get_connection(use_db=True)
                 with conn.cursor() as cur:
@@ -359,11 +389,16 @@ class DatabaseManager:
                         LIMIT %s;
                     """, (limit,))
                     rows = cur.fetchall()
-                conn.close()
                 if rows and len(rows) > 0:
                     return rows
             except Exception:
                 pass
+            finally:
+                if conn:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
 
         # Nivel 1: Búfer en memoria RAM
         with self._lock:

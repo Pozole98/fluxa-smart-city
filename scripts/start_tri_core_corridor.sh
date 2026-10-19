@@ -14,30 +14,33 @@ sleep 1
 
 mkdir -p logs
 
-echo " [1/3] Iniciando Cruce 01 (Norte) en Core NPU 0 (Puerto 5000)..."
+echo " [1/3] Iniciando Cruce 01 (Norte) en Core NPU 0 (Puerto 5000) con Arduino Físico..."
 setsid "$SCRIPT_DIR/.venv/bin/python3" "$SCRIPT_DIR/main.py" \
     --topology 4_way \
     --backend rknn \
     --npu-core 0 \
     --port 5000 \
+    --enable-arduino \
     --video "$SCRIPT_DIR/videos/demo.mp4" \
     --headless </dev/null > "$SCRIPT_DIR/logs/cruce_01.log" 2>&1 &
 
-echo " [2/3] Iniciando Cruce 02 (Centro) en Core NPU 1 (Puerto 5001)..."
+echo " [2/3] Iniciando Cruce 02 (Centro) en Core NPU 1 (Puerto 5001) en Modo Semáforos Virtuales..."
 setsid "$SCRIPT_DIR/.venv/bin/python3" "$SCRIPT_DIR/main.py" \
     --topology 4_way \
     --backend rknn \
     --npu-core 1 \
     --port 5001 \
+    --no-arduino \
     --video "$SCRIPT_DIR/videos/demo.mp4" \
     --headless </dev/null > "$SCRIPT_DIR/logs/cruce_02.log" 2>&1 &
 
-echo " [3/3] Iniciando Cruce 03 (Sur) en Core NPU 2 (Puerto 5002)..."
+echo " [3/3] Iniciando Cruce 03 (Sur) en Core NPU 2 (Puerto 5002) en Modo Semáforos Virtuales..."
 setsid "$SCRIPT_DIR/.venv/bin/python3" "$SCRIPT_DIR/main.py" \
     --topology 4_way \
     --backend rknn \
     --npu-core 2 \
     --port 5002 \
+    --no-arduino \
     --video "$SCRIPT_DIR/videos/demo.mp4" \
     --headless </dev/null > "$SCRIPT_DIR/logs/cruce_03.log" 2>&1 &
 

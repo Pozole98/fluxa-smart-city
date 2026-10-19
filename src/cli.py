@@ -92,6 +92,23 @@ def print_banner(topology, backend, is_headless, port):
     print("=" * 72)
     print()
 
+def check_single_instance(port):
+    import fcntl
+    import os
+    import tempfile
+    uid = os.getuid() if hasattr(os, 'getuid') else 0
+    lock_file = os.path.join(tempfile.gettempdir(), f"fluxa_{uid}_port_{port}.lock")
+    try:
+        fd = os.open(lock_file, os.O_CREAT | os.O_RDWR, 0o600)
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        global _FLUXA_LOCK_FD
+        _FLUXA_LOCK_FD = fd
+        os.ftruncate(fd, 0)
+        os.write(fd, str(os.getpid()).encode())
+        return True
+    except (IOError, OSError):
+        return False
+
 def ejecutar_cli():
     parser = argparse.ArgumentParser(
         description="FLUXA - Sistema Industrial de Semáforos Inteligentes Edge con IA y Telemetría",
@@ -155,6 +172,19 @@ Ejemplos de Uso:
     )
 
     parser.add_argument(
+        "--no-arduino", "--virtual-lights",
+        dest="no_arduino",
+        action="store_true",
+        help="Desactivar microcontrolador físico Arduino y operar con semáforos virtuales (simulados)"
+    )
+
+    parser.add_argument(
+        "--enable-arduino",
+        action="store_true",
+        help="Forzar activación de microcontrolador físico Arduino en esta instancia"
+    )
+
+    parser.add_argument(
         "--list-topologies",
         action="store_true",
         help="Listar todas las topologías viales soportadas y salir"
@@ -169,8 +199,24 @@ Ejemplos de Uso:
         print()
         sys.exit(0)
 
+    # Validar que no haya otra instancia corriendo en el mismo puerto
+    if not check_single_instance(args.port):
+        print(f"\n❌ Error Crítico: Ya hay otra instancia de FLUXA corriendo en el puerto {args.port}.")
+        print(f" Si necesitas reiniciar, asegúrate de matar el proceso previo: sudo pkill -f main.py\n")
+        sys.exit(1)
+
     # Si se especificó --gui explícitamente, desactivar headless
     is_headless = not args.gui
+
+    # Determinar modo de Arduino / Semáforos Virtuales
+    if args.no_arduino:
+        enable_arduino = False
+    elif args.enable_arduino:
+        enable_arduino = True
+    else:
+        # Por regla del sistema: Solo el puerto 5000 (Nodo 0) usa hardware físico por defecto;
+        # los puertos 5001 y 5002 operan con semáforos virtuales para evitar colisión de puertos.
+        enable_arduino = (args.port == 5000)
 
     topology_info = TOPOLOGIAS_DISPONIBLES[args.topology]
     print_banner(args.topology, args.backend, is_headless, args.port)
@@ -178,13 +224,17 @@ Ejemplos de Uso:
         print(f" Fuente de video especificada por CLI: {args.video}\n")
     if args.npu_core and args.backend == "rknn":
         print(f"Núcleo NPU RK3588 asignado: Core {args.npu_core}\n")
+    if enable_arduino:
+        print(f"🚦 Hardware Semafórico: Conexión Serial Arduino HABILITADA (Nodo Físico)\n")
+    else:
+        print(f"🚦 Hardware Semafórico: Modo SEMÁFOROS VIRTUALES (Simulación)\n")
 
     # Instanciar el controlador según backend
     if args.backend == "cpu":
         mod = __import__(topology_info["cpu_module"])
         if is_headless:
             controller_cls = getattr(mod, topology_info["cpu_controller"])
-            controller = controller_cls(port=args.port, video_source=args.video)
+            controller = controller_cls(port=args.port, video_source=args.video, enable_arduino=enable_arduino)
             controller.run_headless()
         else:
             tk = getattr(mod, "tk", None)
@@ -197,13 +247,13 @@ Ejemplos de Uso:
                 sys.exit(1)
             gui_cls = getattr(mod, topology_info["cpu_gui_app"])
             ventana = tk.Tk()
-            app = gui_cls(ventana, video_source=args.video)
+            app = gui_cls(ventana, video_source=args.video, enable_arduino=enable_arduino)
             ventana.mainloop()
     else:
         mod = __import__(topology_info["rknn_module"])
         if is_headless:
             controller_cls = getattr(mod, topology_info["rknn_controller"])
-            controller = controller_cls(port=args.port, video_source=args.video, npu_core_id=args.npu_core)
+            controller = controller_cls(port=args.port, video_source=args.video, npu_core_id=args.npu_core, enable_arduino=enable_arduino)
             controller.run_headless()
         else:
             tk = getattr(mod, "tk", None)
@@ -216,7 +266,7 @@ Ejemplos de Uso:
                 sys.exit(1)
             gui_cls = getattr(mod, topology_info["rknn_gui_app"])
             ventana = tk.Tk()
-            app = gui_cls(ventana, video_source=args.video)
+            app = gui_cls(ventana, video_source=args.video, enable_arduino=enable_arduino)
             ventana.mainloop()
 
 if __name__ == "__main__":

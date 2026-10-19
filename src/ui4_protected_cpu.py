@@ -38,8 +38,8 @@ class EstadoSemaforoProtected(Enum):
     ROJO_TODOS_2 = 6
 
 class SemaforoController4VProtected_CPU(CoreSemaforoBase):
-    def __init__(self, port=None, video_source=None):
-        super().__init__(topology_name="4_way_protected", backend_name="CPU", port=port, video_source=video_source)
+    def __init__(self, port=None, video_source=None, enable_arduino=None, **kwargs):
+        super().__init__(topology_name="4_way_protected", backend_name="CPU", port=port, video_source=video_source, enable_arduino=enable_arduino, **kwargs)
         self.estado_actual = EstadoSemaforoProtected.VERDE_FRENTE
 
     def _init_model(self):
@@ -67,14 +67,14 @@ class SemaforoController4VProtected_CPU(CoreSemaforoBase):
         return None
 
 class App4VProtected_CPU:
-    def __init__(self, root, video_source=None):
+    def __init__(self, root, video_source=None, enable_arduino=None, **kwargs):
         self.ventana = root
         self.ventana.title("FLUXA - Giro Protegido (CPU)")
         self.ventana.geometry("1100x750")
         self.ventana.configure(bg="#0f172a")
         self.ventana.protocol("WM_DELETE_WINDOW", self.on_closing)
         
-        self.controller = SemaforoController4VProtected_CPU(video_source=video_source)
+        self.controller = SemaforoController4VProtected_CPU(video_source=video_source, enable_arduino=enable_arduino, **kwargs)
         self.video_loop_id = None
         self._crear_ui()
         

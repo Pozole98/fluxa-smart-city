@@ -122,6 +122,23 @@ def nms_fast(boxes, scores, iou_threshold):
         order = order[inds + 1]
     return keep
 
+def multiclass_nms(boxes_out, classes_out, scores_out=None, conf_thres=0.25, iou_thres=0.45):
+    """Función de compatibilidad para código heredado que usa salidas RKNN directas"""
+    outputs = [boxes_out, classes_out]
+    if scores_out is not None:
+        outputs.append(scores_out)
+    try:
+        final_boxes, final_classes, final_scores = postprocess_multi_tensors(outputs, conf_thres)
+        if len(final_boxes) == 0:
+            return np.empty((0, 4)), np.empty((0,)), np.empty((0,))
+        w = final_boxes[:, 2] - final_boxes[:, 0]
+        h = final_boxes[:, 3] - final_boxes[:, 1]
+        xywh = np.column_stack([final_boxes[:, 0], final_boxes[:, 1], w, h])
+        keep = nms_fast(xywh, final_scores, iou_thres)
+        return final_boxes[keep], final_classes[keep], final_scores[keep]
+    except Exception:
+        return np.empty((0, 4)), np.empty((0,)), np.empty((0,))
+
 def postprocess(outputs, r, padding, orig_shape, conf_threshold, nms_threshold):
     if outputs is None or len(outputs) == 0:
         return [], [], []

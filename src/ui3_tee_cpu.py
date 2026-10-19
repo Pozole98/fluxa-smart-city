@@ -38,8 +38,8 @@ class EstadoSemaforo3Tee(Enum):
     ROJO_TODOS_2 = 6
 
 class SemaforoController3V_CPU(CoreSemaforoBase):
-    def __init__(self, port=None, video_source=None):
-        super().__init__(topology_name="3_way_t", backend_name="CPU", port=port, video_source=video_source)
+    def __init__(self, port=None, video_source=None, enable_arduino=None, **kwargs):
+        super().__init__(topology_name="3_way_t", backend_name="CPU", port=port, video_source=video_source, enable_arduino=enable_arduino, **kwargs)
         self.estado_actual = EstadoSemaforo3Tee.VERDE_PRINCIPAL
 
     def _init_model(self):
@@ -67,14 +67,14 @@ class SemaforoController3V_CPU(CoreSemaforoBase):
         return None
 
 class App3V_CPU:
-    def __init__(self, root, video_source=None):
+    def __init__(self, root, video_source=None, enable_arduino=None, **kwargs):
         self.ventana = root
         self.ventana.title("FLUXA - Intersección en T (CPU)")
         self.ventana.geometry("1100x750")
         self.ventana.configure(bg="#0f172a")
         self.ventana.protocol("WM_DELETE_WINDOW", self.on_closing)
         
-        self.controller = SemaforoController3V_CPU(video_source=video_source)
+        self.controller = SemaforoController3V_CPU(video_source=video_source, enable_arduino=enable_arduino, **kwargs)
         self.video_loop_id = None
         self._crear_ui()
         

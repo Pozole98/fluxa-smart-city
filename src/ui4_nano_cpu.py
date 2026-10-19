@@ -107,7 +107,7 @@ class SemaforoController:
         self.TIEMPO_REPOSO = cfg_tl.get("tiempo_reposo", 20.0)
         
         self.CLASES_VEHICULOS = self.config.get("ai_model", {}).get("classes_to_detect", [2, 3, 5, 7])
-        self.CONF_THRESH = self.config.get("ai_model", {}).get("confidence_threshold", 0.35)
+        self.CONF_THRESH = self.config.get("ai_model", {}).get("confidence_threshold", 0.15)
         
         self.COLORES = {
             "rojo": (0, 0, 255), "verde": (0, 255, 0), "amarillo": (0, 255, 255),

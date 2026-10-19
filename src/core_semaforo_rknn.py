@@ -51,7 +51,7 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
     con arquitectura de respaldo automático en CPU (PyTorch) y asignación multi-núcleo (Tri-Core).
     """
 
-    def __init__(self, topology_name="4_way", port=None, video_source=None, npu_core_id=None):
+    def __init__(self, topology_name="4_way", port=None, video_source=None, npu_core_id=None, enable_arduino=None, **kwargs):
         self._rknn_lock = threading.RLock()
         self.rknn = None
         self.cpu_model = None
@@ -60,7 +60,7 @@ class CoreSemaforoRKNN(CoreSemaforoBase):
         self._frame_count = 0
         self._cached_dets_m = None
         self.npu_core_id = npu_core_id
-        super().__init__(topology_name=topology_name, backend_name="NPU (RKNN)", port=port, video_source=video_source)
+        super().__init__(topology_name=topology_name, backend_name="NPU (RKNN)", port=port, video_source=video_source, enable_arduino=enable_arduino, **kwargs)
 
     def _init_cpu_fallback(self, reason="Falla en NPU"):
         """Inicializa el motor de respaldo PyTorch en CPU de forma transparente"""

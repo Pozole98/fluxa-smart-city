@@ -540,6 +540,154 @@
         .bg-red { background: var(--danger); color: white; }
         .bg-dark { background: rgba(7, 13, 9, 0.8); color: #64748b; }
 
+        /* Semáforos Virtuales Realistas (Digital Twin C5) */
+        .v-signal-box {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0.85rem 0.6rem;
+            background: rgba(6, 12, 8, 0.9);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-md);
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+            margin-top: 0.6rem;
+        }
+
+        .v-traffic-head {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 7px;
+            background: linear-gradient(180deg, #18221c 0%, #0d1410 100%);
+            border: 2px solid #233428;
+            border-radius: 18px;
+            padding: 10px 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.08);
+            position: relative;
+        }
+
+        .v-lens-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .v-lens-visor {
+            position: absolute;
+            top: -4px;
+            width: 34px;
+            height: 10px;
+            border-top: 3px solid #334737;
+            border-radius: 50% 50% 0 0;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .v-lens {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #232c25 0%, #0c120e 85%);
+            border: 2px solid #1a241d;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.9);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        /* Lentes encendidos con brillo hiperrealista */
+        .v-lens.lens-red.on {
+            background: radial-gradient(circle at 40% 40%, #ffa3a3 0%, #ef4444 55%, #991b1b 100%);
+            border-color: #fca5a5;
+            box-shadow: 0 0 18px rgba(239, 68, 68, 0.95), 0 0 36px rgba(239, 68, 68, 0.4), inset 0 0 6px #ffffffcc;
+        }
+
+        .v-lens.lens-yellow.on {
+            background: radial-gradient(circle at 40% 40%, #fef08a 0%, #eab308 55%, #854d0e 100%);
+            border-color: #fde047;
+            box-shadow: 0 0 18px rgba(234, 179, 8, 0.95), 0 0 36px rgba(234, 179, 8, 0.4), inset 0 0 6px #ffffffcc;
+        }
+
+        .v-lens.lens-green.on {
+            background: radial-gradient(circle at 40% 40%, #a7f3d0 0%, #22c55e 55%, #166534 100%);
+            border-color: #86efac;
+            box-shadow: 0 0 18px rgba(34, 197, 94, 0.95), 0 0 36px rgba(34, 197, 94, 0.4), inset 0 0 6px #ffffffcc;
+        }
+
+        .v-state-pill {
+            font-size: 0.7rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            letter-spacing: 0.5px;
+            text-align: center;
+            min-width: 65px;
+            transition: all 0.2s ease;
+        }
+        .v-state-pill.is-green { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
+        .v-state-pill.is-yellow { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; }
+        .v-state-pill.is-red { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+
+        /* Modal Semáforo Gigante para Exposición */
+        .v-traffic-head-lg {
+            border-radius: 26px;
+            border-width: 3px;
+            padding: 16px 14px;
+            gap: 14px;
+        }
+        .v-traffic-head-lg .v-lens {
+            width: 72px;
+            height: 72px;
+            border-width: 3px;
+        }
+        .v-traffic-head-lg .v-lens.lens-red.on {
+            box-shadow: 0 0 35px rgba(239, 68, 68, 1), 0 0 70px rgba(239, 68, 68, 0.6), inset 0 0 12px #ffffffcc;
+        }
+        .v-traffic-head-lg .v-lens.lens-yellow.on {
+            box-shadow: 0 0 35px rgba(234, 179, 8, 1), 0 0 70px rgba(234, 179, 8, 0.6), inset 0 0 12px #ffffffcc;
+        }
+        .v-traffic-head-lg .v-lens.lens-green.on {
+            box-shadow: 0 0 35px rgba(34, 197, 94, 1), 0 0 70px rgba(34, 197, 94, 0.6), inset 0 0 12px #ffffffcc;
+        }
+
+        /* Mini Semáforo Virtual en Barra Superior */
+        .topbar-signal-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #334155;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .topbar-signal-dot.dot-green {
+            background: #22c55e;
+            box-shadow: 0 0 8px #22c55e, 0 0 16px rgba(34, 197, 94, 0.8);
+            border-color: #86efac;
+        }
+        .topbar-signal-dot.dot-yellow {
+            background: #eab308;
+            box-shadow: 0 0 8px #eab308, 0 0 16px rgba(234, 179, 8, 0.8);
+            border-color: #fde047;
+        }
+        .topbar-signal-dot.dot-red {
+            background: #ef4444;
+            box-shadow: 0 0 8px #ef4444, 0 0 16px rgba(239, 68, 68, 0.8);
+            border-color: #fca5a5;
+        }
+
+        .port-card:hover:not(.disabled-card) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.92); }
+        }
+
         /* Footer */
         .dashboard-footer {
             margin-top: auto;
@@ -595,20 +743,33 @@
 
         <div class="sys-info-bar">
             <!-- Selector Rápido de Nodos -->
-            <div style="display: flex; gap: 0.5rem; margin-right: auto; padding-right: 1rem; border-right: 1px solid var(--panel-border);">
+            <div style="display: flex; gap: 0.5rem; margin-right: auto; padding-right: 0.8rem; border-right: 1px solid var(--panel-border); align-items: center;">
                 <a href="http://192.168.100.24:5000" class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.7rem; color: #a7f3d0; border-color: #059669; text-decoration: none;">CRUCE_01</a>
                 <a href="http://192.168.100.24:5001" class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.7rem; color: #a7f3d0; border-color: #059669; text-decoration: none;">CRUCE_02</a>
                 <a href="http://192.168.100.24:5002" class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.7rem; color: #a7f3d0; border-color: #059669; text-decoration: none;">CRUCE_03</a>
             </div>
 
+            <!-- Mini Semáforo Virtual Reactivo en Vivo -->
+            <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.45); padding: 0.25rem 0.65rem; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.08); cursor: pointer;" onclick="openModal('modal-virtual-signals')" title="Semáforo Virtual Digital Twin en Vivo (Click para expandir HD)">
+                <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 800; letter-spacing: 0.5px;">SEMÁFORO:</span>
+                <div style="display: flex; align-items: center; gap: 4px;" title="Vía A">
+                    <span style="font-size: 0.68rem; color: #cbd5e1; font-weight: 700;">A</span>
+                    <span id="topbar-dot-a" class="topbar-signal-dot"></span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 4px;" title="Vía B">
+                    <span style="font-size: 0.68rem; color: #cbd5e1; font-weight: 700;">B</span>
+                    <span id="topbar-dot-b" class="topbar-signal-dot"></span>
+                </div>
+            </div>
+
+            <!-- Selector y Estado del Arduino Secuestrado -->
+            <button class="btn btn-outline" onclick="openModal('modal-arduino-port'); fetchArduinoPorts();" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.22rem 0.6rem; font-size: 0.72rem; border-color: rgba(56, 189, 248, 0.4); color: #7dd3fc; background: rgba(56, 189, 248, 0.05);" title="Administrar y Secuestrar Arduino Físico">
+                <span>🔌 Arduino:</span>
+                <strong id="topbar-ard-status" style="font-family: 'JetBrains Mono'; color: #38bdf8;">Detectando...</strong>
+            </button>
+
             <div class="info-pill user-pill">
                 <span>OPERADOR:</span> <strong id="val-user">{{ user or 'admin' }} (C5)</strong>
-            </div>
-            <div class="info-pill">
-                <span>HOST:</span> <strong id="val-host">-</strong>
-            </div>
-            <div class="info-pill">
-                <span>IP:</span> <strong id="val-ip">127.0.0.1</strong>
             </div>
             <div class="info-pill">
                 <span>UPTIME:</span> <strong id="val-uptime">00:00:00</strong>
@@ -633,6 +794,7 @@
     <!-- Toolbar for Advanced Modals -->
     <div class="toolbar">
         <button class="tab-btn active" onclick="switchView('dashboard')">Tablero SCADA</button>
+        <button class="tab-btn" onclick="openModal('modal-virtual-signals')" style="border-color: #22c55e; color: #86efac; font-weight: 700;">🟢 Semáforo Virtual HD</button>
         <button class="tab-btn tab-btn-emergency" onclick="openModal('modal-emergency-corridor')">Corredor de Emergencia C5</button>
         <button class="tab-btn" onclick="openModal('modal-sustainability')">Sustentabilidad y ROI</button>
         <button class="tab-btn" onclick="openModal('modal-ab')">Comparativa A/B</button>
@@ -640,7 +802,8 @@
         <button class="tab-btn" onclick="openModal('modal-zones')">Calibrador ROIs</button>
         <button class="tab-btn" onclick="openModal('modal-peak')">Diagnóstico Hora Pico</button>
         <button class="tab-btn" onclick="openModal('modal-violations')">Infracciones (<span id="viol-badge">0</span>)</button>
-        <button class="tab-btn" onclick="openModal('modal-corridor')" style="border-color: #38bdf8; color: #38bdf8;"> Olas Verdes (<span id="corridor-wave-badge">Normal</span>)</button>
+        <button class="tab-btn" onclick="openModal('modal-corridor')" style="border-color: #38bdf8; color: #38bdf8;">🌊 Olas Verdes (<span id="corridor-wave-badge">Normal</span>)</button>
+        <a href="/presentaciones/index.html" target="_blank" class="tab-btn" style="border-color: #f59e0b; color: #fde047; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">🏆 Presentaciones</a>
         <button class="tab-btn" onclick="window.open('/report/executive', '_blank')">Informe Oficial (PDF)</button>
     </div>
 
@@ -666,15 +829,84 @@
                     </div>
                 </div>
 
-                <!-- Phase & Countdown Card -->
+                <!-- Virtual Traffic Signal & Phase Card -->
                 <div class="phase-card">
-                    <div class="phase-pill bg-dark" id="phase-pill">INICIANDO...</div>
-                    <div style="font-size: 0.78rem; color: var(--text-muted); display: flex; justify-content: space-between;">
-                        <span>Tiempo en Fase: <strong id="phase-time" style="color: white; font-family: 'JetBrains Mono';">0s</strong></span>
-                        <span>Asignado: <strong id="phase-target" style="color: white; font-family: 'JetBrains Mono';">0s</strong></span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.35rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                        <div style="display: flex; align-items: center; gap: 0.45rem;">
+                            <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e;"></span>
+                            <span style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.4px; color: #a7f3d0; text-transform: uppercase;">Semáforo Virtual • Gemelo Digital</span>
+                        </div>
+                        <button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.68rem; border-color: rgba(34,197,94,0.35); color: #86efac;" onclick="openModal('modal-virtual-signals')">
+                            ⛶ Modo Exposición HD
+                        </button>
                     </div>
-                    <div class="phase-progress-bar">
-                        <div class="phase-progress-fill" id="phase-progress"></div>
+
+                    <!-- Dual Realistic Virtual Signals -->
+                    <div class="v-signal-box">
+                        <!-- Semáforo Vía A -->
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
+                            <div style="font-size: 0.68rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; text-align: center;" id="sem-a-title">Vía A (Principal)</div>
+                            
+                            <div class="v-traffic-head" id="vhead-a">
+                                <div class="v-lens-wrapper">
+                                    <div class="v-lens-visor"></div>
+                                    <div class="v-lens lens-red" id="vlens-a-red"></div>
+                                </div>
+                                <div class="v-lens-wrapper">
+                                    <div class="v-lens-visor"></div>
+                                    <div class="v-lens lens-yellow" id="vlens-a-yellow"></div>
+                                </div>
+                                <div class="v-lens-wrapper">
+                                    <div class="v-lens-visor"></div>
+                                    <div class="v-lens lens-green" id="vlens-a-green"></div>
+                                </div>
+                            </div>
+
+                            <span class="v-state-pill is-red" id="sem-a-badge">ROJO</span>
+                            <span style="font-size: 0.62rem; color: #94a3b8; font-family: 'JetBrains Mono';" id="sem-a-sub">Pins D2, D3, D4</span>
+                        </div>
+
+                        <!-- Central Status & Timing -->
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; min-width: 140px; padding: 0 4px;">
+                            <div class="phase-pill bg-dark" id="phase-pill" style="width: 100%; font-size: 0.8rem; padding: 0.35rem 0.5rem;">INICIANDO...</div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 0.63rem; color: var(--text-muted); text-transform: uppercase;">Tiempo en Fase</div>
+                                <div style="font-size: 1.55rem; font-weight: 800; font-family: 'JetBrains Mono'; color: white; line-height: 1.1;" id="phase-time">0s</div>
+                                <div style="font-size: 0.65rem; color: var(--text-muted);">Asignado: <span id="phase-target" style="color: #cbd5e1; font-family: 'JetBrains Mono';">0s</span></div>
+                            </div>
+                            <div class="phase-progress-bar" style="width: 100%;">
+                                <div class="phase-progress-fill" id="phase-progress"></div>
+                            </div>
+                            <!-- Contingency buttons -->
+                            <div style="display: flex; gap: 4px; width: 100%; margin-top: 2px;">
+                                <button class="btn btn-outline" style="flex: 1; padding: 0.2rem; font-size: 0.62rem;" title="Forzar Vía A" onclick="quickForcePhase('1')">Paso A</button>
+                                <button class="btn btn-outline" style="flex: 1; padding: 0.2rem; font-size: 0.62rem;" title="Forzar Vía B" onclick="quickForcePhase('2')">Paso B</button>
+                                <button class="btn btn-outline" style="padding: 0.2rem 0.4rem; font-size: 0.62rem; color: var(--tesco-green);" title="Restaurar Automático" onclick="cancelCorridor()">Auto</button>
+                            </div>
+                        </div>
+
+                        <!-- Semáforo Vía B -->
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
+                            <div style="font-size: 0.68rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; text-align: center;" id="sem-b-title">Vía B (Secundaria)</div>
+                            
+                            <div class="v-traffic-head" id="vhead-b">
+                                <div class="v-lens-wrapper">
+                                    <div class="v-lens-visor"></div>
+                                    <div class="v-lens lens-red" id="vlens-b-red"></div>
+                                </div>
+                                <div class="v-lens-wrapper">
+                                    <div class="v-lens-visor"></div>
+                                    <div class="v-lens lens-yellow" id="vlens-b-yellow"></div>
+                                </div>
+                                <div class="v-lens-wrapper">
+                                    <div class="v-lens-visor"></div>
+                                    <div class="v-lens lens-green" id="vlens-b-green"></div>
+                                </div>
+                            </div>
+
+                            <span class="v-state-pill is-red" id="sem-b-badge">ROJO</span>
+                            <span style="font-size: 0.62rem; color: #94a3b8; font-family: 'JetBrains Mono';" id="sem-b-sub">Pins D5, D6, D7 (Conectado)</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -793,7 +1025,7 @@
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <div class="rec-dot" id="dot-ard" style="background: var(--text-muted);"></div>
                         <span>Semáforos (Arduino UNO R4):</span>
-                        <strong id="val-ard-port" style="color: white; font-family: 'JetBrains Mono';">-</strong>
+                        <strong id="val-ard-port" style="color: white; font-family: 'JetBrains Mono'; cursor: pointer; text-decoration: underline;" onclick="openModal('modal-arduino-port'); fetchArduinoPorts();" title="Cambiar puerto">-</strong>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <div class="rec-dot" id="dot-cam" style="background: var(--text-muted);"></div>
@@ -828,6 +1060,114 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- MODAL: Semáforos Virtuales HD (Modo Exposición & Contingencia C5) -->
+    <div class="modal" id="modal-virtual-signals">
+        <div class="modal-content" style="max-width: 820px; border-color: rgba(34, 197, 94, 0.4); background: #080f0a;">
+            <div class="panel-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.8rem;">
+                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                    <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 12px #22c55e; animation: pulseGlow 1.5s infinite;"></span>
+                    <div>
+                        <div class="panel-title" style="font-size: 1.1rem; color: white;">FLUXA Digital Twin • Semáforos Virtuales HD</div>
+                        <div style="font-size: 0.72rem; color: var(--text-muted);">Simulación en tiempo real & Plan de contingencia para exposición</div>
+                    </div>
+                </div>
+                <button class="btn btn-outline" style="padding: 0.25rem 0.5rem;" onclick="closeModal('modal-virtual-signals')">✕</button>
+            </div>
+
+            <!-- Big Format Virtual Signals Display -->
+            <div style="display: flex; justify-content: space-around; align-items: center; padding: 1.5rem 1rem; background: radial-gradient(circle at center, rgba(16,24,20,0.8), #050a07); border-radius: 12px; margin: 1rem 0; border: 1px solid rgba(255,255,255,0.05); gap: 1.5rem; flex-wrap: wrap;">
+                
+                <!-- Large Signal A -->
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                    <div style="font-size: 0.92rem; font-weight: 800; color: #e2e8f0; letter-spacing: 0.5px; text-transform: uppercase;" id="modal-sem-a-title">VÍA A (SENTIDO PRINCIPAL)</div>
+                    <div class="v-traffic-head v-traffic-head-lg">
+                        <div class="v-lens-wrapper">
+                            <div class="v-lens-visor" style="width: 60px; height: 16px; top: -6px;"></div>
+                            <div class="v-lens lens-red" id="modal-vlens-a-red"></div>
+                        </div>
+                        <div class="v-lens-wrapper">
+                            <div class="v-lens-visor" style="width: 60px; height: 16px; top: -6px;"></div>
+                            <div class="v-lens lens-yellow" id="modal-vlens-a-yellow"></div>
+                        </div>
+                        <div class="v-lens-wrapper">
+                            <div class="v-lens-visor" style="width: 60px; height: 16px; top: -6px;"></div>
+                            <div class="v-lens lens-green" id="modal-vlens-a-green"></div>
+                        </div>
+                    </div>
+                    <div class="v-state-pill is-red" id="modal-sem-a-badge" style="font-size: 0.95rem; padding: 0.35rem 1rem;">ROJO</div>
+                    <div style="font-size: 0.72rem; color: #94a3b8; font-family: 'JetBrains Mono';" id="modal-sem-a-sub">Pins Físicos: D2, D3, D4</div>
+                </div>
+
+                <!-- Center High-Impact HUD -->
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-width: 220px; text-align: center;">
+                    <div style="background: rgba(0,0,0,0.5); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--panel-border);">
+                        <div style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Estado Canónico FSM</div>
+                        <div style="font-size: 1.25rem; font-weight: 900; font-family: 'JetBrains Mono'; color: #38bdf8;" id="modal-phase-name">INICIANDO...</div>
+                    </div>
+
+                    <div>
+                        <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px;">Tiempo en Fase</div>
+                        <div style="font-size: 3.5rem; font-weight: 900; font-family: 'JetBrains Mono'; color: white; line-height: 1;" id="modal-phase-time">0s</div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">Máximo Asignado: <strong id="modal-phase-target" style="color: var(--tesco-green); font-family: 'JetBrains Mono';">0s</strong></div>
+                    </div>
+
+                    <div style="width: 100%; max-width: 200px;">
+                        <div class="phase-progress-bar" style="height: 8px; border-radius: 4px;">
+                            <div class="phase-progress-fill" id="modal-phase-progress"></div>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.72rem; color: #a7f3d0;">
+                        <span>Enlace Hardware: </span><strong id="modal-ard-status" style="color: white;">Sincronizado</strong>
+                    </div>
+                </div>
+
+                <!-- Large Signal B -->
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                    <div style="font-size: 0.92rem; font-weight: 800; color: #e2e8f0; letter-spacing: 0.5px; text-transform: uppercase;" id="modal-sem-b-title">VÍA B (SENTIDO SECUNDARIO)</div>
+                    <div class="v-traffic-head v-traffic-head-lg">
+                        <div class="v-lens-wrapper">
+                            <div class="v-lens-visor" style="width: 60px; height: 16px; top: -6px;"></div>
+                            <div class="v-lens lens-red" id="modal-vlens-b-red"></div>
+                        </div>
+                        <div class="v-lens-wrapper">
+                            <div class="v-lens-visor" style="width: 60px; height: 16px; top: -6px;"></div>
+                            <div class="v-lens lens-yellow" id="modal-vlens-b-yellow"></div>
+                        </div>
+                        <div class="v-lens-wrapper">
+                            <div class="v-lens-visor" style="width: 60px; height: 16px; top: -6px;"></div>
+                            <div class="v-lens lens-green" id="modal-vlens-b-green"></div>
+                        </div>
+                    </div>
+                    <div class="v-state-pill is-red" id="modal-sem-b-badge" style="font-size: 0.95rem; padding: 0.35rem 1rem;">ROJO</div>
+                    <div style="font-size: 0.72rem; color: #94a3b8; font-family: 'JetBrains Mono';" id="modal-sem-b-sub">Pins Físicos: D5, D6, D7 (Conectado)</div>
+                </div>
+
+            </div>
+
+            <!-- Contingency & Manual Override Bar -->
+            <div style="background: rgba(13, 23, 17, 0.7); border: 1px solid var(--panel-border); border-radius: 8px; padding: 0.85rem 1rem;">
+                <div style="font-size: 0.78rem; font-weight: 700; color: #f59e0b; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+                    <span>⚡ Panel de Contingencia en Vivo (Plan de Emergencia para Exposición a la Intemperie)</span>
+                </div>
+                <p style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                    Si los cables físicos o LEDs se desconectan por el viento o lluvia, puedes usar estos controles para demostrar ante los evaluadores el control total de las fases en vivo:
+                </p>
+                <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                    <button class="btn btn-outline" style="flex: 1; padding: 0.55rem; font-size: 0.78rem; font-weight: 700;" onclick="quickForcePhase('1')">
+                        🟢 Dar Verde Inmediato a Vía A
+                    </button>
+                    <button class="btn btn-outline" style="flex: 1; padding: 0.55rem; font-size: 0.78rem; font-weight: 700;" onclick="quickForcePhase('2')">
+                        🟢 Dar Verde Inmediato a Vía B
+                    </button>
+                    <button class="btn btn-accent" style="padding: 0.55rem 1rem; font-size: 0.78rem; font-weight: 700;" onclick="cancelCorridor()">
+                        ↺ Reanudar Ciclo Automático IA
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL: Corredor de Emergencia C5 -->
@@ -962,6 +1302,48 @@
             </div>
         </div>
     </div>
+    <!-- Modal Selector y Secuestrador Exclusivo de Arduinos -->
+    <div class="modal" id="modal-arduino-port">
+        <div class="modal-content" style="max-width: 620px;">
+            <div class="panel-header">
+                <div class="panel-title" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span>🔌 Selector Exclusivo de Arduinos (Multi-Nodo Orange Pi 5)</span>
+                </div>
+                <button class="btn btn-outline" style="padding: 0.25rem 0.5rem;" onclick="closeModal('modal-arduino-port')">✕</button>
+            </div>
+            
+            <div style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: var(--radius-sm); padding: 0.6rem 0.8rem; margin-bottom: 0.9rem; font-size: 0.76rem; color: #bae6fd; line-height: 1.4;">
+                <strong>Secuestro Exclusivo por Nodo:</strong> Cada proceso de cruce vial en la Orange Pi 5 "secuestra" un único Arduino físico mediante cerrojos <code style="background: rgba(0,0,0,0.4); padding: 0.1rem 0.3rem; border-radius: 3px;">flock</code> a nivel de kernel Linux. Si otro nodo está usando un puerto, el acceso queda blindado para evitar instrucciones cruzadas simultáneas.
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">
+                    Puertos y Controladores Detectados:
+                </span>
+                <button class="btn btn-outline" style="font-size: 0.72rem; padding: 0.25rem 0.6rem;" onclick="fetchArduinoPorts()">
+                    ↻ Escanear Puertos
+                </button>
+            </div>
+
+            <div id="arduino-ports-container" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 280px; overflow-y: auto; margin-bottom: 1rem; padding-right: 4px;">
+                <div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 1.5rem;">Escaneando puertos serie...</div>
+            </div>
+
+            <input type="hidden" id="selected-arduino-port" value="">
+
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.8rem;">
+                <div id="arduino-selection-summary" style="font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono';">
+                    Selecciona un puerto o activa el Gemelo Digital
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-outline" onclick="closeModal('modal-arduino-port')">Cancelar</button>
+                    <button class="btn btn-primary" id="btn-secuestrar-arduino" onclick="setArduinoPort()" disabled>
+                        🔒 Secuestrar y Asignar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal 1: Estudio Visual de Calibración de ROIs, Tiempos y Modelos IA -->
     <div class="modal" id="modal-zones">
@@ -1054,7 +1436,7 @@
                                 <span style="color: var(--text-muted);">Umbral de Confianza:</span>
                                 <strong id="lbl-conf-thresh" style="color: #60a5fa; font-family: 'JetBrains Mono';">0.35</strong>
                             </div>
-                            <input type="range" id="slider-conf-thresh" min="0.15" max="0.85" step="0.05" value="0.35" style="width: 100%; accent-color: #60a5fa;" oninput="document.getElementById('lbl-conf-thresh').innerText = this.value">
+                            <input type="range" id="slider-conf-thresh" min="0.05" max="0.85" step="0.01" value="0.15" style="width: 100%; accent-color: #60a5fa;" oninput="document.getElementById('lbl-conf-thresh').innerText = this.value">
                         </div>
                     </div>
 
@@ -1242,36 +1624,43 @@
         const colorPalette = ['#70ba28', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
         
         // Traffic Chart Setup
-        const ctx = document.getElementById('trafficChart').getContext('2d');
-        const trafficChart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: [], datasets: [] },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#8ea395', font: { family: 'Inter', size: 10 } } } },
-                scales: {
-                    x: { ticks: { color: '#8ea395', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } },
-                    y: { beginAtZero: true, ticks: { color: '#8ea395', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } }
-                },
-                animation: false
-            }
-        });
-
-        // Peak Hour Chart Setup
-        const ctxPeak = document.getElementById('peakHourChart').getContext('2d');
-        const peakHourChart = new Chart(ctxPeak, {
-            type: 'bar',
-            data: { labels: [], datasets: [{ label: 'Promedio Autos / Hora', data: [], backgroundColor: '#70ba2888', borderColor: '#70ba28', borderWidth: 1 }] },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#8ea395' } } },
-                scales: {
-                    x: { ticks: { color: '#8ea395', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } },
-                    y: { beginAtZero: true, ticks: { color: '#8ea395', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } }
+        let trafficChart = null;
+        let peakHourChart = null;
+        
+        try {
+            const ctx = document.getElementById('trafficChart').getContext('2d');
+            trafficChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#8ea395', font: { family: 'Inter', size: 10 } } } },
+                    scales: {
+                        x: { ticks: { color: '#8ea395', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } },
+                        y: { beginAtZero: true, ticks: { color: '#8ea395', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } }
+                    },
+                    animation: false
                 }
-            }
-        });
+            });
+
+            // Peak Hour Chart Setup
+            const ctxPeak = document.getElementById('peakHourChart').getContext('2d');
+            peakHourChart = new Chart(ctxPeak, {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'Promedio Autos / Hora', data: [], backgroundColor: '#70ba2888', borderColor: '#70ba28', borderWidth: 1 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#8ea395' } } },
+                    scales: {
+                        x: { ticks: { color: '#8ea395', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } },
+                        y: { beginAtZero: true, ticks: { color: '#8ea395', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } }
+                    }
+                }
+            });
+        } catch (e) {
+            console.error("Chart.js failed to load. The dashboard will continue to function without graphs. (Probably offline)", e);
+        }
 
         async function fetchStatus() {
             try {
@@ -1297,6 +1686,74 @@
                 else if (data.status.includes('AMARILLO')) pill.classList.add('bg-yellow');
                 else if (data.status.includes('ROJO')) pill.classList.add('bg-red');
 
+                // Semáforos Virtuales (Digital Twin) - Ópticas Realistas y Badges
+                if (data.semaforos) {
+                    const stA = data.semaforos.semaforo_a; // "VERDE", "AMARILLO", "ROJO"
+                    const stB = data.semaforos.semaforo_b;
+
+                    // Función auxiliar para encender/apagar ópticas realistas
+                    const updateLenses = (prefix, state) => {
+                        const red = document.getElementById(`${prefix}-red`);
+                        const yel = document.getElementById(`${prefix}-yellow`);
+                        const grn = document.getElementById(`${prefix}-green`);
+                        if (red) red.className = `v-lens lens-red ${state === 'ROJO' ? 'on' : ''}`;
+                        if (yel) yel.className = `v-lens lens-yellow ${state === 'AMARILLO' ? 'on' : ''}`;
+                        if (grn) grn.className = `v-lens lens-green ${state === 'VERDE' ? 'on' : ''}`;
+                    };
+
+                    const updateBadge = (id, state) => {
+                        const badge = document.getElementById(id);
+                        if (badge) {
+                            badge.innerText = state;
+                            badge.className = "v-state-pill " + (state === 'VERDE' ? 'is-green' : (state === 'AMARILLO' ? 'is-yellow' : 'is-red'));
+                        }
+                    };
+
+                    // Actualizar semáforos en Tablero Principal
+                    updateLenses('vlens-a', stA);
+                    updateLenses('vlens-b', stB);
+                    updateBadge('sem-a-badge', stA);
+                    updateBadge('sem-b-badge', stB);
+
+                    // Mini Semáforo Virtual Reactivo en Barra Superior
+                    const dotA = document.getElementById('topbar-dot-a');
+                    const dotB = document.getElementById('topbar-dot-b');
+                    if (dotA) dotA.className = 'topbar-signal-dot ' + (stA === 'VERDE' ? 'dot-green' : (stA === 'AMARILLO' ? 'dot-yellow' : 'dot-red'));
+                    if (dotB) dotB.className = 'topbar-signal-dot ' + (stB === 'VERDE' ? 'dot-green' : (stB === 'AMARILLO' ? 'dot-yellow' : 'dot-red'));
+
+                    // Actualizar semáforos en Modal de Exposición HD
+                    updateLenses('modal-vlens-a', stA);
+                    updateLenses('modal-vlens-b', stB);
+                    updateBadge('modal-sem-a-badge', stA);
+                    updateBadge('modal-sem-b-badge', stB);
+
+                    // Etiquetas descriptivas
+                    if (data.semaforos.etiqueta_a) {
+                        const elA1 = document.getElementById('sem-a-title');
+                        const elA2 = document.getElementById('modal-sem-a-title');
+                        if (elA1) elA1.innerText = data.semaforos.etiqueta_a;
+                        if (elA2) elA2.innerText = data.semaforos.etiqueta_a.toUpperCase();
+                    }
+                    if (data.semaforos.etiqueta_b) {
+                        const elB1 = document.getElementById('sem-b-title');
+                        const elB2 = document.getElementById('modal-sem-b-title');
+                        if (elB1) elB1.innerText = data.semaforos.etiqueta_b;
+                        if (elB2) elB2.innerText = data.semaforos.etiqueta_b.toUpperCase();
+                    }
+                    if (data.semaforos.pins_a) {
+                        const pA1 = document.getElementById('sem-a-sub');
+                        const pA2 = document.getElementById('modal-sem-a-sub');
+                        if (pA1) pA1.innerText = data.semaforos.pins_a;
+                        if (pA2) pA2.innerText = `Pins Físicos: ${data.semaforos.pins_a}`;
+                    }
+                    if (data.semaforos.pins_b) {
+                        const pB1 = document.getElementById('sem-b-sub');
+                        const pB2 = document.getElementById('modal-sem-b-sub');
+                        if (pB1) pB1.innerText = data.semaforos.pins_b;
+                        if (pB2) pB2.innerText = `Pins Físicos: ${data.semaforos.pins_b}`;
+                    }
+                }
+
                 // Emergency Strobe indicator on panel
                 const vidPanel = document.getElementById('panel-video-stream');
                 if (data.emergencia_activa) {
@@ -1308,18 +1765,41 @@
                 // Alerta de Arduino Desconectado (>30s)
                 const ardBanner = document.getElementById('banner-arduino-disconnect');
                 if (ardBanner) {
-                    if (!window.arduinoAlertIgnored && data.arduino && data.arduino.alerta_desconexion_prolongada) {
+                    if (!window.arduinoAlertIgnored && data.arduino && data.arduino.alerta_desconexion_prolongada && !data.arduino.virtual_mode) {
                         ardBanner.style.display = 'flex';
                     } else {
                         ardBanner.style.display = 'none';
                     }
                 }
 
-                // Progress Bar
-                document.getElementById('phase-time').innerText = Math.floor(data.fase_tiempo_transcurrido) + 's';
-                document.getElementById('phase-target').innerText = Math.floor(data.fase_tiempo_asignado) + 's';
+                // Progress Bar & Reloj de Fase
+                const tTranscurrido = Math.floor(data.fase_tiempo_transcurrido);
+                const tAsignado = Math.floor(data.fase_tiempo_asignado);
                 const pct = data.fase_tiempo_asignado > 0 ? Math.min(100, (data.fase_tiempo_transcurrido / data.fase_tiempo_asignado) * 100) : 0;
+                
+                document.getElementById('phase-time').innerText = tTranscurrido + 's';
+                document.getElementById('phase-target').innerText = tAsignado + 's';
                 document.getElementById('phase-progress').style.width = pct + '%';
+
+                // Sincronizar Modal de Exposición HD
+                const mPhase = document.getElementById('modal-phase-name');
+                const mTime = document.getElementById('modal-phase-time');
+                const mTarget = document.getElementById('modal-phase-target');
+                const mProg = document.getElementById('modal-phase-progress');
+                const mArd = document.getElementById('modal-ard-status');
+                if (mPhase) mPhase.innerText = data.status;
+                if (mTime) mTime.innerText = tTranscurrido + 's';
+                if (mTarget) mTarget.innerText = tAsignado + 's';
+                if (mProg) mProg.style.width = pct + '%';
+                if (mArd && data.arduino) {
+                    if (data.arduino.virtual_mode) {
+                        mArd.innerText = `Semáforos Virtuales (CMD '${data.arduino.last_command || '-'}')`;
+                        mArd.style.color = '#38bdf8';
+                    } else {
+                        mArd.innerText = data.arduino.connected ? `Arduino Conectado (CMD '${data.arduino.last_command || '-'}')` : `Arduino Desconectado (Modo Virtual Activo)`;
+                        mArd.style.color = data.arduino.connected ? '#86efac' : '#f87171';
+                    }
+                }
 
                 // V2X SPaT Widget
                 if (data.v2x) {
@@ -1364,11 +1844,16 @@
                 document.getElementById('val-total-today').innerText = data.total_acumulado || 0;
 
                 // Hardware Telemetry
-                if (data.hardware && !data.hardware.error) {
-                    const hw = data.hardware;
-                    document.getElementById('val-host').innerText = hw.hostname || '-';
-                    document.getElementById('val-ip').innerText = hw.ip_address || '-';
-                    document.getElementById('val-uptime').innerText = hw.uptime_human || '-';
+                if (data.hardware) {
+                    if (data.hardware.error) {
+                        document.getElementById('val-host').innerText = "ERROR";
+                        document.getElementById('hw-cpu').innerText = "ERR";
+                        console.error("Hardware Telemetry Error:", data.hardware.error);
+                    } else {
+                        const hw = data.hardware;
+                        document.getElementById('val-host').innerText = hw.hostname || '-';
+                        document.getElementById('val-ip').innerText = hw.ip_address || '-';
+                        document.getElementById('val-uptime').innerText = hw.uptime_human || '-';
                     
                     document.getElementById('hw-cpu').innerText = `${hw.cpu_percent}%`;
                     document.getElementById('hw-cores').innerText = `${hw.cpu_count} núcleos`;
@@ -1438,11 +1923,25 @@
                     document.getElementById('lat-total').innerText = `${data.latencias_ms.pipeline_total}ms`;
                 }
 
-                // Peripherals
+                // Peripherals & Hardware Locker Status
                 if (data.arduino) {
                     const dotArd = document.getElementById('dot-ard');
-                    data.arduino.connected ? dotArd.classList.add('on') : dotArd.classList.remove('on');
-                    document.getElementById('val-ard-port').innerText = `${data.arduino.port} (${data.arduino.tx_count} tx)`;
+                    const topbarArd = document.getElementById('topbar-ard-status');
+                    const cmdTxt = data.arduino.last_command ? ` • CMD '${data.arduino.last_command}'` : '';
+                    if (data.arduino.virtual_mode) {
+                        dotArd.classList.add('on');
+                        dotArd.style.background = '#38bdf8';
+                        dotArd.style.boxShadow = '0 0 6px #38bdf8';
+                        document.getElementById('val-ard-port').innerText = `Virtual (Simulado)${cmdTxt} (${data.arduino.tx_count} tx)`;
+                        if (topbarArd) topbarArd.innerText = 'Virtual 🎮';
+                    } else {
+                        dotArd.style.background = '';
+                        dotArd.style.boxShadow = '';
+                        data.arduino.connected ? dotArd.classList.add('on') : dotArd.classList.remove('on');
+                        const pName = data.arduino.port ? data.arduino.port.replace('/dev/', '') : 'Sin Asignar';
+                        document.getElementById('val-ard-port').innerText = `${data.arduino.port}${cmdTxt} (${data.arduino.tx_count} tx) [Secuestrado]`;
+                        if (topbarArd) topbarArd.innerText = `${pName} 🔒`;
+                    }
                 }
                 if (data.camara) {
                     const dotCam = document.getElementById('dot-cam');
@@ -1577,6 +2076,19 @@
             };
         }
 
+        async function quickForcePhase(axis) {
+            try {
+                await fetch('/api/control', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ action: 'emergency_corridor', target: axis })
+                });
+                fetchStatus();
+            } catch(e) {
+                console.error("Error forzando fase:", e);
+            }
+        }
+
         async function activateCorridor(axis) {
             try {
                 await fetch('/api/control', {
@@ -1597,6 +2109,7 @@
                     body: JSON.stringify({ action: 'reset' })
                 });
                 closeModal('modal-emergency-corridor');
+                closeModal('modal-virtual-signals');
                 fetchStatus();
             } catch(e) { alert("Error al restaurar ciclo."); }
         }
@@ -1707,12 +2220,14 @@
                 const data = await res.json();
                 alert(" Ola Verde emitida exitosamente a lo largo del corredor.");
                 fetchCorridorStatus();
+
             } catch(e) {
                 alert("Error emitiendo ola verde: " + e);
             }
         }
 
         async function updateTrafficChart() {
+            if (!trafficChart) return;
             try {
                 const res = await fetch('/api/history');
                 const data = await res.json();
@@ -1819,8 +2334,8 @@
                 // AI Model & Thresholds
                 if (studioConfig.ai_model) {
                     const ai = studioConfig.ai_model;
-                    document.getElementById('slider-conf-thresh').value = ai.confidence_threshold || 0.35;
-                    document.getElementById('lbl-conf-thresh').innerText = ai.confidence_threshold || 0.35;
+                    document.getElementById('slider-conf-thresh').value = ai.confidence_threshold || 0.15;
+                    document.getElementById('lbl-conf-thresh').innerText = ai.confidence_threshold || 0.15;
                 }
 
                 // Cargar lista de modelos disponibles
@@ -1906,8 +2421,6 @@
             if (loading) loading.style.display = 'flex';
             
             snapshotImage = new Image();
-            snapshotImage.crossOrigin = "anonymous";
-            snapshotImage.src = '/api/frame/snapshot?t=' + Date.now();
             
             snapshotImage.onload = () => {
                 isSnapshotLoaded = true;
@@ -1919,6 +2432,8 @@
                 if (loading) loading.style.display = 'none';
                 renderRoiCanvas();
             };
+            
+            snapshotImage.src = '/api/frame/snapshot?t=' + Date.now();
         }
 
         function renderRoiCanvas() {
@@ -1964,13 +2479,23 @@
                     if (i === 0) roiCtx.moveTo(px, py);
                     else roiCtx.lineTo(px, py);
                 });
-                roiCtx.closePath();
 
-                roiCtx.fillStyle = isCurrent ? `${colorHex}44` : `${colorHex}18`;
-                roiCtx.fill();
-                roiCtx.strokeStyle = colorHex;
-                roiCtx.lineWidth = isCurrent ? 2.5 : 1.5;
-                roiCtx.stroke();
+                if (pts.length >= 3) {
+                    roiCtx.closePath();
+                    roiCtx.fillStyle = isCurrent ? `${colorHex}44` : `${colorHex}18`;
+                    roiCtx.fill();
+                    roiCtx.strokeStyle = colorHex;
+                    roiCtx.lineWidth = isCurrent ? 2.5 : 1.5;
+                    roiCtx.setLineDash([]);
+                    roiCtx.stroke();
+                } else {
+                    // Si tiene < 3 puntos, dibujar línea punteada de advertencia
+                    roiCtx.strokeStyle = "#f59e0b";
+                    roiCtx.lineWidth = 1.5;
+                    roiCtx.setLineDash([4, 4]);
+                    roiCtx.stroke();
+                    roiCtx.setLineDash([]);
+                }
 
                 // Centroide para la etiqueta
                 let avgX = 0, avgY = 0;
@@ -1979,16 +2504,17 @@
                 avgY = (avgY / pts.length) * h;
 
                 roiCtx.fillStyle = "rgba(7, 13, 9, 0.9)";
-                roiCtx.fillRect(avgX - 32, avgY - 11, 64, 22);
-                roiCtx.strokeStyle = colorHex;
+                roiCtx.fillRect(avgX - 35, avgY - 11, 70, 22);
+                roiCtx.strokeStyle = (pts.length >= 3) ? colorHex : "#f59e0b";
                 roiCtx.lineWidth = 1;
-                roiCtx.strokeRect(avgX - 32, avgY - 11, 64, 22);
+                roiCtx.strokeRect(avgX - 35, avgY - 11, 70, 22);
                 
-                roiCtx.fillStyle = "#ffffff";
-                roiCtx.font = "bold 10px Inter";
+                roiCtx.fillStyle = (pts.length >= 3) ? "#ffffff" : "#fef08a";
+                roiCtx.font = "bold 9px Inter";
                 roiCtx.textAlign = "center";
                 roiCtx.textBaseline = "middle";
-                roiCtx.fillText(laneName.toUpperCase(), avgX, avgY);
+                const labelText = (pts.length >= 3) ? laneName.toUpperCase() : `${laneName.toUpperCase()} (<3 pts)`;
+                roiCtx.fillText(labelText, avgX, avgY);
 
                 // Vértices (Manijas de arrastre)
                 pts.forEach((pt, i) => {
@@ -2012,6 +2538,16 @@
 
                 laneIdx++;
             }
+
+            // Indicador de Protección Anti-Colisión por Solapamiento
+            roiCtx.fillStyle = "rgba(15, 23, 42, 0.75)";
+            roiCtx.fillRect(10, 10, 310, 20);
+            roiCtx.strokeStyle = "rgba(56, 189, 248, 0.4)";
+            roiCtx.strokeRect(10, 10, 310, 20);
+            roiCtx.fillStyle = "#7dd3fc";
+            roiCtx.font = "9px Inter";
+            roiCtx.textAlign = "left";
+            roiCtx.fillText("🛡️ Fusión Geométrica FLUXA: Solapamiento resuelto sin crash", 16, 23);
         }
 
         function getCanvasCoords(e) {
@@ -2163,6 +2699,21 @@
                 }
             }
 
+            // Saneamiento y Blindaje Anti-Crash de ROIs
+            if (studioConfig.zones && studioConfig.zones[activeTopology]) {
+                const currentZones = studioConfig.zones[activeTopology];
+                for (const [lane, pts] of Object.entries(currentZones)) {
+                    if (Array.isArray(pts) && pts.length > 0 && pts.length < 3) {
+                        const fix = confirm(`⚠️ El carril '${lane.toUpperCase()}' tiene solo ${pts.length} punto(s), pero un polígono requiere al menos 3 vértices.\n\n¿Deseas restablecer '${lane}' a su preset por defecto antes de guardar?\n\n(Aceptar = Cargar preset | Cancelar = Guardar carril inactivo/vacío sin crash)`);
+                        if (fix) {
+                            resetCurrentLaneToDefault();
+                        } else {
+                            studioConfig.zones[activeTopology][lane] = [];
+                        }
+                    }
+                }
+            }
+
             const payload = {
                 zones: studioConfig.zones,
                 traffic_light: {
@@ -2203,6 +2754,7 @@
             if (id === 'modal-peak') fetchPeakHour();
             if (id === 'modal-violations') fetchViolations();
             if (id === 'modal-corridor') fetchCorridorStatus();
+
         }
 
         function closeModal(id) {
@@ -2214,7 +2766,7 @@
         }
 
         // Loop de actualización
-        setInterval(fetchStatus, 1000);
+        setInterval(fetchStatus, 500);
         setInterval(fetchEvents, 2000);
         setInterval(updateTrafficChart, 5000);
         setInterval(fetchViolations, 10000);
@@ -2225,6 +2777,180 @@
         updateTrafficChart();
         fetchViolations();
         fetchCorridorStatus();
+        let detectedArduinoPorts = [];
+
+        async function fetchArduinoPorts() {
+            const container = document.getElementById('arduino-ports-container');
+            const summary = document.getElementById('arduino-selection-summary');
+            const btnApply = document.getElementById('btn-secuestrar-arduino');
+            if (container) container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 1.2rem;">Escaneando puertos serie en Linux (flock)...</div>';
+
+            try {
+                const res = await fetch('/api/config/arduino_ports');
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    detectedArduinoPorts = data.ports || [];
+                    if (!container) return;
+                    container.innerHTML = '';
+
+                    if (detectedArduinoPorts.length === 0) {
+                        container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 1.5rem;">No se detectaron puertos serie conectados.</div>';
+                        return;
+                    }
+
+                    detectedArduinoPorts.forEach(p => {
+                        const card = document.createElement('div');
+                        const isCurrent = p.is_current;
+                        const isOccupiedByOther = (p.status === 'ocupado');
+                        const isVirtual = (p.port === 'VIRTUAL');
+
+                        let borderColor = 'rgba(255,255,255,0.08)';
+                        let badgeBg = 'rgba(255,255,255,0.05)';
+                        let badgeColor = 'var(--text-muted)';
+                        let badgeText = 'DISPONIBLE';
+
+                        if (isCurrent) {
+                            borderColor = '#22c55e';
+                            badgeBg = 'rgba(34, 197, 94, 0.2)';
+                            badgeColor = '#86efac';
+                            badgeText = isVirtual ? 'ACTIVO (VIRTUAL)' : 'SECUESTRADO POR ESTE NODO';
+                        } else if (isOccupiedByOther) {
+                            borderColor = 'rgba(239, 68, 68, 0.4)';
+                            badgeBg = 'rgba(239, 68, 68, 0.2)';
+                            badgeColor = '#fca5a5';
+                            badgeText = `OCUPADO: ${p.locked_by || 'Otro Nodo'}`;
+                        } else if (isVirtual) {
+                            borderColor = 'rgba(168, 85, 247, 0.4)';
+                            badgeBg = 'rgba(168, 85, 247, 0.15)';
+                            badgeColor = '#d8b4fe';
+                            badgeText = 'GEMELO DIGITAL VIRTUAL';
+                        } else {
+                            borderColor = 'rgba(56, 189, 248, 0.4)';
+                            badgeBg = 'rgba(56, 189, 248, 0.15)';
+                            badgeColor = '#7dd3fc';
+                            badgeText = 'LIBRE (Listo para secuestrar)';
+                        }
+
+                        card.className = `port-card ${isCurrent ? 'selected' : ''} ${isOccupiedByOther ? 'disabled-card' : ''}`;
+                        card.style.cssText = `
+                            background: ${isCurrent ? 'rgba(34, 197, 94, 0.08)' : 'rgba(8, 14, 10, 0.8)'};
+                            border: 1.5px solid ${borderColor};
+                            border-radius: var(--radius-sm);
+                            padding: 0.65rem 0.85rem;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            cursor: ${isOccupiedByOther ? 'not-allowed' : 'pointer'};
+                            opacity: ${isOccupiedByOther ? '0.65' : '1'};
+                            transition: all 0.2s ease;
+                        `;
+
+                        card.innerHTML = `
+                            <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <strong style="color: white; font-family: 'JetBrains Mono'; font-size: 0.82rem;">
+                                        ${isVirtual ? '🎮 SEMÁFOROS VIRTUALES' : '📟 ' + p.port}
+                                    </strong>
+                                    <span style="font-size: 0.64rem; font-weight: 800; padding: 0.12rem 0.45rem; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${borderColor};">
+                                        ${badgeText}
+                                    </span>
+                                </div>
+                                <span style="font-size: 0.72rem; color: var(--text-muted);">
+                                    ${p.desc || 'Dispositivo serial'}
+                                </span>
+                            </div>
+                            <div style="text-align: right;">
+                                <input type="radio" name="arduino_port_radio" value="${p.port}" ${isCurrent ? 'checked' : ''} ${isOccupiedByOther ? 'disabled' : ''} style="cursor: pointer;">
+                            </div>
+                        `;
+
+                        if (!isOccupiedByOther) {
+                            card.onclick = () => {
+                                const radio = card.querySelector('input[type="radio"]');
+                                if (radio) radio.checked = true;
+                                selectArduinoPortOption(p.port);
+                            };
+                        }
+
+                        container.appendChild(card);
+                    });
+
+                    const cur = detectedArduinoPorts.find(p => p.is_current);
+                    if (cur) {
+                        selectArduinoPortOption(cur.port);
+                    }
+                }
+            } catch (e) {
+                if (container) container.innerHTML = '<div style="color: #ef4444; font-size: 0.8rem; text-align: center; padding: 1.2rem;">Error al escanear puertos seriales.</div>';
+            }
+        }
+
+        function selectArduinoPortOption(port) {
+            document.getElementById('selected-arduino-port').value = port;
+            const summary = document.getElementById('arduino-selection-summary');
+            const btnApply = document.getElementById('btn-secuestrar-arduino');
+
+            const cards = document.querySelectorAll('#arduino-ports-container .port-card');
+            cards.forEach(c => {
+                const radio = c.querySelector('input[type="radio"]');
+                if (radio && radio.value === port) {
+                    c.style.background = 'rgba(56, 189, 248, 0.12)';
+                    c.style.borderColor = '#38bdf8';
+                } else if (!c.classList.contains('disabled-card')) {
+                    c.style.background = 'rgba(8, 14, 10, 0.8)';
+                    c.style.borderColor = 'rgba(255,255,255,0.08)';
+                }
+            });
+
+            if (summary) {
+                if (port === 'VIRTUAL') {
+                    summary.innerHTML = `Seleccionado: <strong style="color: #c084fc;">Gemelo Digital Virtual</strong>`;
+                } else {
+                    summary.innerHTML = `Seleccionado: <strong style="color: #38bdf8;">${port}</strong> (Secuestro Exclusivo)`;
+                }
+            }
+
+            if (btnApply) {
+                btnApply.disabled = false;
+            }
+        }
+
+        async function setArduinoPort() {
+            const port = document.getElementById('selected-arduino-port').value;
+            if (!port) {
+                alert('Por favor selecciona un puerto de la lista.');
+                return;
+            }
+
+            const btnApply = document.getElementById('btn-secuestrar-arduino');
+            if (btnApply) {
+                btnApply.disabled = true;
+                btnApply.innerText = '🔒 Secuestrando...';
+            }
+
+            try {
+                const res = await fetch('/api/config/arduino_port', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({port: port})
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'ok') {
+                    alert(`✅ Asignación Exitosa: ${data.message || 'Puerto secuestrado de forma exclusiva para este nodo.'}`);
+                    closeModal('modal-arduino-port');
+                    fetchStatus();
+                } else {
+                    alert(`⚠️ No fue posible secuestrar el puerto: ${data.error || 'El dispositivo está ocupado por otro nodo o no está disponible.'}`);
+                }
+            } catch (e) {
+                alert('Error de red al intentar secuestrar el puerto: ' + e.message);
+            } finally {
+                if (btnApply) {
+                    btnApply.disabled = false;
+                    btnApply.innerText = '🔒 Secuestrar y Asignar';
+                }
+            }
+        }
     </script>
 </body>
 </html>

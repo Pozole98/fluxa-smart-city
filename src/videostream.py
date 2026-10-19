@@ -115,7 +115,10 @@ class VideoStream:
         if isinstance(self.src, int) or (isinstance(self.src, str) and self.src.isdigit()):
             dev_idx = int(self.src)
             try:
-                cap = cv2.VideoCapture(dev_idx)
+                # Usar V4L2 explícitamente para evitar problemas de bloqueo en Linux con USB
+                cap = cv2.VideoCapture(dev_idx, cv2.CAP_V4L2)
+                if not cap.isOpened():
+                    cap = cv2.VideoCapture(dev_idx)
                 if cap.isOpened():
                     ret, _ = cap.read()
                     if ret:
@@ -128,7 +131,9 @@ class VideoStream:
         # 3.3. Dispositivos USB en cascada (0, 1, 2)
         for dev in [0, 1, 2]:
             try:
-                cap = cv2.VideoCapture(dev)
+                cap = cv2.VideoCapture(dev, cv2.CAP_V4L2)
+                if not cap.isOpened():
+                    cap = cv2.VideoCapture(dev)
                 if cap.isOpened():
                     ret, _ = cap.read()
                     if ret:
@@ -242,11 +247,13 @@ class VideoStream:
                 self.frame_ready.set()  # Liberar cualquier wait pendiente
 
     def read(self):
+        if self.stopped:
+            return False, None
         # Bloquear hasta que un nuevo frame esté disponible (simula captura real y evita procesar frames duplicados)
         self.frame_ready.wait(timeout=1.0)
         
         with self.lock:
-            if self.failed or not self.grabbed or self.frame is None:
+            if self.stopped or self.failed or not self.grabbed or self.frame is None:
                 return False, None
             
             self.frame_ready.clear()
@@ -255,9 +262,10 @@ class VideoStream:
     def stop(self):
         """Detiene el hilo de forma síncrona esperando a que termine limpiamente sin bloquearse"""
         self.stopped = True
+        self.frame_ready.set()  # Liberar cualquier wait pendiente inmediatamente
         if self.thread is not None and self.thread.is_alive() and threading.current_thread() != self.thread:
             try:
-                self.thread.join(timeout=0.5)
+                self.thread.join(timeout=0.6)
             except Exception:
                 pass
         acquired = False
@@ -265,7 +273,7 @@ class VideoStream:
             acquired = self.lock.acquire(timeout=0.5)
             self.grabbed = False
             self.failed = True
-            if self.stream is not None:
+            if self.stream is not None and (self.thread is None or not self.thread.is_alive()):
                 try:
                     self.stream.release()
                 except Exception:
