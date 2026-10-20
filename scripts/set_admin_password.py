@@ -78,6 +78,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Configuración de Credenciales de Administrador FLUXA C5")
     parser.add_argument("--username", type=str, default=None, help="Nombre de usuario administrador")
     parser.add_argument("--password", type=str, default=None, help="Contraseña en texto plano a hashear")
+    parser.add_argument("--password-stdin", action="store_true", help="Leer contraseña desde STDIN (evita exposición en ps)")
+    parser.add_argument("--password-file", type=str, default=None, help="Leer contraseña desde archivo seguro con permisos 600")
     parser.add_argument("--force", action="store_true", help="Forzar escritura")
     args = parser.parse_args()
-    set_password(username=args.username, password=args.password)
+
+    pwd = args.password
+    if args.password_stdin:
+        pwd = sys.stdin.readline().rstrip('\r\n')
+    elif args.password_file and os.path.isfile(args.password_file):
+        with open(args.password_file, 'r') as pf:
+            pwd = pf.readline().rstrip('\r\n')
+
+    set_password(username=args.username, password=pwd)
