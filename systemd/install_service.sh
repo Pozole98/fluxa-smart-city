@@ -11,18 +11,58 @@ SERVICE_DEST="/etc/systemd/system/$SERVICE_NAME"
 CURRENT_USER="${SUDO_USER:-$USER}"
 ARCH=$(uname -m)
 
-if [ "${DRY_RUN:-0}" != "1" ] && [ "$EUID" -ne 0 ]; then
+if [ "${FLUXA_TEST_MODE:-0}" != "1" ] && [ "$EUID" -ne 0 ]; then
   echo "Por favor ejecuta este script con privilegios root (sudo bash systemd/install_service.sh)"
   exit 1
 fi
 
+MIGRATE=0
+for arg in "$@"; do
+    if [ "$arg" = "--migrate" ]; then
+        MIGRATE=1
+    fi
+done
+
 SYSTEMD_DIR="${SYSTEMD_DIR:-/etc/systemd/system}"
 TARGET_DEST="${SYSTEMD_DIR}/fluxa.target"
+MONOLITHIC_SVC="${SYSTEMD_DIR}/$SERVICE_NAME"
+SHOULD_ENABLE=1
 
-if [ -f "${SYSTEMD_DIR}/$SERVICE_NAME" ]; then
-    echo "⚠️  Aviso: Se detectó un servicio monolítico previo en ${SYSTEMD_DIR}/$SERVICE_NAME."
-    echo "   No se modificará ni eliminará automáticamente. Si desea utilizar la arquitectura Tri-Core,"
-    echo "   se recomienda detener y deshabilitar el servicio anterior: sudo systemctl disable --now $SERVICE_NAME"
+MONOLITHIC_DETECTED=0
+if [ -f "$MONOLITHIC_SVC" ]; then
+    MONOLITHIC_DETECTED=1
+elif [ "${FLUXA_TEST_MODE:-0}" != "1" ] && command -v systemctl &>/dev/null; then
+    if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null || systemctl is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
+        MONOLITHIC_DETECTED=1
+    fi
+fi
+
+if [ "$MONOLITHIC_DETECTED" -eq 1 ]; then
+    if [ "$MIGRATE" -eq 1 ]; then
+        if [ -f "$MONOLITHIC_SVC" ]; then
+            BAK_MONO="${MONOLITHIC_SVC}.bak.$(date +%Y%m%d_%H%M%S)"
+            echo "📦 Migración solicitada (--migrate): Respaldando ${MONOLITHIC_SVC} en ${BAK_MONO}..."
+            cp -a "$MONOLITHIC_SVC" "$BAK_MONO"
+        fi
+        if [ "${FLUXA_TEST_MODE:-0}" != "1" ] && command -v systemctl &>/dev/null; then
+            systemctl stop "$SERVICE_NAME" 2>/dev/null || true
+            systemctl disable "$SERVICE_NAME" 2>/dev/null || true
+            systemctl daemon-reload
+        fi
+        if [ -f "$MONOLITHIC_SVC" ]; then
+            rm -f "$MONOLITHIC_SVC"
+        fi
+        echo " Servicio monolítico previo respaldado y desactivado. Procediendo con instalación Tri-Core."
+    else
+        echo "⚠️  Aviso: Se detectó un servicio monolítico fluxa.service preexistente (activo, habilitado o en ${MONOLITHIC_SVC})."
+        echo "   Para evitar colisiones de puertos (5000) o conflictos de hardware entre cruces,"
+        echo "   NO se instalarán, habilitarán ni arrancarán los servicios fluxa-node{0,1,2} ni fluxa.target."
+        echo "   Para migrar automáticamente a Tri-Core respaldando la unit previa y activando los nodos, ejecute:"
+        echo "     sudo bash systemd/install_service.sh --migrate"
+        echo "   O alternativamente desde el instalador principal:"
+        echo "     sudo bash install.sh --migrate"
+        exit 0
+    fi
 fi
 
 echo "Configurando servicio Tri-Core para usuario $CURRENT_USER en $SCRIPT_DIR..."
@@ -115,16 +155,21 @@ EOF
   fi
 done
 
-if [ "${DRY_RUN:-0}" != "1" ] && command -v systemctl &>/dev/null; then
-    echo " Recargando daemon de systemd..."
-    systemctl daemon-reload
+if [ "$SHOULD_ENABLE" -eq 1 ]; then
+    if [ "${FLUXA_TEST_MODE:-0}" != "1" ] && command -v systemctl &>/dev/null; then
+        echo " Recargando daemon de systemd..."
+        systemctl daemon-reload
 
-    systemctl enable fluxa.target
-    for CORE in 0 1 2; do
-      SVC_NAME="fluxa-node${CORE}.service"
-      systemctl enable "$SVC_NAME"
-      systemctl restart "$SVC_NAME"
-    done
+        systemctl enable fluxa.target
+        for CORE in 0 1 2; do
+          SVC_NAME="fluxa-node${CORE}.service"
+          systemctl enable "$SVC_NAME"
+          systemctl restart "$SVC_NAME"
+        done
+    fi
+else
+    echo "⚠️  Atención: No se habilitaron ni iniciaron los servicios Tri-Core porque existe $MONOLITHIC_SVC."
+    echo "   Para proceder con la migración, ejecute: sudo bash systemd/install_service.sh --migrate"
 fi
 
 echo "=========================================================================="

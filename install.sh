@@ -31,6 +31,35 @@ CURRENT_USER="${SUDO_USER:-$USER}"
 CURRENT_HOME=$(eval echo "~$CURRENT_USER")
 ARCH=$(uname -m)
 
+# ------------------------------------------------------------------------------
+# 0. Definición de run_sudo y Verificación de Seguridad de FLUXA_TEST_MODE
+# ------------------------------------------------------------------------------
+if [ "${FLUXA_TEST_MODE:-0}" = "1" ]; then
+    CANONICAL_SCRIPT_DIR=$(readlink -f "$SCRIPT_DIR" 2>/dev/null || echo "$SCRIPT_DIR")
+    if [[ "$CANONICAL_SCRIPT_DIR" != /tmp/* ]] && [[ "$CANONICAL_SCRIPT_DIR" != */scratch/* ]]; then
+        echo -e "${C_RED}❌ Error de seguridad: FLUXA_TEST_MODE=1 solo está permitido en directorios temporales (/tmp/ o scratch/).${C_RESET}" >&2
+        echo -e "${C_RED}   Directorio actual no temporal: ${CANONICAL_SCRIPT_DIR}${C_RESET}" >&2
+        exit 1
+    fi
+    # En modo de prueba en sandbox, run_sudo ejecuta los comandos directamente sin sudo
+    # y sin silenciar errores, de modo que cualquier falla real sea visible.
+    run_sudo() {
+        "$@"
+    }
+else
+    run_sudo() {
+        if [ "$EUID" -ne 0 ]; then
+            sudo "$@"
+        else
+            "$@"
+        fi
+    }
+fi
+
+is_interactive() {
+    [ -t 0 ] && [ "${FLUXA_TEST_MODE:-0}" != "1" ]
+}
+
 # Manejo de archivos temporales y subprocesos
 TMP_FILES=()
 SUDO_KEEP_PID=""
@@ -50,28 +79,34 @@ trap cleanup EXIT
 # ------------------------------------------------------------------------------
 # 1. Cerrojo de Exclusión Mutua Compartido (/run/lock/fluxa.lock)
 # ------------------------------------------------------------------------------
-LOCK_FILE="${LOCK_FILE:-/run/lock/fluxa.lock}"
+LOCK_FILE="/run/lock/fluxa.lock"
+if [ "${FLUXA_TEST_MODE:-0}" = "1" ] && [ -n "${LOCK_FILE_OVERRIDE:-}" ]; then
+    LOCK_FILE="$LOCK_FILE_OVERRIDE"
+fi
 LOCK_DIR="$(dirname "$LOCK_FILE")"
 if [ ! -d "$LOCK_DIR" ]; then
     run_sudo mkdir -p "$LOCK_DIR"
 fi
+if [ ! -f "$LOCK_FILE" ]; then
+    run_sudo touch "$LOCK_FILE"
+    run_sudo chmod 666 "$LOCK_FILE"
+fi
 
-if [ "${FLUXA_LOCK_HELD:-0}" = "1" ]; then
-    # Verificar que el descriptor 200 realmente esté abierto en este proceso antes de confiar
-    if { true >&200; } 2>/dev/null; then
-        echo -e "${C_BLUE}ℹ️  Lock de FLUXA heredado vía fd 200 ($LOCK_FILE).${C_RESET}"
-    else
-        echo -e "${C_YELLOW}⚠️  Aviso: FLUXA_LOCK_HELD=1 detectado pero fd 200 no estaba abierto. Adquiriendo cerrojo...${C_RESET}"
-        exec 200>"$LOCK_FILE"
-        if ! flock -n 200; then
-            echo -e "${C_RED}❌ Error: Ya existe un proceso de instalación o actualización de FLUXA en ejecución.${C_RESET}" >&2
-            echo -e "${C_YELLOW}Archivo de bloqueo ocupado: ${LOCK_FILE}${C_RESET}" >&2
-            exit 1
-        fi
+CANONICAL_LOCK_FILE=$(readlink -f "$LOCK_FILE" 2>/dev/null || echo "$LOCK_FILE")
+FD200_TARGET=$(readlink -f /proc/self/fd/200 2>/dev/null || true)
+
+LOCK_ACQUIRED=0
+if [ "${FLUXA_LOCK_HELD:-0}" = "1" ] && [ -n "$FD200_TARGET" ] && [ "$FD200_TARGET" = "$CANONICAL_LOCK_FILE" ]; then
+    # Verificar con flock -n 200 que el descriptor realmente sostiene el cerrojo
+    if flock -n 200; then
+        echo -e "${C_BLUE}ℹ️  Lock de FLUXA heredado y verificado vía fd 200 ($LOCK_FILE).${C_RESET}"
+        LOCK_ACQUIRED=1
     fi
-else
-    # Abrir fd 200 apuntando al archivo de lock
-    exec 200>"$LOCK_FILE"
+fi
+
+if [ "$LOCK_ACQUIRED" -eq 0 ]; then
+    # Abrir con >> (append) sin truncar el archivo existente
+    exec 200>>"$LOCK_FILE"
     if ! flock -n 200; then
         echo -e "${C_RED}❌ Error: Ya existe un proceso de instalación o actualización de FLUXA en ejecución.${C_RESET}" >&2
         echo -e "${C_YELLOW}Archivo de bloqueo ocupado: ${LOCK_FILE}${C_RESET}" >&2
@@ -84,19 +119,7 @@ fi
 # ------------------------------------------------------------------------------
 # 2. Elevación de Privilegios (sudo)
 # ------------------------------------------------------------------------------
-run_sudo() {
-    if [ "${DRY_RUN:-0}" = "1" ]; then
-        "$@" 2>/dev/null || true
-        return 0
-    fi
-    if [ "$EUID" -ne 0 ]; then
-        sudo "$@"
-    else
-        "$@"
-    fi
-}
-
-if [ "${DRY_RUN:-0}" != "1" ] && [ "$EUID" -ne 0 ]; then
+if [ "${FLUXA_TEST_MODE:-0}" != "1" ] && [ "$EUID" -ne 0 ]; then
     echo -e "${C_YELLOW}🔑 Se requieren permisos de administrador (sudo) para paquetes de sistema y hardware.${C_RESET}"
     sudo -v
     # Mantener sudo activo en segundo plano cerrando explícitamente fd 200 para no retener el cerrojo
@@ -140,8 +163,8 @@ fi
 # ------------------------------------------------------------------------------
 echo -e "\n${C_YELLOW} [1/6] Verificando dependencias del sistema operativo (Python, MariaDB, OCR, OpenCV)...${C_RESET}"
 
-if [ "${DRY_RUN:-0}" = "1" ]; then
-    echo -e "${C_CYAN}➡️  [DRY_RUN] Omitiendo gestor de paquetes de sistema.${C_RESET}"
+if [ "${FLUXA_TEST_MODE:-0}" = "1" ]; then
+    echo -e "${C_CYAN}➡️  [FLUXA_TEST_MODE] Omitiendo gestor de paquetes de sistema.${C_RESET}"
 elif command -v zypper &>/dev/null; then
     echo -e "${C_CYAN}➡️  Instalando paquetes via ZYPPER (openSUSE / SLES)...${C_RESET}"
     run_sudo zypper --non-interactive refresh || true
@@ -188,38 +211,37 @@ KERNEL=="video*", MODE="0666", GROUP="video"
 KERNEL=="rknpu*", MODE="0666"
 EOF
 
-if [ -f "$UDEV_RULES_FILE" ]; then
-    if ! cmp -s "$TMP_UDEV" "$UDEV_RULES_FILE"; then
-        BAK_UDEV="${UDEV_RULES_FILE}.bak.$(date +%Y%m%d_%H%M%S)"
-        echo -e "${C_YELLOW}⚠️  Aviso: $UDEV_RULES_FILE ya existe y difiere. Guardando respaldo: $BAK_UDEV${C_RESET}"
-        run_sudo cp -a "$UDEV_RULES_FILE" "$BAK_UDEV"
-        run_sudo mv "$TMP_UDEV" "$UDEV_RULES_FILE"
-        run_sudo chmod 644 "$UDEV_RULES_FILE"
+if [ "${FLUXA_TEST_MODE:-0}" != "1" ]; then
+    if [ -f "$UDEV_RULES_FILE" ]; then
+        if ! cmp -s "$TMP_UDEV" "$UDEV_RULES_FILE"; then
+            BAK_UDEV="${UDEV_RULES_FILE}.bak.$(date +%Y%m%d_%H%M%S)"
+            echo -e "${C_YELLOW}⚠️  Aviso: $UDEV_RULES_FILE ya existe y difiere. Guardando respaldo: $BAK_UDEV${C_RESET}"
+            run_sudo cp -a "$UDEV_RULES_FILE" "$BAK_UDEV"
+            run_sudo mv "$TMP_UDEV" "$UDEV_RULES_FILE"
+            run_sudo chmod 644 "$UDEV_RULES_FILE"
+        else
+            echo -e "${C_GREEN} Reglas udev ya instaladas e idénticas.${C_RESET}"
+            rm -f "$TMP_UDEV"
+        fi
     else
-        echo -e "${C_GREEN} Reglas udev ya instaladas e idénticas.${C_RESET}"
-        rm -f "$TMP_UDEV"
-    fi
-else
-    if [ "${DRY_RUN:-0}" != "1" ]; then
         run_sudo mv "$TMP_UDEV" "$UDEV_RULES_FILE"
         run_sudo chmod 644 "$UDEV_RULES_FILE"
         echo -e "${C_GREEN} Reglas udev instaladas en ${UDEV_RULES_FILE}.${C_RESET}"
-    else
-        rm -f "$TMP_UDEV"
     fi
-fi
 
-if [ "${DRY_RUN:-0}" != "1" ] && command -v udevadm &>/dev/null; then
-    run_sudo udevadm control --reload-rules || true
-    run_sudo udevadm trigger || true
-fi
-
-# Asignar grupos de hardware al usuario si existen
-for grp in dialout uucp video render; do
-    if grep -q "^${grp}:" /etc/group 2>/dev/null; then
-        run_sudo usermod -a -G "$grp" "$CURRENT_USER" 2>/dev/null || true
+    if command -v udevadm &>/dev/null; then
+        run_sudo udevadm control --reload-rules || true
+        run_sudo udevadm trigger || true
     fi
-done
+
+    for grp in dialout uucp video render; do
+        if grep -q "^${grp}:" /etc/group 2>/dev/null; then
+            run_sudo usermod -a -G "$grp" "$CURRENT_USER" 2>/dev/null || true
+        fi
+    done
+else
+    rm -f "$TMP_UDEV"
+fi
 
 # ------------------------------------------------------------------------------
 # 6. Entorno Virtual Python (.venv) Idempotente y Robusto
@@ -247,7 +269,7 @@ if [ ! -f "$PIP_CMD" ] || [ ! -f "$PYTHON_CMD" ]; then
     exit 1
 fi
 
-if [ "${DRY_RUN:-0}" != "1" ]; then
+if [ "${FLUXA_TEST_MODE:-0}" != "1" ]; then
     echo -e "${C_CYAN}➡️  Actualizando herramientas de empaquetado (pip, setuptools, wheel)...${C_RESET}"
     "$PIP_CMD" install --upgrade pip setuptools wheel --quiet
     echo -e "${C_CYAN}➡️  Verificando/instalando requerimientos de FLUXA desde requirements.txt...${C_RESET}"
@@ -261,15 +283,9 @@ fi
 echo -e "\n${C_YELLOW} [4/6] Verificando Base de Datos MariaDB y archivo .env...${C_RESET}"
 
 ENV_FILE="$SCRIPT_DIR/.env"
-MYSQL_EXEC="${MYSQL_CMD:-}"
-if [ -z "$MYSQL_EXEC" ]; then
-    if command -v mariadb &>/dev/null; then
-        MYSQL_EXEC="mariadb"
-    elif command -v mysql &>/dev/null; then
-        MYSQL_EXEC="mysql"
-    else
-        MYSQL_EXEC="mysql"
-    fi
+MYSQL_EXEC="mysql"
+if command -v mariadb &>/dev/null; then
+    MYSQL_EXEC="mariadb"
 fi
 
 # Función de validación de contraseñas: rechaza comillas simples, barras invertidas, saltos de línea y caracteres de control/NUL
@@ -295,7 +311,7 @@ validate_db_password() {
 }
 
 # Inicializar servicio MariaDB/MySQL si systemd está activo
-if [ "${DRY_RUN:-0}" != "1" ] && command -v systemctl &>/dev/null; then
+if [ "${FLUXA_TEST_MODE:-0}" != "1" ] && command -v systemctl &>/dev/null; then
     run_sudo systemctl enable mariadb 2>/dev/null || run_sudo systemctl enable mysql 2>/dev/null || true
     run_sudo systemctl start mariadb 2>/dev/null || run_sudo systemctl start mysql 2>/dev/null || true
 fi
@@ -323,34 +339,29 @@ if [ -f "$ENV_FILE" ]; then
 
     echo -e "${C_BLUE}ℹ️  Instalación previa detectada (.env encontrado). Comprobando conectividad...${C_RESET}"
 
+    # Sondeo mediante --defaults-extra-file temporal con permisos 600 y comillas simples
     TMP_EXTRA_CNF=$(mktemp)
     TMP_FILES+=("$TMP_EXTRA_CNF")
     chmod 600 "$TMP_EXTRA_CNF"
     cat << EOF > "$TMP_EXTRA_CNF"
 [client]
-host=${EXISTING_HOST}
-port=${EXISTING_PORT}
-user=${EXISTING_USER}
-password=${EXISTING_PASS}
+host='${EXISTING_HOST}'
+port='${EXISTING_PORT}'
+user='${EXISTING_USER}'
+password='${EXISTING_PASS}'
 EOF
 
     CAN_CONNECT=0
     if command -v "$MYSQL_EXEC" &>/dev/null; then
-        if [ "${DRY_RUN:-0}" != "1" ] || [ "${MOCK_CONNECT:-0}" = "1" ]; then
-            if "$MYSQL_EXEC" --defaults-extra-file="$TMP_EXTRA_CNF" -e "SELECT 1;" "$EXISTING_DB" &>/dev/null; then
-                CAN_CONNECT=1
-            fi
-        else
-            CAN_CONNECT="${MOCK_CAN_CONNECT:-1}"
+        if "$MYSQL_EXEC" --defaults-extra-file="$TMP_EXTRA_CNF" -e "SELECT 1;" "$EXISTING_DB" &>/dev/null; then
+            CAN_CONNECT=1
         fi
-    elif [ "${DRY_RUN:-0}" = "1" ]; then
-        CAN_CONNECT="${MOCK_CAN_CONNECT:-1}"
     fi
     rm -f "$TMP_EXTRA_CNF"
 
     if [ "$CAN_CONNECT" -eq 1 ]; then
         echo -e "${C_GREEN} Conexión a MariaDB verificada exitosamente con las credenciales existentes en .env.${C_RESET}"
-        if [ -t 0 ] && [ "${NON_INTERACTIVE:-0}" != "1" ] && [ "${FORCE_RECONFIG:-0}" != "1" ]; then
+        if is_interactive && [ "${FORCE_RECONFIG:-0}" != "1" ]; then
             echo -e "${C_CYAN}¿Deseas mantener la configuración y base de datos actual? [S/n]:${C_RESET} "
             read -r KEEP_ENV_CHOICE || KEEP_ENV_CHOICE="S"
             if [[ "$KEEP_ENV_CHOICE" =~ ^[Nn] ]]; then
@@ -378,7 +389,7 @@ if [ "$DB_RECONFIG_NEEDED" -eq 1 ]; then
     while true; do
         if [ -n "${DATABASE_PASSWORD:-}" ]; then
             CANDIDATE_PASS="$DATABASE_PASSWORD"
-        elif [ -t 0 ] && [ "${NON_INTERACTIVE:-0}" != "1" ]; then
+        elif is_interactive; then
             echo -e "${C_CYAN}Ingresa la contraseña para el usuario MariaDB 'fluxa' (o presiona ENTER para generar una aleatoria segura):${C_RESET} "
             read -s -r USER_PASS_INPUT
             echo
@@ -397,7 +408,7 @@ if [ "$DB_RECONFIG_NEEDED" -eq 1 ]; then
             DB_PASS="$CANDIDATE_PASS"
             break
         else
-            if [ ! -t 0 ] || [ "${NON_INTERACTIVE:-0}" = "1" ]; then
+            if ! is_interactive; then
                 echo -e "${C_RED}❌ Error: Contraseña inválida en modo no-interactivo.${C_RESET}" >&2
                 exit 1
             fi
@@ -407,7 +418,7 @@ if [ "$DB_RECONFIG_NEEDED" -eq 1 ]; then
     done
 
     # Aplicar configuración a MariaDB vía STDIN (sin -e para no exponer credenciales en la tabla de procesos)
-    if [ "${DRY_RUN:-0}" != "1" ] && command -v "$MYSQL_EXEC" &>/dev/null; then
+    if command -v "$MYSQL_EXEC" &>/dev/null; then
         run_sudo "$MYSQL_EXEC" <<EOF
 CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';
@@ -439,7 +450,7 @@ fi
 ADMIN_CRED_FILE="$SCRIPT_DIR/instance/admin_credentials.json"
 if [ ! -f "$ADMIN_CRED_FILE" ]; then
     echo -e "\n${C_BLUE}🔑 Configurando credenciales de Operador Administrador C5...${C_RESET}"
-    if [ -t 0 ] && [ "${NON_INTERACTIVE:-0}" != "1" ]; then
+    if is_interactive; then
         "$PYTHON_CMD" "$SCRIPT_DIR/scripts/set_admin_password.py"
     else
         AUTO_ADMIN_PASS=$(openssl rand -hex 10 2>/dev/null || date +%s%N | sha256sum | head -c 20)
@@ -528,7 +539,7 @@ if [ -f "$WRAPPER_PATH" ] && cmp -s "$TMP_WRAPPER" "$WRAPPER_PATH"; then
     echo -e "${C_GREEN} Comando 'fluxa' ya instalado e idéntico en ${WRAPPER_PATH}.${C_RESET}"
     rm -f "$TMP_WRAPPER"
 else
-    if [ "${DRY_RUN:-0}" != "1" ]; then
+    if [ "${FLUXA_TEST_MODE:-0}" != "1" ]; then
         run_sudo mv "$TMP_WRAPPER" "$WRAPPER_PATH"
         run_sudo chmod +x "$WRAPPER_PATH"
         echo -e "${C_GREEN} Comando global 'fluxa' instalado en ${WRAPPER_PATH}.${C_RESET}"
@@ -542,21 +553,14 @@ fi
 # ------------------------------------------------------------------------------
 echo -e "\n${C_YELLOW}⚙️  [6/6] Configurando servicios en segundo plano (Systemd)...${C_RESET}"
 
-SYSTEMD_DIR="${SYSTEMD_DIR:-/etc/systemd/system}"
+SYSTEMD_DIR="${SYSTEMD_DIR_OVERRIDE:-/etc/systemd/system}"
 
 if [ "$ARCH" = "aarch64" ]; then
     echo -e "${C_CYAN}➡️  Arquitectura aarch64 detectada (Orange Pi 5).${C_RESET}"
     echo -e "${C_CYAN}➡️  Delegando en systemd/install_service.sh (Arquitectura Tri-Core / fluxa.target)...${C_RESET}"
     
-    # Comprobar si existe un fluxa.service monolítico previo y emitir aviso sin destruir
-    if [ -f "${SYSTEMD_DIR}/fluxa.service" ]; then
-        echo -e "${C_YELLOW}⚠️  Aviso: Se detectó un servicio monolítico previo en ${SYSTEMD_DIR}/fluxa.service.${C_RESET}"
-        echo -e "${C_YELLOW}   No se migrará automáticamente para proteger configuraciones en producción.${C_RESET}"
-        echo -e "${C_YELLOW}   Para adoptar el cluster Tri-Core: sudo systemctl disable --now fluxa.service && sudo systemctl enable --now fluxa.target${C_RESET}"
-    fi
-
-    # Invocar install_service.sh heredando FLUXA_LOCK_HELD=1
-    FLUXA_LOCK_HELD=1 SYSTEMD_DIR="$SYSTEMD_DIR" DRY_RUN="${DRY_RUN:-0}" run_sudo bash "$SCRIPT_DIR/systemd/install_service.sh"
+    # Invocar install_service.sh heredando el lock y reenviando argumentos (como --migrate)
+    FLUXA_LOCK_HELD=1 SYSTEMD_DIR="$SYSTEMD_DIR" run_sudo bash "$SCRIPT_DIR/systemd/install_service.sh" "$@"
 else
     echo -e "${C_CYAN}➡️  Arquitectura no-aarch64 ($ARCH). Configurando servicio individual fluxa.service...${C_RESET}"
     
@@ -580,7 +584,7 @@ EOF
         fi
         rm -f "$TMP_TARGET"
     else
-        if [ "${DRY_RUN:-0}" != "1" ]; then
+        if [ "${FLUXA_TEST_MODE:-0}" != "1" ]; then
             run_sudo mv "$TMP_TARGET" "$TARGET_DEST"
             run_sudo chmod 644 "$TARGET_DEST"
         else
@@ -629,7 +633,7 @@ EOF
             rm -f "$TMP_SVC"
         fi
     else
-        if [ "${DRY_RUN:-0}" != "1" ]; then
+        if [ "${FLUXA_TEST_MODE:-0}" != "1" ]; then
             run_sudo mv "$TMP_SVC" "$SERVICE_FILE"
             run_sudo chmod 644 "$SERVICE_FILE"
             echo -e "${C_GREEN} Servicio systemd creado en ${SERVICE_FILE}.${C_RESET}"
@@ -638,7 +642,7 @@ EOF
         fi
     fi
 
-    if [ "${DRY_RUN:-0}" != "1" ] && command -v systemctl &>/dev/null; then
+    if [ "${FLUXA_TEST_MODE:-0}" != "1" ] && command -v systemctl &>/dev/null; then
         run_sudo systemctl daemon-reload
         run_sudo systemctl enable fluxa.target fluxa.service
     fi
