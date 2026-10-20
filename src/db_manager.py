@@ -143,11 +143,6 @@ class DatabaseManager:
                         INDEX idx_time (timestamp)
                     ) ENGINE=InnoDB;
                 """)
-                try:
-                    cur.execute("ALTER TABLE red_light_violations ADD COLUMN license_plate VARCHAR(50) DEFAULT 'NO_DETECTADA';")
-                    cur.execute("ALTER TABLE red_light_violations ADD COLUMN plate_confidence FLOAT DEFAULT 0.0;")
-                except Exception:
-                    pass
             conn.commit()
             self.connected = True
             logging.info(f"Esquema MariaDB '{self.db_name}' verificado e inicializado correctamente.")
