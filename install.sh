@@ -518,19 +518,106 @@ TMP_FILES+=("$TMP_WRAPPER")
 
 cat << 'EOF' > "$TMP_WRAPPER"
 #!/usr/bin/env bash
+# ==============================================================================
+# FLUXA Smart Mobility • CLI Global de Control y Operación Edge
+# Tecnológico de Estudios Superiores de Coacalco (TESCo) • TecNM
+# ==============================================================================
+set -e
+
 SCRIPT_DIR_PATH="__INSTALL_DIR__"
-cd "$SCRIPT_DIR_PATH" || exit 1
-if [ -f "$SCRIPT_DIR_PATH/.env" ]; then
-    set -a
-    # shellcheck disable=SC1091
-    . "$SCRIPT_DIR_PATH/.env"
-    set +a
-fi
-if [ -f "$SCRIPT_DIR_PATH/.venv/bin/python3" ]; then
-    exec "$SCRIPT_DIR_PATH/.venv/bin/python3" "$SCRIPT_DIR_PATH/main.py" "$@"
-else
-    exec python3 "$SCRIPT_DIR_PATH/main.py" "$@"
-fi
+
+show_help() {
+    echo "FLUXA Smart Mobility • Consola Global de Control"
+    echo ""
+    echo "Subcomandos de Gestión del Ciclo de Vida:"
+    echo "  fluxa update [opciones]    Actualiza el sistema con snapshot, migraciones y rollback automático"
+    echo "  fluxa check                Verifica si existen actualizaciones remotas o migraciones pendientes"
+    echo "  fluxa rollback [opciones]  Revierte al snapshot de seguridad anterior"
+    echo "  fluxa version              Muestra la versión del sistema, commit y arquitectura"
+    echo "  fluxa status               Muestra el estado de los servicios de control semafórico"
+    echo "  fluxa start                Inicia el servicio en segundo plano (fluxa.target)"
+    echo "  fluxa stop                 Detiene el servicio en segundo plano"
+    echo "  fluxa restart              Reinicia el servicio en segundo plano"
+    echo "  fluxa logs                 Monitorea en tiempo real los registros de auditoría y visión"
+    echo ""
+    echo "Ejecución Directa de la Aplicación:"
+    echo "  fluxa --topology 4_way --backend rknn --headless --port 5000"
+    echo "  fluxa --topology 4_way --backend cpu --gui"
+    echo "  (Cualquier argumento no reconocido como subcomando se reenvía a main.py)"
+}
+
+SUBCOMMAND="${1:-}"
+
+case "$SUBCOMMAND" in
+    update)
+        shift
+        cd "$SCRIPT_DIR_PATH" || exit 1
+        exec sudo bash "$SCRIPT_DIR_PATH/update.sh" "$@"
+        ;;
+    check)
+        shift
+        cd "$SCRIPT_DIR_PATH" || exit 1
+        exec bash "$SCRIPT_DIR_PATH/update.sh" --check "$@"
+        ;;
+    rollback)
+        shift
+        cd "$SCRIPT_DIR_PATH" || exit 1
+        exec sudo bash "$SCRIPT_DIR_PATH/update.sh" --rollback "$@"
+        ;;
+    version)
+        cd "$SCRIPT_DIR_PATH" || exit 1
+        COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "release")
+        BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+        TAG=$(git describe --tags --exact-match 2>/dev/null || echo "sin-tag")
+        echo "FLUXA Smart City • Versión Edge"
+        echo " - Commit:       $COMMIT"
+        echo " - Rama / Tag:   $BRANCH ($TAG)"
+        echo " - Arquitectura: $(uname -m)"
+        echo " - Ubicación:    $SCRIPT_DIR_PATH"
+        exit 0
+        ;;
+    status)
+        if command -v systemctl &>/dev/null; then
+            systemctl status fluxa.target fluxa.service 2>/dev/null || systemctl status fluxa-node0 2>/dev/null || systemctl status fluxa.target
+        else
+            echo "systemctl no disponible en este entorno."
+        fi
+        exit 0
+        ;;
+    start)
+        echo "Iniciando FLUXA (fluxa.target)..."
+        exec sudo systemctl start fluxa.target
+        ;;
+    stop)
+        echo "Deteniendo FLUXA (fluxa.target)..."
+        exec sudo systemctl stop fluxa.target
+        ;;
+    restart)
+        echo "Reiniciando FLUXA (fluxa.target)..."
+        exec sudo systemctl restart fluxa.target
+        ;;
+    logs)
+        exec sudo journalctl -u fluxa.target -u "fluxa-node*.service" -u fluxa.service -f
+        ;;
+    help|--help|-h)
+        show_help
+        exit 0
+        ;;
+    *)
+        cd "$SCRIPT_DIR_PATH" || exit 1
+        if [ -f "$SCRIPT_DIR_PATH/.env" ]; then
+            set -a
+            # shellcheck disable=SC1091
+            . "$SCRIPT_DIR_PATH/.env"
+            set +a
+        fi
+        if [ -f "$SCRIPT_DIR_PATH/.venv/bin/python3" ]; then
+            exec "$SCRIPT_DIR_PATH/.venv/bin/python3" "$SCRIPT_DIR_PATH/main.py" "$@"
+        else
+            exec python3 "$SCRIPT_DIR_PATH/main.py" "$@"
+        fi
+        ;;
+esac
 EOF
 
 sed -i "s|__INSTALL_DIR__|$SCRIPT_DIR|g" "$TMP_WRAPPER"
