@@ -291,6 +291,12 @@ def admin_dashboard():
     """Centro de Mando C5 SCADA - Control Total y Monitoreo Avanzado (Protegido)"""
     return render_template('index.html', user=session.get('user', 'admin'))
 
+@app.route('/c5')
+@admin_required
+def c5_scada_dashboard():
+    """Consola C5 SCADA - Centro de Monitoreo Urbano y Operaciones Viales en Tiempo Real"""
+    return render_template('c5_scada.html', user=session.get('user', 'admin'))
+
 @app.route('/report/executive')
 @admin_required
 def report_executive():
@@ -421,6 +427,195 @@ def get_status():
         estado_global["hardware"] = cached_hw_metrics
         snapshot = dict(estado_global)
     return jsonify(snapshot)
+
+@app.route('/api/health', methods=['GET'])
+def get_health():
+    """
+    Endpoint de Salud Integral (Health-Check) para supervisión C5, orquestadores y monitoreo SCADA.
+    Evalúa la disponibilidad de la cámara, Arduino, FSM, DB y hardware.
+    """
+    global cached_hw_metrics
+    try:
+        cached_hw_metrics = hw_monitor.get_metrics()
+    except Exception as e:
+        cached_hw_metrics = {"error": str(e)}
+
+    with estado_lock:
+        cam_info = estado_global.get("camara", {})
+        ard_info = estado_global.get("arduino", {})
+        fsm_status = estado_global.get("status", "DESCONOCIDO")
+        modo = estado_global.get("modo", "Normal")
+        fps = float(estado_global.get("fps", 0.0))
+        emergencia = bool(estado_global.get("emergencia_activa", False))
+        f_trans = float(estado_global.get("fase_tiempo_transcurrido", 0.0))
+        f_asig = float(estado_global.get("fase_tiempo_asignado", 0.0))
+        topologia = estado_global.get("topologia", "desconocida")
+        backend = estado_global.get("backend", "CPU")
+        corr_info = estado_global.get("corridor", {})
+
+    is_degraded = bool(cam_info.get("modo_degradado", False))
+    cam_connected = bool(cam_info.get("connected", False))
+    ard_connected = bool(ard_info.get("connected", False))
+    is_virtual_ard = bool(ard_info.get("virtual_mode", False))
+
+    db_connected = False
+    if db_manager_instance is not None:
+        try:
+            db_connected = db_manager_instance.is_connected() if hasattr(db_manager_instance, 'is_connected') else True
+        except Exception:
+            db_connected = False
+
+    if is_degraded or (not ard_connected and not is_virtual_ard):
+        overall_status = "degraded"
+    elif not cam_connected and not is_degraded and fps == 0:
+        overall_status = "unhealthy"
+    else:
+        overall_status = "healthy"
+
+    health_report = {
+        "status": overall_status,
+        "timestamp": datetime.now().isoformat(),
+        "node": {
+            "topologia": topologia,
+            "backend": backend,
+            "node_id": corr_info.get("node_id", "STANDALONE") if isinstance(corr_info, dict) else "STANDALONE"
+        },
+        "subsystems": {
+            "camera": {
+                "status": "degraded" if is_degraded else ("ok" if cam_connected else "disconnected"),
+                "connected": cam_connected,
+                "modo_degradado": is_degraded,
+                "fps": fps,
+                "tipo": cam_info.get("tipo", "Desconocido"),
+                "source": cam_info.get("source_raw", "N/A"),
+                "consecutive_failed_frames": cam_info.get("consecutive_failed_frames", 0)
+            },
+            "microcontroller": {
+                "status": "ok" if (ard_connected or is_virtual_ard) else "disconnected",
+                "connected": ard_connected,
+                "virtual_mode": is_virtual_ard,
+                "port": ard_info.get("port", "N/A"),
+                "last_command": ard_info.get("last_command", "N/A"),
+                "last_tx_ago_sec": ard_info.get("last_tx_ago", 0.0),
+                "tx_count": ard_info.get("tx_count", 0),
+                "reconnects": ard_info.get("reconnects", 0)
+            },
+            "database": {
+                "status": "connected" if db_connected else "local_fallback",
+                "connected": db_connected
+            },
+            "traffic_fsm": {
+                "status": "active",
+                "phase": fsm_status,
+                "mode": modo,
+                "emergency_active": emergencia,
+                "elapsed_sec": f_trans,
+                "assigned_sec": f_asig,
+                "remaining_sec": max(0.0, f_asig - f_trans)
+            },
+            "hardware": {
+                "soc_temperature_celsius": cached_hw_metrics.get("temp", 0.0),
+                "cpu_usage_pct": cached_hw_metrics.get("cpu", 0.0),
+                "ram_usage_pct": cached_hw_metrics.get("ram", 0.0)
+            }
+        }
+    }
+
+    http_code = 200 if overall_status in ("healthy", "degraded") else 503
+    return jsonify(health_report), http_code
+
+@app.route('/metrics', methods=['GET'])
+def get_prometheus_metrics():
+    """
+    Exportador de Métricas en formato estándar de Prometheus (OpenMetrics).
+    Permite integración con Grafana, Prometheus Agent y dashboards SCADA.
+    """
+    global cached_hw_metrics
+    try:
+        cached_hw_metrics = hw_monitor.get_metrics()
+    except Exception:
+        cached_hw_metrics = {}
+
+    with estado_lock:
+        fps = float(estado_global.get("fps", 0.0))
+        total_veh = int(estado_global.get("total_acumulado", 0))
+        autos_dict = estado_global.get("autos", {})
+        curr_veh = sum(autos_dict.values()) if isinstance(autos_dict, dict) else 0
+        f_trans = float(estado_global.get("fase_tiempo_transcurrido", 0.0))
+        f_asig = float(estado_global.get("fase_tiempo_asignado", 0.0))
+        cam_info = estado_global.get("camara", {})
+        ard_info = estado_global.get("arduino", {})
+        sost = estado_global.get("sostenibilidad", {})
+        emergencia = 1 if estado_global.get("emergencia_activa", False) else 0
+
+    degraded = 1 if cam_info.get("modo_degradado", False) else 0
+    ard_conn = 1 if ard_info.get("connected", False) or ard_info.get("virtual_mode", False) else 0
+    ard_tx = int(ard_info.get("tx_count", 0))
+    temp = float(cached_hw_metrics.get("temp", 0.0)) if isinstance(cached_hw_metrics, dict) else 0.0
+    cpu = float(cached_hw_metrics.get("cpu", 0.0)) if isinstance(cached_hw_metrics, dict) else 0.0
+    ram = float(cached_hw_metrics.get("ram", 0.0)) if isinstance(cached_hw_metrics, dict) else 0.0
+    fuel = float(sost.get("combustible_ahorrado_litros", 0.0)) if isinstance(sost, dict) else 0.0
+    co2 = float(sost.get("co2_mitigado_kg", 0.0)) if isinstance(sost, dict) else 0.0
+
+    lines = [
+        "# HELP fluxa_fps Tasa actual de procesamiento de video en fotogramas por segundo",
+        "# TYPE fluxa_fps gauge",
+        f"fluxa_fps {fps:.1f}",
+        "",
+        "# HELP fluxa_vehicles_total Total acumulado de vehiculos detectados en el nodo",
+        "# TYPE fluxa_vehicles_total counter",
+        f"fluxa_vehicles_total {total_veh}",
+        "",
+        "# HELP fluxa_vehicles_current Vehiculos en escena actualmente en todas las zonas",
+        "# TYPE fluxa_vehicles_current gauge",
+        f"fluxa_vehicles_current {curr_veh}",
+        "",
+        "# HELP fluxa_phase_elapsed_seconds Tiempo transcurrido en la fase semaforica actual",
+        "# TYPE fluxa_phase_elapsed_seconds gauge",
+        f"fluxa_phase_elapsed_seconds {f_trans:.1f}",
+        "",
+        "# HELP fluxa_phase_assigned_seconds Tiempo asignado dinamicamente a la fase actual",
+        "# TYPE fluxa_phase_assigned_seconds gauge",
+        f"fluxa_phase_assigned_seconds {f_asig:.1f}",
+        "",
+        "# HELP fluxa_degraded_mode_active Estado binario de modo degradado por tiempos fijos fail-safe",
+        "# TYPE fluxa_degraded_mode_active gauge",
+        f"fluxa_degraded_mode_active {degraded}",
+        "",
+        "# HELP fluxa_emergency_active Estado binario de corredor de emergencia prioritario activo",
+        "# TYPE fluxa_emergency_active gauge",
+        f"fluxa_emergency_active {emergencia}",
+        "",
+        "# HELP fluxa_arduino_connected Estado de comunicacion con el microcontrolador semaforico",
+        "# TYPE fluxa_arduino_connected gauge",
+        f"fluxa_arduino_connected {ard_conn}",
+        "",
+        "# HELP fluxa_arduino_tx_total Total de comandos transmitidos al microcontrolador",
+        "# TYPE fluxa_arduino_tx_total counter",
+        f"fluxa_arduino_tx_total {ard_tx}",
+        "",
+        "# HELP fluxa_hardware_temp_celsius Temperatura del procesador central o SoC",
+        "# TYPE fluxa_hardware_temp_celsius gauge",
+        f"fluxa_hardware_temp_celsius {temp:.1f}",
+        "",
+        "# HELP fluxa_hardware_cpu_percent Porcentaje de carga del procesador",
+        "# TYPE fluxa_hardware_cpu_percent gauge",
+        f"fluxa_hardware_cpu_percent {cpu:.1f}",
+        "",
+        "# HELP fluxa_hardware_ram_percent Porcentaje de ocupacion de memoria RAM",
+        "# TYPE fluxa_hardware_ram_percent gauge",
+        f"fluxa_hardware_ram_percent {ram:.1f}",
+        "",
+        "# HELP fluxa_sustainability_fuel_saved_liters Combustible ahorrado en ralentis evitados",
+        "# TYPE fluxa_sustainability_fuel_saved_liters counter",
+        f"fluxa_sustainability_fuel_saved_liters {fuel:.3f}",
+        "",
+        "# HELP fluxa_sustainability_co2_mitigated_kg Emisiones de CO2 mitigadas en kilogramos",
+        "# TYPE fluxa_sustainability_co2_mitigated_kg counter",
+        f"fluxa_sustainability_co2_mitigated_kg {co2:.3f}",
+        ""
+    ]
+    return Response("\n".join(lines), mimetype='text/plain; version=0.0.4; charset=utf-8')
 
 @app.route('/api/v2x/spat', methods=['GET'])
 def get_v2x_spat():

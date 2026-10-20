@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FLUXA C5 SCADA • Centro de Comando y Control Vial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #06090e;
+            --bg-card: rgba(13, 19, 33, 0.82);
+            --bg-card-hover: rgba(18, 27, 46, 0.92);
+            --border-glass: rgba(56, 189, 248, 0.15);
+            --border-glass-glow: rgba(56, 189, 248, 0.35);
+            
+            --c5-blue: #0ea5e9;
+            --c5-cyan: #06b6d4;
+            --c5-green: #10b981;
+            --c5-green-glow: rgba(16, 185, 129, 0.45);
+            --c5-yellow: #f59e0b;
+            --c5-yellow-glow: rgba(245, 158, 11, 0.45);
+            --c5-red: #ef4444;
+            --c5-red-glow: rgba(239, 68, 68, 0.5);
+            
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-accent: #38bdf8;
+            
+            --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-ui);
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(14, 165, 233, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 85% 85%, rgba(16, 185, 129, 0.06) 0%, transparent 45%);
+            background-attachment: fixed;
+        }
+
+        /* Top Bar SCADA */
+        .scada-navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1.75rem;
+            background: rgba(10, 15, 26, 0.92);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border-glass);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand-cluster {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .c5-badge {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: #ffffff;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(14, 165, 233, 0.4);
+        }
+
+        .brand-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #ffffff;
+        }
+
+        .brand-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .system-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.85rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            letter-spacing: 0.05em;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.6);
+            transition: all 0.3s ease;
+        }
+
+        .system-pill.status-healthy {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #34d399;
+        }
+
+        .system-pill.status-degraded {
+            background: rgba(245, 158, 11, 0.18);
+            border-color: rgba(245, 158, 11, 0.5);
+            color: #fbbf24;
+            animation: pulse-border 2s infinite;
+        }
+
+        .system-pill.status-unhealthy {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.6);
+            color: #f87171;
+            animation: pulse-border 1.2s infinite;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        .nav-link-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-main);
+            padding: 0.4rem 0.9rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .nav-link-btn:hover {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: var(--c5-cyan);
+            color: #ffffff;
+        }
+
+        /* Contenedor Principal */
+        .scada-container {
+            display: grid;
+            grid-template-columns: 360px 1fr 340px;
+            gap: 1.25rem;
+            padding: 1.25rem;
+            flex: 1;
+            max-width: 1920px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        @media (max-width: 1400px) {
+            .scada-container {
+                grid-template-columns: 320px 1fr;
+            }
+            .scada-right-col {
+                grid-column: span 2;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .scada-container {
+                grid-template-columns: 1fr;
+            }
+            .scada-right-col {
+                grid-column: span 1;
+            }
+        }
+
+        /* Tarjetas Glassmorphism */
+        .scada-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+            padding: 1.15rem;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            transition: border-color 0.3s;
+        }
+
+        .scada-card:hover {
+            border-color: var(--border-glass-glow);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            padding-bottom: 0.65rem;
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            color: var(--text-accent);
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Columna Izquierda: Semáforo y FSM */
+        .traffic-intersection-visual {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.2rem;
+            padding: 1rem 0;
+        }
+
+        /* Semáforo Virtual SVG */
+        .virtual-signals-row {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            gap: 1rem;
+        }
+
+        .traffic-light-head {
+            background: #111622;
+            border: 2px solid #28334a;
+            border-radius: 20px;
+            padding: 12px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 8px 20px rgba(0,0,0,0.6);
+            width: 68px;
+        }
+
+        .light-bulb {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #1f2736;
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.25s ease-in-out;
+        }
+
+        .light-bulb.red.active {
+            background: radial-gradient(circle, #ff6b6b 10%, #dc2626 70%, #991b1b 100%);
+            box-shadow: 0 0 25px var(--c5-red), 0 0 10px var(--c5-red-glow);
+        }
+
+        .light-bulb.yellow.active {
+            background: radial-gradient(circle, #fde047 10%, #d97706 70%, #b45309 100%);
+            box-shadow: 0 0 25px var(--c5-yellow), 0 0 10px var(--c5-yellow-glow);
+            animation: pulse-light 0.9s infinite alternate;
+        }
+
+        .light-bulb.green.active {
+            background: radial-gradient(circle, #6ee7b7 10%, #10b981 70%, #047857 100%);
+            box-shadow: 0 0 25px var(--c5-green), 0 0 10px var(--c5-green-glow);
+        }
+
+        .light-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        /* Reloj de Fase Circular SVG */
+        .phase-dial-wrapper {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .phase-dial-svg {
+            transform: rotate(-90deg);
+            width: 140px;
+            height: 140px;
+        }
+
+        .dial-track {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.08);
+            stroke-width: 8;
+        }
+
+        .dial-progress {
+            fill: none;
+            stroke: var(--c5-green);
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 377;
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 0.4s linear, stroke 0.4s ease;
+        }
+
+        .phase-dial-content {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .dial-timer {
+            font-family: var(--font-mono);
+            font-size: 2rem;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1;
+        }
+
+        .dial-unit {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-top: 2px;
+        }
+
+        .fsm-state-badge {
+            background: rgba(14, 165, 233, 0.12);
+            border: 1px solid rgba(14, 165, 233, 0.35);
+            padding: 0.4rem 0.9rem;
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--text-accent);
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Centro de la Pantalla: Video & Stream */
+        .video-viewport-wrapper {
+            position: relative;
+            background: #020617;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            aspect-ratio: 16 / 9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mjpeg-stream-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .stream-watermark {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            background: rgba(2, 6, 23, 0.75);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-family: var(--font-mono);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stream-watermark.rec::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            display: inline-block;
+            box-shadow: 0 0 6px #ef4444;
+            animation: pulse-dot 1s infinite;
+        }
+
+        /* Banner de Modo Degradado */
+        .degraded-alert-banner {
+            display: none;
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.25), rgba(245, 158, 11, 0.1));
+            border: 1px solid var(--c5-yellow);
+            border-radius: 6px;
+            padding: 0.65rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #fbbf24;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .degraded-alert-banner.visible {
+            display: flex;
+        }
+
+        /* Grilla de Métricas Telemetría */
+        .kpi-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.85rem;
+        }
+
+        @media (max-width: 1200px) {
+            .kpi-metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .kpi-box {
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 0.75rem 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .kpi-box-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .kpi-box-value {
+            font-family: var(--font-mono);
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        .kpi-box-sub {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+        }
+
+        /* Columna Derecha: Monitoreo Hardware & Operaciones */
+        .scada-right-col {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .subsystem-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.8rem;
+        }
+
+        .subsystem-row:last-child {
+            border-bottom: none;
+        }
+
+        .subsystem-label {
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .subsystem-value {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* Botones de Control de Operaciones C5 */
+        .c5-ops-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.65rem;
+        }
+
+        .c5-op-btn {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            color: var(--text-main);
+            padding: 0.65rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        .c5-op-btn:hover {
+            background: rgba(14, 165, 233, 0.2);
+            border-color: var(--c5-cyan);
+            transform: translateY(-1px);
+        }
+
+        .c5-op-btn.danger {
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+        }
+
+        .c5-op-btn.danger:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: var(--c5-red);
+        }
+
+        /* Feed de Eventos */
+        .events-log-terminal {
+            background: #020617;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 0.6rem;
+            max-height: 220px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 0.5rem;
+            line-height: 1.3;
+        }
+
+        .log-time {
+            color: #64748b;
+            white-space: nowrap;
+        }
+
+        .log-tag {
+            font-weight: 700;
+            padding: 0 0.3rem;
+            border-radius: 3px;
+        }
+
+        .log-tag.INFO { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+        .log-tag.WARN { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .log-tag.PHASE { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .log-tag.EMERG { background: rgba(239, 68, 68, 0.25); color: #f87171; }
+
+        .log-msg {
+            color: #cbd5e1;
+            word-break: break-all;
+        }
+
+        /* Animaciones */
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { border-color: rgba(245, 158, 11, 0.5); }
+            50% { border-color: rgba(245, 158, 11, 0.9); box-shadow: 0 0 10px rgba(245, 158, 11, 0.3); }
+        }
+
+        @keyframes pulse-light {
+            0% { opacity: 0.85; filter: brightness(0.9); }
+            100% { opacity: 1; filter: brightness(1.25); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header SCADA C5 -->
+    <header class="scada-navbar">
+        <div class="brand-cluster">
+            <span class="c5-badge">C5 SCADA</span>
+            <div>
+                <h1 class="brand-title">FLUXA • Control de Movilidad Inteligente</h1>
+                <div class="brand-subtitle">Centro de Monitoreo Urbano & Operaciones Viales</div>
+            </div>
+        </div>
+
+        <div class="nav-actions">
+            <div id="system-health-pill" class="system-pill status-healthy">
+                <span class="status-dot"></span>
+                <span id="system-health-text">SISTEMA OPERATIVO</span>
+            </div>
+
+            <div class="system-pill">
+                <span style="color: var(--text-muted)">NODO:</span>
+                <span id="top-node-id" style="color: var(--c5-cyan)">NODO_STANDALONE</span>
+            </div>
+
+            <div class="system-pill">
+                <span style="color: var(--text-muted)">HORA:</span>
+                <span id="scada-clock" style="color: #ffffff">00:00:00</span>
+            </div>
+
+            <a href="/admin" class="nav-link-btn" title="Ir al panel de configuración completa">
+                ⚙️ Ajustes & ROIs
+            </a>
+            <a href="/" class="nav-link-btn" target="_blank" title="Abrir portal ciudadano">
+                🌐 Portal Público
+            </a>
+            <a href="/api/auth/logout" class="nav-link-btn" style="border-color: rgba(239, 68, 68, 0.3); color: #fca5a5;">
+                Cerrar Sesión
+            </a>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal de Monitoreo -->
+    <main class="scada-container">
+        
+        <!-- COLUMNA 1: Semáforo y FSM Activa -->
+        <div class="scada-card">
+            <div class="card-header">
+                <span class="card-title">🚦 Cruce & FSM Semafórica</span>
+                <span id="fsm-mode-tag" class="system-pill" style="font-size: 0.65rem">MODO ADAPTATIVO</span>
+            </div>
+
+            <!-- Semáforo Virtual Dual -->
+            <div class="traffic-intersection-visual">
+                <div class="virtual-signals-row">
+                    <!-- Semáforo A (Eje 1) -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                        <span class="light-label" id="label-sem-a">Eje Principal</span>
+                        <div class="traffic-light-head">
+                            <div class="light-bulb red" id="bulb-a-red"></div>
+                            <div class="light-bulb yellow" id="bulb-a-yellow"></div>
+                            <div class="light-bulb green" id="bulb-a-green"></div>
+                        </div>
+                    </div>
+
+                    <!-- Semáforo B (Eje 2) -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                        <span class="light-label" id="label-sem-b">Eje Secundario</span>
+                        <div class="traffic-light-head">
+                            <div class="light-bulb red" id="bulb-b-red"></div>
+                            <div class="light-bulb yellow" id="bulb-b-yellow"></div>
+                            <div class="light-bulb green" id="bulb-b-green"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dial Circular de Cuenta Regresiva -->
+                <div class="phase-dial-wrapper">
+                    <svg class="phase-dial-svg" viewBox="0 0 140 140">
+                        <circle class="dial-track" cx="70" cy="70" r="60"></circle>
+                        <circle class="dial-progress" id="dial-circle-progress" cx="70" cy="70" r="60"></circle>
+                    </svg>
+                    <div class="phase-dial-content">
+                        <span class="dial-timer" id="dial-remaining-sec">--</span>
+                        <span class="dial-unit">Seg Restantes</span>
+                    </div>
+                </div>
+
+                <!-- Estado FSM Canónico -->
+                <div class="fsm-state-badge" id="fsm-phase-text">
+                    INICIANDO...
+                </div>
+            </div>
+
+            <!-- Resumen de Microcontrolador -->
+            <div style="background: rgba(15, 23, 42, 0.4); border-radius: 6px; padding: 0.65rem; font-size: 0.75rem; display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted)">Controlador Físico:</span>
+                    <span id="ard-port-display" style="font-family: var(--font-mono); color: var(--c5-cyan)">--</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted)">Último Comando TX:</span>
+                    <span id="ard-cmd-display" style="font-family: var(--font-mono); color: #ffffff">--</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted)">Tramas Enviadas:</span>
+                    <span id="ard-tx-count" style="font-family: var(--font-mono); color: #34d399">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA 2: Feed de Video & Telemetría en Vivo -->
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+            
+            <!-- Banner de Alerta Fail-Safe Degradado -->
+            <div id="degraded-banner" class="degraded-alert-banner">
+                <span style="font-size: 1.2rem">⚠️</span>
+                <div>
+                    <strong>FAIL-SAFE VIAL ACTIVO:</strong> Modo degradado de tiempos fijos en ejecución. El cruce semafórico opera por reloj interno para garantizar la seguridad del tráfico.
+                </div>
+            </div>
+
+            <!-- Viewport de Video -->
+            <div class="scada-card" style="padding: 0.75rem;">
+                <div class="video-viewport-wrapper">
+                    <img id="scada-video-stream" src="/video_feed" class="mjpeg-stream-feed" alt="Transmisión en vivo del cruce" onerror="this.src='/static/logos/placeholder.png';">
+                    <div class="stream-watermark rec">
+                        <span id="stream-fps-badge">0.0 FPS</span>
+                        <span>•</span>
+                        <span id="stream-source-badge">CÁMARA</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grilla de Métricas en Vivo -->
+            <div class="kpi-metrics-grid">
+                <div class="kpi-box">
+                    <span class="kpi-box-label">Aforo en Escena</span>
+                    <span class="kpi-box-value" id="kpi-curr-cars" style="color: var(--c5-cyan)">0</span>
+                    <span class="kpi-box-sub" id="kpi-zones-summary">N:0 | S:0 | E:0 | O:0</span>
+                </div>
+
+                <div class="kpi-box">
+                    <span class="kpi-box-label">Demanda Ponderada (TSP)</span>
+                    <span class="kpi-box-value" id="kpi-tsp-score" style="color: var(--c5-yellow)">0.0</span>
+                    <span class="kpi-box-sub">Prioridad dinámica calculada</span>
+                </div>
+
+                <div class="kpi-box">
+                    <span class="kpi-box-label">Ahorro de Combustible</span>
+                    <span class="kpi-box-value" id="kpi-fuel-saved" style="color: var(--c5-green)">0.0 L</span>
+                    <span class="kpi-box-sub" id="kpi-co2-mitigated">0.0 kg CO2 mitigados</span>
+                </div>
+
+                <div class="kpi-box">
+                    <span class="kpi-box-label">Vehículos Acumulados</span>
+                    <span class="kpi-box-value" id="kpi-total-cars" style="color: #a78bfa">0</span>
+                    <span class="kpi-box-sub">Conteo único BYTETracker</span>
+                </div>
+            </div>
+
+            <!-- Consola de Eventos del C5 -->
+            <div class="scada-card" style="flex: 1;">
+                <div class="card-header">
+                    <span class="card-title">📜 Registro de Operaciones y Eventos en Tiempo Real</span>
+                    <span style="font-size: 0.7rem; color: var(--text-muted)">Syslog C5</span>
+                </div>
+                <div class="events-log-terminal" id="events-terminal">
+                    <!-- Inyectado por JS -->
+                    <div class="log-entry">
+                        <span class="log-time">--:--:--</span>
+                        <span class="log-tag INFO">INFO</span>
+                        <span class="log-msg">Conectando con la API de telemetría de FLUXA...</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- COLUMNA 3: Salud del Sistema & Operaciones C5 -->
+        <div class="scada-right-col">
+            
+            <!-- Tarjeta de Salud de Hardware & Nodos -->
+            <div class="scada-card">
+                <div class="card-header">
+                    <span class="card-title">💻 Salud de Hardware (Orange Pi 5)</span>
+                </div>
+
+                <div class="subsystem-row">
+                    <span class="subsystem-label">SoC RK3588 Temp:</span>
+                    <span class="subsystem-value" id="hw-soc-temp" style="color: #38bdf8">-- °C</span>
+                </div>
+
+                <div class="subsystem-row">
+                    <span class="subsystem-label">Carga CPU:</span>
+                    <span class="subsystem-value" id="hw-cpu-load">-- %</span>
+                </div>
+
+                <div class="subsystem-row">
+                    <span class="subsystem-label">Memoria RAM:</span>
+                    <span class="subsystem-value" id="hw-ram-usage">-- %</span>
+                </div>
+
+                <div class="subsystem-row">
+                    <span class="subsystem-label">Motor de Inferencia:</span>
+                    <span class="subsystem-value" id="hw-ai-engine" style="color: var(--c5-green); font-size: 0.72rem">RKNN NPU</span>
+                </div>
+
+                <div class="subsystem-row">
+                    <span class="subsystem-label">Watchdogs (Systemd + HW):</span>
+                    <span class="subsystem-value" style="color: #34d399">ACTIVOS (15s)</span>
+                </div>
+
+                <div class="subsystem-row">
+                    <span class="subsystem-label">Base de Datos:</span>
+                    <span class="subsystem-value" id="hw-db-status" style="color: #34d399">CONECTADA</span>
+                </div>
+            </div>
+
+            <!-- Botonera de Mando de Operaciones C5 -->
+            <div class="scada-card">
+                <div class="card-header">
+                    <span class="card-title">🚨 Mando y Prioridades C5</span>
+                </div>
+
+                <div style="font-size: 0.75rem; color: var(--text-muted);">
+                    Comandos de intervención inmediata sobre el controlador físico vial:
+                </div>
+
+                <div class="c5-ops-grid">
+                    <button class="c5-op-btn danger" onclick="triggerEmergency('NS')">
+                        <span>🚑 CORREDOR</span>
+                        <strong>EJE 1 (NS)</strong>
+                    </button>
+
+                    <button class="c5-op-btn danger" onclick="triggerEmergency('EO')">
+                        <span>🚒 CORREDOR</span>
+                        <strong>EJE 2 (EO)</strong>
+                    </button>
+
+                    <button class="c5-op-btn" onclick="cancelEmergency()" style="grid-column: span 2; border-color: rgba(16, 185, 129, 0.4);">
+                        <span>✅ CANCELAR PRIORIDAD</span>
+                        <strong>REANUDAR CICLO NORMAL</strong>
+                    </button>
+
+                    <button class="c5-op-btn" onclick="switchMode('Normal')">
+                        <span>🔄 MODO</span>
+                        <strong>ADAPTATIVO IA</strong>
+                    </button>
+
+                    <button class="c5-op-btn" onclick="switchMode('Tiempos_Fijos')">
+                        <span>⏱️ MODO</span>
+                        <strong>TIEMPOS FIJOS</strong>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Métricas Sustentables Resumidas -->
+            <div class="scada-card">
+                <div class="card-header">
+                    <span class="card-title">🌱 Smart City Impact</span>
+                </div>
+
+                <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
+                    Auditoría acumulada comparada contra semáforos electromecánicos tradicionales de tiempo fijo:
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                        <span style="color: var(--text-muted)">Tiempo Ahorrado:</span>
+                        <strong id="impact-saved-hours" style="font-family: var(--font-mono); color: #38bdf8">0.0 Horas</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                        <span style="color: var(--text-muted)">Eficiencia Vial:</span>
+                        <strong id="impact-efficiency-pct" style="font-family: var(--font-mono); color: #34d399">-- %</strong>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+        // Reloj del C5
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('scada-clock').textContent = now.toLocaleTimeString('es-MX', { hour12: false });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        const CIRCLE_CIRCUMFERENCE = 377; // 2 * PI * 60
+
+        // Actualización de Telemetría cada 800ms
+        async function fetchTelemetry() {
+            try {
+                const res = await fetch('/api/status');
+                if (!res.ok) return;
+                const data = await res.json();
+                renderTelemetry(data);
+            } catch (err) {
+                console.warn("Fallo temporal consultando telemetría:", err);
+            }
+        }
+
+        // Consulta de Salud cada 3s
+        async function fetchHealth() {
+            try {
+                const res = await fetch('/api/health');
+                const health = await res.json();
+                renderHealth(health);
+            } catch (err) {
+                console.warn("Fallo consultando salud:", err);
+            }
+        }
+
+        // Consulta de Eventos cada 2.5s
+        async function fetchEvents() {
+            try {
+                const res = await fetch('/api/events');
+                if (!res.ok) return;
+                const events = await res.json();
+                renderEvents(events);
+            } catch (err) {
+                console.warn("Fallo consultando eventos:", err);
+            }
+        }
+
+        function renderHealth(health) {
+            const pill = document.getElementById('system-health-pill');
+            const pillText = document.getElementById('system-health-text');
+            const banner = document.getElementById('degraded-banner');
+
+            const status = health.status || "healthy";
+            pill.className = "system-pill status-" + status;
+
+            if (status === "healthy") {
+                pillText.textContent = "SISTEMA OPERATIVO";
+                banner.classList.remove('visible');
+            } else if (status === "degraded") {
+                pillText.textContent = "MODO DEGRADADO (FAIL-SAFE)";
+                banner.classList.add('visible');
+            } else {
+                pillText.textContent = "FALLA CRÍTICA";
+                banner.classList.add('visible');
+            }
+
+            if (health.node && health.node.node_id) {
+                document.getElementById('top-node-id').textContent = health.node.node_id;
+            }
+
+            const dbSub = health.subsystems?.database;
+            if (dbSub) {
+                document.getElementById('hw-db-status').textContent = dbSub.connected ? "CONECTADA (MARIADB)" : "MODO LOCAL (OFFLINE)";
+                document.getElementById('hw-db-status').style.color = dbSub.connected ? "#34d399" : "#fbbf24";
+            }
+        }
+
+        function renderTelemetry(data) {
+            // FSM y Estado
+            const fsmState = data.status || "DESCONOCIDO";
+            document.getElementById('fsm-phase-text').textContent = fsmState;
+            document.getElementById('fsm-mode-tag').textContent = data.modo ? ("MODO " + data.modo.toUpperCase()) : "MODO ADAPTATIVO";
+
+            const elapsed = parseFloat(data.fase_tiempo_transcurrido || 0);
+            const assigned = Math.max(1.0, parseFloat(data.fase_tiempo_asignado || 1.0));
+            const remaining = Math.max(0, Math.ceil(assigned - elapsed));
+
+            document.getElementById('dial-remaining-sec').textContent = remaining;
+
+            // Progreso del reloj SVG
+            const progressRatio = Math.min(1.0, elapsed / assigned);
+            const offset = CIRCLE_CIRCUMFERENCE * (1 - progressRatio);
+            const circle = document.getElementById('dial-circle-progress');
+            circle.style.strokeDashoffset = offset;
+
+            // Color del Dial según la fase
+            if (fsmState.includes("VERDE")) {
+                circle.style.stroke = "var(--c5-green)";
+            } else if (fsmState.includes("AMARILLO")) {
+                circle.style.stroke = "var(--c5-yellow)";
+            } else {
+                circle.style.stroke = "var(--c5-red)";
+            }
+
+            // Semáforos Físicos/Virtuales
+            const sem = data.semaforos || {};
+            const semA = sem.semaforo_a || "ROJO";
+            const semB = sem.semaforo_b || "ROJO";
+
+            document.getElementById('label-sem-a').textContent = sem.etiqueta_a || "Eje Principal";
+            document.getElementById('label-sem-b').textContent = sem.etiqueta_b || "Eje Secundario";
+
+            setBulbs('bulb-a', semA);
+            setBulbs('bulb-b', semB);
+
+            // Arduino
+            const ard = data.arduino || {};
+            document.getElementById('ard-port-display').textContent = ard.port || "Simulado";
+            document.getElementById('ard-cmd-display').textContent = ard.last_command || "--";
+            document.getElementById('ard-tx-count').textContent = ard.tx_count || 0;
+
+            // Stream Watermark
+            document.getElementById('stream-fps-badge').textContent = (data.fps || 0.0).toFixed(1) + " FPS";
+            const cam = data.camara || {};
+            document.getElementById('stream-source-badge').textContent = cam.tipo || "CÁMARA";
+
+            // KPIs
+            const autos = data.autos || {};
+            const totalCurr = Object.values(autos).reduce((a, b) => a + b, 0);
+            document.getElementById('kpi-curr-cars').textContent = totalCurr;
+
+            const zonesArr = Object.entries(autos).map(([k, v]) => `${k.charAt(0).toUpperCase()}:${v}`).slice(0, 4);
+            if (zonesArr.length) {
+                document.getElementById('kpi-zones-summary').textContent = zonesArr.join(" | ");
+            }
+
+            const dem = data.demanda_ponderada || {};
+            const totalDem = Object.values(dem).reduce((a, b) => a + b, 0);
+            document.getElementById('kpi-tsp-score').textContent = totalDem.toFixed(1);
+
+            document.getElementById('kpi-total-cars').textContent = data.total_acumulado || 0;
+
+            const sost = data.sostenibilidad || {};
+            document.getElementById('kpi-fuel-saved').textContent = (sost.combustible_ahorrado_litros || 0).toFixed(1) + " L";
+            document.getElementById('kpi-co2-mitigated').textContent = (sost.co2_mitigado_kg || 0).toFixed(1) + " kg CO2 mitigados";
+            document.getElementById('impact-saved-hours').textContent = (sost.horas_espera_ahorradas || 0).toFixed(1) + " Horas";
+            document.getElementById('impact-efficiency-pct').textContent = (sost.eficiencia_flujo_pct || 94.5).toFixed(1) + " %";
+
+            // Hardware
+            const hw = data.hardware || {};
+            document.getElementById('hw-soc-temp').textContent = (hw.temp || 0).toFixed(1) + " °C";
+            document.getElementById('hw-cpu-load').textContent = (hw.cpu || 0).toFixed(1) + " %";
+            document.getElementById('hw-ram-usage').textContent = (hw.ram || 0).toFixed(1) + " %";
+            
+            const ai = data.ai_engine || {};
+            if (ai.accelerator) {
+                document.getElementById('hw-ai-engine').textContent = ai.accelerator.includes("Rockchip") ? "RKNN NPU (6 TOPS)" : "CPU Multi-Core";
+            }
+        }
+
+        function setBulbs(prefix, state) {
+            document.getElementById(prefix + '-red').className = "light-bulb red" + (state === "ROJO" ? " active" : "");
+            document.getElementById(prefix + '-yellow').className = "light-bulb yellow" + (state === "AMARILLO" ? " active" : "");
+            document.getElementById(prefix + '-green').className = "light-bulb green" + (state === "VERDE" ? " active" : "");
+        }
+
+        function renderEvents(events) {
+            if (!Array.isArray(events)) return;
+            const term = document.getElementById('events-terminal');
+            term.innerHTML = '';
+            events.slice(0, 15).forEach(ev => {
+                const div = document.createElement('div');
+                div.className = 'log-entry';
+                div.innerHTML = `
+                    <span class="log-time">${ev.time || ''}</span>
+                    <span class="log-tag ${ev.tag || 'INFO'}">${ev.tag || 'INFO'}</span>
+                    <span class="log-msg">${escapeHtml(ev.msg || '')}</span>
+                `;
+                term.appendChild(div);
+            });
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        // Operaciones C5
+        async function triggerEmergency(direction) {
+            if (!confirm(`¿Confirma activar prioridad vial de CORREDOR DE EMERGENCIA C5 para el Eje ${direction}?`)) return;
+            try {
+                const res = await fetch('/api/control', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ action: `EMERGENCIA_${direction}` })
+                });
+                const resData = await res.json();
+                fetchTelemetry();
+                fetchEvents();
+            } catch (err) {
+                alert("Error activando corredor: " + err);
+            }
+        }
+
+        async function cancelEmergency() {
+            try {
+                await fetch('/api/control', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ action: 'CANCELAR_EMERGENCIA' })
+                });
+                fetchTelemetry();
+                fetchEvents();
+            } catch (err) {
+                alert("Error cancelando emergencia: " + err);
+            }
+        }
+
+        async function switchMode(mode) {
+            try {
+                await fetch('/api/control', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ action: 'CAMBIAR_MODO', modo: mode })
+                });
+                fetchTelemetry();
+                fetchEvents();
+            } catch (err) {
+                alert("Error cambiando modo: " + err);
+            }
+        }
+
+        // Bucles de sondeo
+        setInterval(fetchTelemetry, 800);
+        setInterval(fetchHealth, 3000);
+        setInterval(fetchEvents, 2500);
+
+        fetchTelemetry();
+        fetchHealth();
+        fetchEvents();
+    </script>
+</body>
+</html>
