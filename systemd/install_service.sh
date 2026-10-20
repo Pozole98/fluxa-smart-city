@@ -119,13 +119,16 @@ After=network.target mariadb.service mysql.service
 Wants=mariadb.service mysql.service
 
 [Service]
-Type=simple
+Type=notify
+NotifyAccess=all
+WatchdogSec=15
+TimeoutStartSec=60
 User=${CURRENT_USER}
 WorkingDirectory=${SCRIPT_DIR}
 EnvironmentFile=-${SCRIPT_DIR}/.env
 ExecStart=${PYTHON_EXEC} ${SCRIPT_DIR}/main.py --topology 4_way --backend ${BACKEND} --headless --port ${PORT} --npu-core ${CORE}
 Restart=always
-RestartSec=5
+RestartSec=3
 TimeoutStopSec=15
 StandardOutput=journal
 StandardError=journal

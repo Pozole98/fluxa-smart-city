@@ -29,6 +29,10 @@ from api_server import TelemetryAPI
 from db_manager import DatabaseManager
 from corridor_sync import CorridorSyncManager
 from arduino_locker import ArduinoDeviceLock, inspect_port_lock
+try:
+    from systemd_notifier import get_notifier
+except ImportError:
+    from src.systemd_notifier import get_notifier
 
 # Diccionario de nombres y pesos de clases COCO para Prioridad TSP
 NOMBRES_CLASES_COCO = {
@@ -176,6 +180,7 @@ class CoreSemaforoBase:
         self.tiempo_ultimo_cambio = time.time()
         self.fase_tiempo_asignado = 0.0
         self._ultimo_estado_str = ""
+        self.notifier = get_notifier()
 
         # Métricas de Sustentabilidad, Impacto Ecológico y Comparativa A/B
         self.segundos_espera_ahorrados_acum = 0.0
@@ -793,6 +798,9 @@ class CoreSemaforoBase:
         self.ultimo_comando = None
         self.api.log_event('INFO', f"Sistema FLUXA iniciado ({self.topology_name} - {self.backend_name})")
         self.db.log_event_async('INFO', f"Sistema FLUXA iniciado ({self.topology_name} - {self.backend_name})")
+        if hasattr(self, 'notifier') and self.notifier:
+            self.notifier.notify_ready()
+            self.notifier.notify_status(f"Operativo | {self.topology_name} | {self.backend_name}")
 
     def _construir_poligonos(self):
         """
@@ -984,6 +992,11 @@ class CoreSemaforoBase:
 
     def stop(self):
         self.running = False
+        if hasattr(self, 'notifier') and self.notifier:
+            try:
+                self.notifier.notify_stopping()
+            except Exception:
+                pass
         if hasattr(self, '_arduino_locker') and self._arduino_locker:
             try:
                 self._arduino_locker.release()
@@ -1284,6 +1297,8 @@ class CoreSemaforoBase:
             instant_fps = 1.0 / dt_fps
             self._fps_ema = self._fps_alpha * instant_fps + (1.0 - self._fps_alpha) * self._fps_ema
         self.current_fps = round(self._fps_ema, 1)
+        if hasattr(self, 'notifier') and self.notifier:
+            self.notifier.notify_watchdog()
 
         # Inferencia
         t_infer_start = time.time()
@@ -1337,6 +1352,9 @@ class CoreSemaforoBase:
         if estado_str != self._ultimo_estado_str:
             self.api.log_event('PHASE', f"Transición de fase -> {estado_str}")
             self.db.log_event_async('PHASE', f"Transición de fase -> {estado_str}")
+            if hasattr(self, 'notifier') and self.notifier:
+                total_v = sum(autos_estabilizados.values()) if isinstance(autos_estabilizados, dict) else 0
+                self.notifier.notify_status(f"Fase: {estado_str} | {self.current_fps:.1f} FPS | Autos: {total_v}")
             
             # Notificación de Ola Verde a nodos contiguos si se abre el verde principal con flujo
             if any(k in estado_str for k in ["VERDE_1", "VERDE_NS", "VERDE_A", "VERDE_PRINCIPAL", "VERDE_FRENTE"]):
@@ -1710,6 +1728,11 @@ class CoreSemaforoBase:
             _terminating = True
             print("\n Señal de terminación recibida. Deteniendo servicio FLUXA...")
             self.running = False
+            if hasattr(self, 'notifier') and self.notifier:
+                try:
+                    self.notifier.notify_stopping()
+                except Exception:
+                    pass
             
             def _cleanup():
                 try:
