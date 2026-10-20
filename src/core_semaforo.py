@@ -1719,7 +1719,14 @@ class CoreSemaforoBase:
                     
             t = threading.Thread(target=_cleanup, daemon=True)
             t.start()
-            t.join(timeout=1.0)
+            # Timeout de 4.0s para terminación limpia de hilos, liberación de cámaras V4L2 y desconexión serial.
+            # Margen temporal y tolerancia de fallo:
+            # 1. TimeoutStopSec en units systemd (fluxa.service y fluxa-node*.service) está fijado en 15s,
+            #    lo que garantiza un margen holgado antes de cualquier SIGKILL por parte del supervisor de Linux.
+            # 2. El microcontrolador Arduino en gabinete tiene un watchdog hardware/firmware de 30s. Si no recibe
+            #    heartbeat serial en 30s, conmuta a modo seguro de emergencia (destello ámbar/rojo preventivo).
+            #    Un ciclo de parada y reinicio de 4s a 10s completa la transición sin disparar falsas alarmas en vía pública.
+            t.join(timeout=4.0)
             print("Servicio FLUXA finalizado.")
             os._exit(0)
             
