@@ -174,6 +174,16 @@ class VideoStream:
         self.thread.start()
         return self
 
+    def get_status(self):
+        """Retorna el estado de conectividad e integridad del flujo de video"""
+        with self.lock:
+            return {
+                "connected": not self.failed and self.grabbed and self.stream is not None,
+                "is_file": self.is_file,
+                "source": str(self.src),
+                "target_fps": self.target_fps
+            }
+
     def update(self):
         """
         Bucle de captura ejecutado exclusivamente en su hilo dedicado.
@@ -181,6 +191,7 @@ class VideoStream:
         para evitar condiciones de carrera y fallos de double-free en libavcodec.
         """
         frame_interval = 1.0 / max(10.0, self.target_fps) if self.is_file else 0.005
+        reconnect_attempts = 0
         
         try:
             while not self.stopped:
@@ -189,12 +200,15 @@ class VideoStream:
                 if self.stream is None or not self.stream.isOpened():
                     with self.lock:
                         self.failed = True
-                    time.sleep(1.0)
+                    reconnect_attempts += 1
+                    backoff = min(5.0, 1.0 + (reconnect_attempts * 0.5))
+                    time.sleep(backoff)
                     if self.stopped:
                         break
                     self.stream = self._conectar_fuente()
-                    if self.stream:
+                    if self.stream and self.stream.isOpened():
                         self._configurar_stream()
+                        reconnect_attempts = 0
                     continue
 
                 try:

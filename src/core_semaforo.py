@@ -148,6 +148,10 @@ class CoreSemaforoBase:
         
         self.frame_count = 0
         self.consecutive_failed_frames = 0
+        self.consecutive_valid_frames = 0
+        self.consecutive_black_frames = 0
+        self.modo_degradado_camara = False
+        self.TIEMPO_FIJO_FALLBACK = float(self.config.get("traffic_light", {}).get("tiempo_fijo_fallback", 20.0))
         self.last_autos = {zona: 0 for zona in self.zonas_raw.keys()}
         self.last_demanda_ponderada = {zona: 0.0 for zona in self.zonas_raw.keys()}
         self.autos_history = [] 
@@ -536,6 +540,16 @@ class CoreSemaforoBase:
         # --- FASE 1: VERDE EJE 1 (Corredor Principal) ---
         if any(k in estado_str for k in ["VERDE_1", "VERDE_NS", "VERDE_A", "VERDE_PRINCIPAL", "VERDE_FRENTE", "VERDE_VEHICULOS"]):
             self.enviar_comando(self.fsm_commands.get('VERDE_1', '1'))
+            
+            # Modo degradado / Fail-safe vial: tiempos fijos garantizados sin depender de visión artificial
+            if getattr(self, 'modo_degradado_camara', False):
+                self.fase_tiempo_asignado = getattr(self, 'TIEMPO_FIJO_FALLBACK', 20.0)
+                if tiempo_transcurrido >= self.fase_tiempo_asignado:
+                    self._cambiar_fase("AMARILLO_1")
+                    if self.is_pedestrian:
+                        self.llamada_peatonal_manual = False
+                return
+
             base_calc = min(self.TIEMPO_MAXIMO_VERDE, max(tiempo_minimo_actual, demanda_eje_1 * factor))
             
             # Si hay una ola verde activa en el corredor principal, extender la fase verde
@@ -585,6 +599,14 @@ class CoreSemaforoBase:
         # --- FASE 2: VERDE EJE 2 ---
         elif any(k in estado_str for k in ["VERDE_2", "VERDE_EO", "VERDE_B", "VERDE_SECUNDARIA", "VERDE_GIRO", "VERDE_PEATONES"]):
             self.enviar_comando(self.fsm_commands.get('VERDE_2', '3'))
+            
+            # Modo degradado / Fail-safe vial: tiempos fijos garantizados
+            if getattr(self, 'modo_degradado_camara', False):
+                self.fase_tiempo_asignado = getattr(self, 'TIEMPO_FIJO_FALLBACK', 20.0)
+                if tiempo_transcurrido >= self.fase_tiempo_asignado:
+                    self._cambiar_fase("AMARILLO_2")
+                return
+
             if self.is_pedestrian:
                 tiempo_cruce = max(10.0, demanda_eje_2 * 3.5)
                 self.fase_tiempo_asignado = min(25.0, tiempo_cruce)
@@ -1225,11 +1247,21 @@ class CoreSemaforoBase:
             logging.warning(f"Error en rotación de almacenamiento de infracciones: {e}")
 
     def _generar_frame_failsafe(self, estado_str):
-        """Genera un cuadro de respaldo si la fuente de video se interrumpe temporalmente"""
+        """Genera un cuadro de respaldo si la fuente de video se interrumpe temporalmente o se degrada"""
         placeholder = np.ones((self.h, self.w, 3), dtype=np.uint8) * 18
-        cv2.putText(placeholder, "SENAL DE VIDEO EN RECONEXION", (int(self.w*0.18), int(self.h*0.45)), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 200, 255), 2)
-        cv2.putText(placeholder, f"FUENTE: {self.fuente_actual}", (int(self.w*0.22), int(self.h*0.55)), 
+        
+        if getattr(self, 'modo_degradado_camara', False):
+            msg_alerta = "MODO DEGRADADO - TIEMPOS FIJOS ACTIVOS"
+            color_alerta = (0, 165, 255)
+            sub_msg = "FAIL-SAFE VIAL ACTIVO • CONTROL POR RELOJ INTERNO"
+        else:
+            msg_alerta = "SENAL DE VIDEO EN RECONEXION"
+            color_alerta = (0, 200, 255)
+            sub_msg = f"FUENTE: {self.fuente_actual}"
+            
+        cv2.putText(placeholder, msg_alerta, (int(self.w*0.12), int(self.h*0.45)), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, color_alerta, 2)
+        cv2.putText(placeholder, sub_msg, (int(self.w*0.14), int(self.h*0.55)), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (180, 180, 180), 1)
         self._dibujar_hud_universal(placeholder, estado_str, self.last_autos)
         return placeholder
@@ -1247,9 +1279,35 @@ class CoreSemaforoBase:
 
         ret, frame = self.cap.read() if self.cap else (False, None)
         
-        # Manejo a prueba de fallos si la fuente se desconecta
-        if not ret or frame is None:
+        # Detección de cuadro negro o sensor desconectado
+        is_black_frame = False
+        if ret and frame is not None:
+            try:
+                sample = frame[::8, ::8]
+                if sample.size > 0 and float(sample.std()) < 1.0:
+                    is_black_frame = True
+            except Exception:
+                is_black_frame = False
+
+        is_frame_invalid = (not ret or frame is None or is_black_frame)
+
+        # Manejo a prueba de fallos si la fuente se desconecta o entrega cuadros negros/inválidos
+        is_failsafe = False
+        if is_frame_invalid:
+            is_failsafe = True
             self.consecutive_failed_frames += 1
+            self.consecutive_valid_frames = 0
+            
+            # Activación de Modo Degradado
+            if self.consecutive_failed_frames >= 10:
+                if not self.modo_degradado_camara:
+                    self.modo_degradado_camara = True
+                    logging.warning("⚠️ [FAIL-SAFE VIAL] Activado MODO DEGRADADO: Pérdida o degradación del flujo de video. Conmutando a ciclo de tiempos fijos equitativo.")
+                    self.api.log_event('WARN', "Modo degradado activado por fallo en flujo de video")
+                    self.db.log_event_async('WARN', "Modo degradado activado por fallo en flujo de video")
+                    if hasattr(self, 'notifier') and self.notifier:
+                        self.notifier.notify_status(f"DEGRADADO | {estado_str} | Tiempos Fijos")
+
             if self.consecutive_failed_frames > 40:
                 videos_dir = os.path.join(os.path.dirname(__file__), '..', 'videos')
                 fallback_demo = os.path.join(videos_dir, 'demo.mp4')
@@ -1259,22 +1317,24 @@ class CoreSemaforoBase:
                             fallback_demo = os.path.join(videos_dir, fn)
                             break
                 if os.path.exists(fallback_demo) and self.fuente_actual != fallback_demo:
-                    print("Fallo prolongado de video. Conmutando a clip de respaldo...")
+                    logging.info("Fallo prolongado de video. Conmutando a clip de respaldo...")
                     self.cambiar_fuente_video(fallback_demo)
-                self.consecutive_failed_frames = 0
+                self.consecutive_failed_frames = 10
                 
             frame = self._generar_frame_failsafe(estado_str)
-            try:
-                ret_enc, jpeg_buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
-                if ret_enc:
-                    with self._jpeg_lock:
-                        self._jpeg_frame_buffer = jpeg_buf.tobytes()
-            except Exception:
-                pass
-            return frame
+        else:
+            self.consecutive_failed_frames = 0
+            self.consecutive_valid_frames += 1
+            
+            # Recuperación automática tras 15 cuadros consecutivos válidos
+            if self.modo_degradado_camara and self.consecutive_valid_frames >= 15:
+                self.modo_degradado_camara = False
+                logging.info("✅ [FAIL-SAFE VIAL] Señal de cámara restaurada y estabilizada. Retornando a control adaptativo inteligente.")
+                self.api.log_event('INFO', "Restauración de señal de video: retornando a control inteligente")
+                self.db.log_event_async('INFO', "Restauración de señal de video: retornando a control inteligente")
+                if hasattr(self, 'notifier') and self.notifier:
+                    self.notifier.notify_status(f"NORMAL | {estado_str} | Modo Adaptativo")
 
-        self.consecutive_failed_frames = 0
-        
         # Rollover de conteos acumulados a medianoche
         current_day = datetime.now().day
         if current_day != self._current_day:
@@ -1300,42 +1360,50 @@ class CoreSemaforoBase:
         if hasattr(self, 'notifier') and self.notifier:
             self.notifier.notify_watchdog()
 
-        # Inferencia
-        t_infer_start = time.time()
-        dets = self._predict(frame)
-        t_infer_end = time.time()
-        self.latencias["inferencia"] = round((t_infer_end - t_infer_start) * 1000, 1)
-
         overlay = frame.copy()
 
-        # Tracking & Detección Robusta
-        t_track_start = time.time()
-        if dets is not None and len(dets) > 0:
-            try:
-                wrapper = DetectionsWrapper(dets)
-                tracked = self.tracker.update(wrapper)
-            except Exception as e:
-                # Fallback de seguridad: usar detecciones directas si BYTETracker falla
-                tracked = []
-                for i, d in enumerate(dets):
-                    x1, y1, x2, y2, s, c = d
-                    tracked.append([x1, y1, x2, y2, i + 1, s, c, i])
-            self._procesar_tracking(tracked, frame, overlay)
-        else:
+        if is_failsafe:
+            # En modo failsafe no se ejecuta inferencia ni tracking pero se preserva la FSM
+            self.latencias["inferencia"] = 0.0
+            self.latencias["tracking"] = 0.0
             self.last_autos = {zona: 0 for zona in self.zonas_raw.keys()}
             self.last_demanda_ponderada = {zona: 0.0 for zona in self.zonas_raw.keys()}
-        t_track_end = time.time()
-        self.latencias["tracking"] = round((t_track_end - t_track_start) * 1000, 1)
+            autos_estabilizados = {zona: 0 for zona in self.zonas_raw.keys()}
+        else:
+            # Inferencia normal
+            t_infer_start = time.time()
+            dets = self._predict(frame)
+            t_infer_end = time.time()
+            self.latencias["inferencia"] = round((t_infer_end - t_infer_start) * 1000, 1)
 
-        # Anti-flicker
-        self.autos_history.append(self.last_autos.copy())
-        if len(self.autos_history) > 8:
-            self.autos_history.pop(0)
+            # Tracking & Detección Robusta
+            t_track_start = time.time()
+            if dets is not None and len(dets) > 0:
+                try:
+                    wrapper = DetectionsWrapper(dets)
+                    tracked = self.tracker.update(wrapper)
+                except Exception as e:
+                    # Fallback de seguridad: usar detecciones directas si BYTETracker falla
+                    tracked = []
+                    for i, d in enumerate(dets):
+                        x1, y1, x2, y2, s, c = d
+                        tracked.append([x1, y1, x2, y2, i + 1, s, c, i])
+                self._procesar_tracking(tracked, frame, overlay)
+            else:
+                self.last_autos = {zona: 0 for zona in self.zonas_raw.keys()}
+                self.last_demanda_ponderada = {zona: 0.0 for zona in self.zonas_raw.keys()}
+            t_track_end = time.time()
+            self.latencias["tracking"] = round((t_track_end - t_track_start) * 1000, 1)
 
-        autos_estabilizados = {zona: 0 for zona in self.zonas_raw.keys()}
-        for h_autos in self.autos_history:
-            for zona in autos_estabilizados:
-                autos_estabilizados[zona] = max(autos_estabilizados[zona], h_autos.get(zona, 0))
+            # Anti-flicker
+            self.autos_history.append(self.last_autos.copy())
+            if len(self.autos_history) > 8:
+                self.autos_history.pop(0)
+
+            autos_estabilizados = {zona: 0 for zona in self.zonas_raw.keys()}
+            for h_autos in self.autos_history:
+                for zona in autos_estabilizados:
+                    autos_estabilizados[zona] = max(autos_estabilizados[zona], h_autos.get(zona, 0))
 
         if sum(autos_estabilizados.values()) == 0:
             if self.tiempo_sin_autos_inicio is None:
@@ -1506,7 +1574,9 @@ class CoreSemaforoBase:
             "resolution": f"{self.w}x{self.h}",
             "fps_captura": round(self.current_fps, 1),
             "tipo": tipo_fuente_str,
-            "source_raw": str(self.fuente_actual)
+            "source_raw": str(self.fuente_actual),
+            "modo_degradado": getattr(self, 'modo_degradado_camara', False),
+            "consecutive_failed_frames": self.consecutive_failed_frames
         }
 
         # Paquete de Sostenibilidad & Smart City ROI
@@ -1686,7 +1756,8 @@ class CoreSemaforoBase:
         
         t_trans = int(time.time() - self.tiempo_ultimo_cambio)
         t_asig = int(self.fase_tiempo_asignado)
-        texto_estado = f"{estado_str} [{t_trans}s / {t_asig}s]"
+        tag_modo = " [MODO DEGRADADO]" if getattr(self, 'modo_degradado_camara', False) else ""
+        texto_estado = f"{estado_str}{tag_modo} [{t_trans}s / {t_asig}s]"
         cv2.putText(frame, texto_estado, (32, int(hud_h * 0.65)), cv2.FONT_HERSHEY_SIMPLEX, 0.52, color_fase, 1)
         
         model_file = self.config.get("ai_model", {}).get("model_file", "yolov8n.pt" if "CPU" in self.backend_name else "yolov8n.rknn")
