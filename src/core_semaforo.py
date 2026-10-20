@@ -1077,19 +1077,19 @@ class CoreSemaforoBase:
                     self.ultimo_comando = comando
                     self.arduino_tx_count += 1
                     self.api.log_event('ARDUINO', f"Comando '{comando}' enviado a semáforos")
-                if hasattr(self.arduino, 'in_waiting') and self.arduino.in_waiting > 0:
+                in_w = getattr(self.arduino, 'in_waiting', 0)
+                if isinstance(in_w, int) and in_w > 0:
                     self.arduino.reset_input_buffer()
-            except serial.SerialException:
-                logging.warning("❌ Falla de comunicación Serial con Arduino R4. Iniciando watchdog de reconexión...")
+            except (serial.SerialException, OSError, Exception) as e:
+                logging.warning(f"❌ Falla de comunicación Serial con Arduino R4 ({e}). Iniciando watchdog de reconexión...")
                 self.api.log_event('WARN', "Desconexión de Arduino detectada. Iniciando watchdog...")
                 self.tiempo_desconexion_arduino = time.time()
                 try:
-                    self.arduino.close()
+                    if self.arduino:
+                        self.arduino.close()
                 except Exception:
                     pass
                 self.arduino = None
-            except Exception:
-                pass
 
     def forzar_emergencia(self, accion):
         if accion == "RESET":
@@ -1117,6 +1117,12 @@ class CoreSemaforoBase:
             self.db.log_event_async('EMERG', f" PRIORIDAD C5 ACTIVADA: Corredor de Emergencia para {accion}")
 
     def _check_modo_noche(self):
+        # Prioridad de seguridad vial: si la cámara está degradada, opera siempre en modo fail-safe
+        if getattr(self, 'modo_degradado_camara', False):
+            if not self.emergencia_activa:
+                self.modo_actual = "Modo Degradado (Fail-Safe)"
+            return getattr(self, 'TIEMPO_FIJO_FALLBACK', 20.0)
+
         night_cfg = self.config.get("night_mode", {})
         if not night_cfg.get("enabled", False):
             if not self.emergencia_activa and not self.modo_actual.startswith("🚨"):
@@ -1263,7 +1269,6 @@ class CoreSemaforoBase:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.65, color_alerta, 2)
         cv2.putText(placeholder, sub_msg, (int(self.w*0.14), int(self.h*0.55)), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (180, 180, 180), 1)
-        self._dibujar_hud_universal(placeholder, estado_str, self.last_autos)
         return placeholder
 
     def process_frame(self):
@@ -1469,26 +1474,27 @@ class CoreSemaforoBase:
             )
             self.ultimo_log_time = time.time()
 
-        # Renderizar ROIs con colores pre-calculados y centroides cacheados
-        for nombre, pts in self.poligonos.items():
-            color = self._zona_color_map.get(nombre, (200, 200, 200))
-            cv2.fillPoly(overlay, [pts], color=color)
-            cv2.polylines(frame, [pts], isClosed=True, color=color, thickness=2)
-            
-            cx, cy = self._zona_centroids.get(nombre, (self.w // 2, self.h // 2))
-            count_zona = autos_estabilizados.get(nombre, 0)
-            tag_text = f"{nombre.upper()}: {count_zona}"
-            
-            (tw, th), _ = cv2.getTextSize(tag_text, cv2.FONT_HERSHEY_SIMPLEX, 0.48, 1)
-            cv2.rectangle(frame, (cx - tw//2 - 4, cy - th//2 - 4), (cx + tw//2 + 4, cy + th//2 + 4), (15, 23, 42), -1)
-            cv2.rectangle(frame, (cx - tw//2 - 4, cy - th//2 - 4), (cx + tw//2 + 4, cy + th//2 + 4), color, 1)
-            cv2.putText(frame, tag_text, (cx - tw//2, cy + th//2 - 1), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1)
+        if not is_failsafe:
+            # Renderizar ROIs con colores pre-calculados y centroides cacheados (solo sobre video real)
+            for nombre, pts in self.poligonos.items():
+                color = self._zona_color_map.get(nombre, (200, 200, 200))
+                cv2.fillPoly(overlay, [pts], color=color)
+                cv2.polylines(frame, [pts], isClosed=True, color=color, thickness=2)
+                
+                cx, cy = self._zona_centroids.get(nombre, (self.w // 2, self.h // 2))
+                count_zona = autos_estabilizados.get(nombre, 0)
+                tag_text = f"{nombre.upper()}: {count_zona}"
+                
+                (tw, th), _ = cv2.getTextSize(tag_text, cv2.FONT_HERSHEY_SIMPLEX, 0.48, 1)
+                cv2.rectangle(frame, (cx - tw//2 - 4, cy - th//2 - 4), (cx + tw//2 + 4, cy + th//2 + 4), (15, 23, 42), -1)
+                cv2.rectangle(frame, (cx - tw//2 - 4, cy - th//2 - 4), (cx + tw//2 + 4, cy + th//2 + 4), color, 1)
+                cv2.putText(frame, tag_text, (cx - tw//2, cy + th//2 - 1), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1)
 
-        cv2.addWeighted(overlay, 0.18, frame, 0.82, 0, frame)
+            cv2.addWeighted(overlay, 0.18, frame, 0.82, 0, frame)
+            self._dibujar_interfaz_topologia(frame, autos_estabilizados)
 
-        # HUD superior
+        # HUD superior universal (se dibuja una sola vez con los datos sincronizados del ciclo)
         self._dibujar_hud_universal(frame, estado_str, autos_estabilizados)
-        self._dibujar_interfaz_topologia(frame, autos_estabilizados)
 
         self.latencias["pipeline_total"] = round((time.time() - t_loop_start) * 1000, 1)
 

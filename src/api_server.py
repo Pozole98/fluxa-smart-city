@@ -461,7 +461,10 @@ def get_health():
     db_connected = False
     if db_manager_instance is not None:
         try:
-            db_connected = db_manager_instance.is_connected() if hasattr(db_manager_instance, 'is_connected') else True
+            if hasattr(db_manager_instance, 'is_connected'):
+                db_connected = bool(db_manager_instance.is_connected())
+            elif hasattr(db_manager_instance, 'connected'):
+                db_connected = bool(db_manager_instance.connected)
         except Exception:
             db_connected = False
 
@@ -1162,21 +1165,21 @@ def control():
         control_callback(cmd)
         registrar_evento('EMERG', f"Control Remoto C5 activó prioridad: {cmd}")
         return jsonify({"message": f"Prioridad activada para {cmd}", "status": "ok"})
-    elif action == "emergency_corridor":
-        eje = target if target else "NS"
+    elif action == "emergency_corridor" or action.startswith("EMERGENCIA_"):
+        eje = target if target else (action.replace("EMERGENCIA_", "").upper() if action.startswith("EMERGENCIA_") else "NS")
         control_callback(eje)
         registrar_evento('EMERG', f" CORREDOR DE EMERGENCIA C5 ACTIVADO PARA EJE {eje}")
         return jsonify({"message": f" Corredor de Emergencia despejado para {eje}", "status": "ok"})
-    elif action == "pedestrian_call":
+    elif action in ["pedestrian_call", "PEATONES"]:
         control_callback("PEATONES")
         registrar_evento('INFO', "Demanda peatonal forzada vía API C5")
         return jsonify({"message": "Llamada peatonal registrada", "status": "ok"})
-    elif action == "reset":
+    elif action in ["reset", "RESET", "CANCELAR_EMERGENCIA"]:
         control_callback("RESET")
         registrar_evento('INFO', "Modo Normal restaurado vía API C5")
         return jsonify({"message": "Ciclo semafórico normal restaurado", "status": "ok"})
-    elif action == "set_mode":
-        modo = data.get("mode", "Normal")
+    elif action in ["set_mode", "CAMBIAR_MODO"]:
+        modo = data.get("mode") or data.get("modo", "Normal")
         control_callback(f"MODE:{modo}")
         registrar_evento('INFO', f"Modo de operación cambiado a: {modo}")
         return jsonify({"message": f"Modo configurado a {modo}", "status": "ok"})

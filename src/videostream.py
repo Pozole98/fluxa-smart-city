@@ -263,8 +263,14 @@ class VideoStream:
     def read(self):
         if self.stopped:
             return False, None
-        # Bloquear hasta que un nuevo frame esté disponible (simula captura real y evita procesar frames duplicados)
-        self.frame_ready.wait(timeout=1.0)
+
+        # Retornar inmediatamente si el flujo ya se encuentra en estado fallido sin esperar el timeout
+        with self.lock:
+            if self.failed or self.stream is None:
+                return False, None
+
+        # Esperar hasta que un nuevo frame esté disponible (máximo 0.2s para mantener ágil el ciclo de la FSM)
+        self.frame_ready.wait(timeout=0.2)
         
         with self.lock:
             if self.stopped or self.failed or not self.grabbed or self.frame is None:

@@ -87,6 +87,10 @@ class DatabaseManager:
             cursorclass=pymysql.cursors.DictCursor
         )
 
+    def is_connected(self) -> bool:
+        """Retorna True si el gestor está activo y mantiene conexión válida con MariaDB"""
+        return bool(self.enabled and self.connected)
+
     def _init_db_schema(self):
         """Inicializa la base de datos relacional y las tablas requeridas"""
         conn = None

@@ -1080,7 +1080,7 @@
                 const res = await fetch('/api/control', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ action: `EMERGENCIA_${direction}` })
+                    body: JSON.stringify({ action: 'emergency_corridor', target: direction })
                 });
                 const resData = await res.json();
                 fetchTelemetry();
@@ -1095,7 +1095,7 @@
                 await fetch('/api/control', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ action: 'CANCELAR_EMERGENCIA' })
+                    body: JSON.stringify({ action: 'reset' })
                 });
                 fetchTelemetry();
                 fetchEvents();
@@ -1109,7 +1109,7 @@
                 await fetch('/api/control', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ action: 'CAMBIAR_MODO', modo: mode })
+                    body: JSON.stringify({ action: 'set_mode', mode: mode })
                 });
                 fetchTelemetry();
                 fetchEvents();

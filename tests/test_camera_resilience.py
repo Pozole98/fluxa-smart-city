@@ -118,6 +118,21 @@ class TestCameraResilience(unittest.TestCase):
 
         self.assertTrue(self.semaforo.modo_degradado_camara)
 
+    def test_videostream_read_does_not_block_when_failed(self):
+        """VideoStream.read() retorna de inmediato (False, None) si failed=True sin esperar timeout"""
+        with patch.object(VideoStream, '_conectar_fuente', return_value=None):
+            vs = VideoStream(src="test.mp4")
+            vs.failed = True
+            
+            t0 = time.time()
+            ret, frame = vs.read()
+            dt = time.time() - t0
+            
+            self.assertFalse(ret)
+            self.assertIsNone(frame)
+            # Debe tardar menos de 50ms, sin esperar el timeout de frame_ready
+            self.assertLess(dt, 0.05)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -111,6 +111,39 @@ class TestApiObservability(unittest.TestCase):
         self.assertIn("scada-container", html)
         self.assertIn("traffic-light-head", html)
 
+    def test_api_control_actions(self):
+        """/api/control acepta acciones tanto en formato canónico como directo en español"""
+        mock_cb = MagicMock()
+        import api_server
+        api_server.control_callback = mock_cb
+
+        with self.client.session_transaction() as sess:
+            sess['is_admin'] = True
+
+        # Prueba formato canónico
+        res = self.client.post('/api/control', json={'action': 'emergency_corridor', 'target': 'NS'})
+        self.assertEqual(res.status_code, 200)
+        mock_cb.assert_called_with('NS')
+
+        # Prueba formato directo C5
+        res = self.client.post('/api/control', json={'action': 'EMERGENCIA_EO'})
+        self.assertEqual(res.status_code, 200)
+        mock_cb.assert_called_with('EO')
+
+        # Prueba reset / cancelar
+        res = self.client.post('/api/control', json={'action': 'reset'})
+        self.assertEqual(res.status_code, 200)
+        mock_cb.assert_called_with('RESET')
+
+        res = self.client.post('/api/control', json={'action': 'CANCELAR_EMERGENCIA'})
+        self.assertEqual(res.status_code, 200)
+        mock_cb.assert_called_with('RESET')
+
+        # Prueba set_mode / CAMBIAR_MODO
+        res = self.client.post('/api/control', json={'action': 'set_mode', 'mode': 'Tiempos_Fijos'})
+        self.assertEqual(res.status_code, 200)
+        mock_cb.assert_called_with('MODE:Tiempos_Fijos')
+
 
 if __name__ == '__main__':
     unittest.main()
